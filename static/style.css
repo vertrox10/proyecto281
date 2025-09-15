@@ -1,0 +1,118 @@
+/* 🎨 Fondo general */
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #EDE6E0, #A3C8D6); /* Beige Suave + Celeste Claro */
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+
+/* 📦 Caja del login */
+.login-container {
+    background: #F5F5F5; /* Gris Claro */
+    padding: 2rem;
+    border-radius: 15px;
+    width: 360px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+    text-align: center;
+    border: 2px solid #EDE6E0; /* Beige Suave */
+}
+
+/* 📝 Título */
+.login-container h1 {
+    margin-bottom: 1.5rem;
+    color: #264653; /* Azul Profundo */
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+/* 🔹 Inputs */
+.input-group {
+    text-align: left;
+    margin-bottom: 1.2rem;
+}
+
+.input-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.3rem;
+    color: #2F241F; /* Marrón Oscuro */
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #A3C8D6; /* Celeste Claro */
+    border-radius: 8px;
+    font-size: 1rem;
+    background: #fff;
+    transition: 0.3s ease;
+}
+
+.input-group input:focus {
+    border-color: #264653; /* Azul Profundo */
+    outline: none;
+    box-shadow: 0 0 6px rgba(38, 70, 83, 0.4);
+}
+
+/* 🔘 Botón */
+button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    background: #264653; /* Azul Profundo */
+    color: #fff;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.1s ease;
+}
+
+button:hover {
+    background: #2F241F; /* Marrón Oscuro */
+    transform: scale(1.02);
+}
+
+/* 📌 Texto registro */
+.register-text {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #2F241F; /* Marrón Oscuro */
+}
+
+.register-text a {
+    color: #E3A78C; /* Durazno Suave */
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.register-text a:hover {
+    text-decoration: underline;
+}
+
+/* ✨ Alertas */
+.alert {
+    margin-top: 1rem;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.alert-success {
+    background: #7A8C6E; /* Verde Oliva */
+    color: #fff;
+}
+
+.alert-danger {
+    background: #E3A78C; /* Durazno Suave */
+    color: #2F241F; /* Marrón Oscuro */
+}
+
+.alert-info {
+    background: #A3C8D6; /* Celeste Claro */
+    color: #264653; /* Azul Profundo */
+}
