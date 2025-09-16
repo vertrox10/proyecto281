@@ -116,3 +116,35 @@ button:hover {
     background: #A3C8D6; /* Celeste Claro */
     color: #264653; /* Azul Profundo */
 }
+/*capcha*/
+/* Contenedor input + icono */
+.captcha-input {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.captcha-input input {
+    flex: 1;
+    padding-right: 35px; /* espacio para el icono */
+}
+
+/* Ícono de estado */
+#captcha-status {
+    position: absolute;
+    right: 10px;
+    font-size: 1.2rem;
+    pointer-events: none;
+}
+
+/* Colores para validación */
+.valid {
+    color: #4CAF50; /* Verde */
+    content: "✔";
+}
+
+.invalid {
+    color: #E74C3C; /* Rojo */
+    content: "✖";
+}
+

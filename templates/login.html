@@ -17,6 +17,18 @@
                 <label for="password">Contraseña</label>
                 <input type="password" id="password" name="password" required>
             </div>
+
+            <!-- CAPTCHA -->
+            <!-- CAPTCHA -->
+            <div class="input-group captcha-group" style="text-align:center;">
+                <img src="{{ url_for('captcha') }}" alt="Captcha" style="margin-bottom:10px;">
+                <div class="captcha-input">
+                    <input type="text" name="captcha" id="captcha" placeholder="Escribe el texto de la imagen" required>
+                    <span id="captcha-status"></span>
+                </div>
+            </div>
+
+
             <button type="submit">Ingresar</button>
         </form>
 
@@ -26,4 +38,38 @@
         </div>
     </div>
 </body>
+<script>
+document.getElementById("captcha").addEventListener("blur", async function() {
+    let captchaValue = this.value;
+    let statusIcon = document.getElementById("captcha-status");
+
+    if (captchaValue.trim() === "") {
+        statusIcon.textContent = "";
+        return;
+    }
+
+    try {
+        let response = await fetch("/verificar_captcha", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ captcha: captchaValue })
+        });
+
+        let data = await response.json();
+
+        if (data.valido) {
+            statusIcon.textContent = "✔";
+            statusIcon.className = "valid";
+        } else {
+            statusIcon.textContent = "✖";
+            statusIcon.className = "invalid";
+        }
+    } catch (error) {
+        console.error("Error verificando captcha:", error);
+    }
+});
+</script>
+
 </html>
