@@ -8,8 +8,15 @@
 <body>
     <div class="login-container">
         <h1>Iniciar Sesión</h1>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+    <div class="alert alert-{{ category }}">{{ message }}</div>
+         {% endfor %}
+        {% endif %}
+        {% endwith %}
         <form method="POST">
-            <div class="input-group">
+            <div class="input-group icon-user">
                 <label for="correo">Correo</label>
                 <input type="email" id="correo" name="correo" required>
             </div>
@@ -20,12 +27,11 @@
 
             <!-- CAPTCHA -->
             <!-- CAPTCHA -->
-            <div class="input-group captcha-group" style="text-align:center;">
-                <img src="{{ url_for('captcha') }}" alt="Captcha" style="margin-bottom:10px;">
-                <div class="captcha-input">
-                    <input type="text" name="captcha" id="captcha" placeholder="Escribe el texto de la imagen" required>
-                    <span id="captcha-status"></span>
-                </div>
+         <div class="input-group captcha-group">
+             <label for="captcha">Verificación</label>
+                <img src="{{ url_for('captcha') }}" alt="Captcha" class="captcha-image">
+             <input type="text" name="captcha" id="captcha" class="captcha-box" placeholder="Escribe el texto de la imagen" required>
+             <span id="captcha-status"></span>
             </div>
 
 

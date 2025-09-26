@@ -7,34 +7,74 @@
 </head>
 <body>
     <div class="login-container">
+
         <h1>Registro</h1>
+
+        <!-- 📌 Mensajes flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert {{ category }}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         <form method="POST">
-            <div class="input-group">
+            <div class="input-group icon-user">
                 <label for="nombre">Nombre</label>
                 <input type="text" id="nombre" name="nombre" required>
             </div>
-            <div class="input-group">
+
+            <div class="input-group icon-user">
                 <label for="ap_paterno">Apellido Paterno</label>
                 <input type="text" id="ap_paterno" name="ap_paterno" required>
             </div>
-            <div class="input-group">
+
+            <div class="input-group icon-user">
                 <label for="ap_materno">Apellido Materno</label>
                 <input type="text" id="ap_materno" name="ap_materno" required>
             </div>
-            <div class="input-group">
+
+            <div class="input-group icon-mail">
                 <label for="correo">Correo</label>
                 <input type="email" id="correo" name="correo" required>
             </div>
-            <div class="input-group">
+
+            <div class="input-group icon-phone">
                 <label for="telefono">Teléfono</label>
                 <input type="text" id="telefono" name="telefono" required>
             </div>
-            <div class="input-group">
+
+            <div class="input-group icon-pass">
                 <label for="password">Contraseña</label>
                 <input type="password" id="password" name="password" required>
             </div>
+
+            <div class="input-group icon-role">
+                <label for="id_rol">Tipo de usuario</label>
+                <select id="id_rol" name="id_rol" required>
+                    <option value="2">Cliente</option>
+                    <option value="1">Administrador</option>
+                </select>
+            </div>
+
             <button type="submit">Registrar</button>
         </form>
+
+        <div class="social-divider">
+            <span>O</span>
+        </div>
+
+        <div class="social-login">
+            <a href="/login/facebook" class="btn-facebook">
+                <img src="{{ url_for('static', filename='facebook-icon.png') }}" alt="Facebook"> Continuar con Facebook
+            </a>
+            <a href="/login/google" class="btn-google">
+                <img src="{{ url_for('static', filename='google-icon.png') }}" alt="Google"> Continuar con Google
+            </a>
+        </div>
 
         <div class="register-text">
             <p>¿Ya tienes cuenta? <a href="{{ url_for('login') }}">Inicia sesión</a></p>
@@ -42,3 +82,5 @@
     </div>
 </body>
 </html>
+
+

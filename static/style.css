@@ -1,30 +1,37 @@
 /* 🎨 Fondo general */
 body {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #EDE6E0, #A3C8D6); /* Beige Suave + Celeste Claro */
-    height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #6BAE75, #F0F4F8);
+    min-height: 100vh;
+    height: auto;
+    margin: 0;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    margin: 0;
+    padding: 1rem;
+    box-sizing: border-box;
+    overflow-y: auto;
 }
 
-/* 📦 Caja del login */
+/* 📦 Caja del registro */
 .login-container {
-    background: #F5F5F5; /* Gris Claro */
+    background: #FFFFFF;
     padding: 2rem;
-    border-radius: 15px;
-    width: 360px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+    border-radius: 10px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     text-align: center;
-    border: 2px solid #EDE6E0; /* Beige Suave */
+    border: 2px solid #6BAE75;
+    box-sizing: border-box;
 }
 
 /* 📝 Título */
 .login-container h1 {
     margin-bottom: 1.5rem;
-    color: #264653; /* Azul Profundo */
-    font-size: 1.8rem;
+    color: #2C3E50;
+    font-size: clamp(1.5rem, 4vw, 1.8rem);
     font-weight: bold;
 }
 
@@ -32,63 +39,82 @@ body {
 .input-group {
     text-align: left;
     margin-bottom: 1.2rem;
+    position: relative;
 }
 
 .input-group label {
     display: block;
     font-weight: bold;
     margin-bottom: 0.3rem;
-    color: #2F241F; /* Marrón Oscuro */
+    color: #2C3E50;
 }
 
-.input-group input {
+.input-group input,
+.input-group select {
     width: 100%;
-    padding: 10px;
-    border: 1px solid #A3C8D6; /* Celeste Claro */
+    padding: 10px 10px 10px 28px;
+    border: 1px solid #4A90A4;
     border-radius: 8px;
+    background: #F0F4F8;
     font-size: 1rem;
-    background: #fff;
-    transition: 0.3s ease;
+    box-sizing: border-box;
 }
 
-.input-group input:focus {
-    border-color: #264653; /* Azul Profundo */
-    outline: none;
-    box-shadow: 0 0 6px rgba(38, 70, 83, 0.4);
+/* ✏️ Íconos por tipo */
+.input-group.icon-user::before {
+    content: "👤";
+}
+.input-group.icon-mail::before {
+    content: "📧";
+}
+.input-group.icon-phone::before {
+    content: "📱";
+}
+.input-group.icon-pass::before {
+    content: "🔒";
+}
+.input-group.icon-role::before {
+    content: "🏷";
+}
+
+/* 📌 Estilo base de todos los íconos */
+.input-group::before {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.1rem;
+    color: #4A90A4;
 }
 
 /* 🔘 Botón */
 button {
     width: 100%;
     padding: 12px;
-    border: none;
-    background: #264653; /* Azul Profundo */
+    background: #7A6BBE;
     color: #fff;
     font-size: 1rem;
     font-weight: bold;
+    border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: background 0.3s ease, transform 0.1s ease;
+    transition: background 0.3s ease;
 }
-
 button:hover {
-    background: #2F241F; /* Marrón Oscuro */
-    transform: scale(1.02);
+    background: #5A4CA0;
 }
 
 /* 📌 Texto registro */
 .register-text {
     margin-top: 1rem;
     font-size: 0.9rem;
-    color: #2F241F; /* Marrón Oscuro */
+    color: #2C3E50;
 }
-
 .register-text a {
-    color: #E3A78C; /* Durazno Suave */
+    color: #4A90A4;
     text-decoration: none;
     font-weight: bold;
 }
-
 .register-text a:hover {
     text-decoration: underline;
 }
@@ -101,50 +127,89 @@ button:hover {
     font-size: 0.9rem;
     font-weight: bold;
 }
-
 .alert-success {
-    background: #7A8C6E; /* Verde Oliva */
+    background: #6BAE75;
+    color: #fff;
+}
+.alert-danger {
+    background: #F9D6D5;
+    color: #2C3E50;
+}
+.alert-info {
+    background: #4A90A4;
     color: #fff;
 }
 
-.alert-danger {
-    background: #E3A78C; /* Durazno Suave */
-    color: #2F241F; /* Marrón Oscuro */
+/* 🔗 Divider */
+.social-divider {
+    text-align: center;
+    margin: 1.5rem 0;
+    position: relative;
+}
+.social-divider span {
+    background: #fff;
+    padding: 0 10px;
+    color: #2C3E50;
+    font-weight: bold;
+    position: relative;
+    z-index: 1;
+}
+.social-divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #ccc;
+    z-index: 0;
 }
 
-.alert-info {
-    background: #A3C8D6; /* Celeste Claro */
-    color: #264653; /* Azul Profundo */
+/* 🔗 Social login */
+.social-login {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
-/*capcha*/
-/* Contenedor input + icono */
-.captcha-input {
-    position: relative;
+.btn-facebook,
+.btn-google {
     display: flex;
     align-items: center;
+    justify-content: center;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+.btn-facebook {
+    background: #3b5998;
+    color: #fff;
+}
+.btn-google {
+    background: #f5f5f5;
+    color: #444;
+    border: 1px solid #ccc;
+}
+.btn-facebook img,
+.btn-google img {
+    width: 20px;
+    margin-right: 10px;
 }
 
-.captcha-input input {
-    flex: 1;
-    padding-right: 35px; /* espacio para el icono */
+/* 📱 Ajustes móviles */
+@media (max-width: 480px) {
+    .login-container {
+        padding: 1rem;
+        max-width: 100%;
+    }
+    .login-container h1 {
+        font-size: 1.5rem;
+    }
+    button {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
 }
 
-/* Ícono de estado */
-#captcha-status {
-    position: absolute;
-    right: 10px;
-    font-size: 1.2rem;
-    pointer-events: none;
-}
-
-/* Colores para validación */
-.valid {
-    color: #4CAF50; /* Verde */
-    content: "✔";
-}
-
-.invalid {
-    color: #E74C3C; /* Rojo */
-    content: "✖";
-}
 

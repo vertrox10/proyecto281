@@ -16,6 +16,7 @@ import datetime
 from flask import Flask
 from flask_mail import Mail
 from flask import request, jsonify, session
+import re
 
 app = Flask(__name__)
 app.secret_key = "supersecreto"  # Necesario para manejar sesiones
@@ -121,26 +122,53 @@ def login():
 
 
 # 🔹 Registro
+def es_correo_valido(correo):
+    patron = r"^[\w\.-]+@([\w\.-]+)$"
+    match = re.match(patron, correo)
+    if not match:
+        return False
+
+    dominio = match.group(1).lower()
+    dominios_permitidos = ["gmail.com", "outlook.com"]
+
+    return dominio in dominios_permitidos
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        nombre = request.form["nombre"]
+        ap_paterno = request.form["ap_paterno"]
+        ap_materno = request.form["ap_materno"]
+        correo = request.form["correo"].lower().strip()
+        telefono = request.form["telefono"]
+        password = request.form["password"]
+
+        hashed_password = generate_password_hash(password)
+        id_rol = int(request.form["id_rol"]) 
+
+        if not es_correo_valido(correo):
+            flash("Formato de correo inválido ❌", "danger")
+            return redirect(url_for("register"))
+        if not es_contrasena_valida(password):
+            flash("La contraseña debe tener al menos 8 caracteres una mayuscula, minuscula,numero")
+            return redirect(url_for ("register"))
+        hashed_password=generate_password_hash(password)
+
+        if not es_telefono_valido(telefono):
+            flash("El teléfono debe contener solo números (7 a 15 dígitos) ❌", "danger")
+            return redirect(url_for("register"))
+        conn = get_db_connection()
+        if not conn:
+            flash("Error de conexión con la base de datos.", "danger")
+            return redirect(url_for("register"))
+
         try:
-            nombre = request.form["nombre"]
-            ap_paterno = request.form["ap_paterno"]
-            ap_materno = request.form["ap_materno"]
-            correo = request.form["correo"]
-            telefono = request.form["telefono"]
-            password = request.form["password"]
-
-            # Encriptar contraseña
-            hashed_password = generate_password_hash(password)
-
-            id_rol = 2  # 👈 Rol por defecto = Usuario
-
-            conn = get_db_connection()
-            if not conn:
-                flash("Error de conexión con la base de datos.", "danger")
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT 1 FROM usuario WHERE correo = %s", (correo,))
+            if cursor.fetchone():
+                flash("Este correo ya está registrado ❌", "danger")
                 return redirect(url_for("register"))
+            cursor.close()
 
             cursor = conn.cursor()
             cursor.execute("""
@@ -149,11 +177,12 @@ def register():
             """, (nombre, ap_paterno, ap_materno, correo, telefono, hashed_password, id_rol))
 
             conn.commit()
-            flash("Usuario registrado con éxito. Ahora inicia sesión.", "success")
+            flash("Usuario registrado con éxito ✅. Ahora inicia sesión.", "success")
 
         except Error as e:
             print("❌ Error en register:", e)
             flash("Error al registrar: " + str(e), "danger")
+
         finally:
             if cursor: cursor.close()
             if conn: conn.close()
@@ -161,6 +190,19 @@ def register():
         return redirect(url_for("login"))
 
     return render_template("register.html")
+def es_telefono_valido(telefono):
+    return re.fullmatch(r"\d{7,15}", telefono) is not None
+
+def es_contrasena_valida(password):
+    if len(password) < 8:
+        return False
+    if not re.search(r"[A-Z]", password):  # Mayúscula
+        return False
+    if not re.search(r"[a-z]", password):  # Minúscula
+        return False
+    if not re.search(r"[0-9]", password):  # Número
+        return False
+    return True
 
 
 # 🔹 Dashboard

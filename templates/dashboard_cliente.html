@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel del Cliente</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h2>¡Hola {{ usuario }}!</h2>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Cerrar sesión</a>
+        </header>
+
+        <section class="dashboard-section">
+            <h3>Mis Reservas</h3>
+            <div class="card">
+                <p>No tienes reservas activas.</p>
+                <a href="{{ url_for('reservar') }}" class="action-btn">Reservar ahora</a>
+            </div>
+        </section>
+
+        <section class="dashboard-section">
+            <h3>Servicios disponibles</h3>
+            <div class="card-grid">
+                <div class="card">
+                    <h4>Habitaciones</h4>
+                    <p>Explora nuestras opciones de alojamiento.</p>
+                    <a href="{{ url_for('habitaciones') }}" class="action-btn">Ver más</a>
+                </div>
+                <div class="card">
+                    <h4>Restaurante</h4>
+                    <p>Consulta el menú y haz tu pedido.</p>
+                    <a href="{{ url_for('restaurante') }}" class="action-btn">Ir al menú</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="dashboard-section">
+            <h3>Mi Perfil</h3>
+            <div class="card">
+                <p>Correo: {{ correo }}</p>
+                <p>Teléfono: {{ telefono }}</p>
+                <a href="{{ url_for('editar_perfil') }}" class="action-btn">Editar perfil</a>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
