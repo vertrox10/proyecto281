@@ -209,7 +209,7 @@ def es_contrasena_valida(password):
 @app.route("/dashboard")
 def dashboard():
     if "usuario" in session:
-        return render_template("dashboard.html", usuario=session["usuario"])
+        return render_template("dashboard_admin.html", usuario=session["usuario"])
     else:
         return redirect(url_for("login"))
 

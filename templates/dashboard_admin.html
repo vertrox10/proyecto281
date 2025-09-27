@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Administrativo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_administrador.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>Panel</h2>
+        <ul>
+            <li><a href="#">Dashboard</a></li>
+            <li><a href="#">Finanzas</a></li>
+            <li><a href="#">Consumos</a></li>
+            <li><a href="#">Reservas</a></li>
+            <li><a href="#">Tickets</a></li>
+            <li><a href="#">Usuarios</a></li>
+        </ul>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <h1>Dashboard Administrativo</h1>
+            <a href="{{ url_for('logout') }}" class="logout-btn">Cerrar sesión</a>
+        </div>
+
+        <div class="cards">
+            <div class="overview">
+    <div class="card">
+        <i class="fas fa-coins"></i>
+        <h3>Ingresos Totales</h3>
+        <p>$0.00</p>
+    </div>
+    <div class="card">
+        <i class="fas fa-bolt"></i>
+        <h3>Consumo Total</h3>
+        <p>0 kWh</p>
+    </div>
+    <div class="card">
+        <i class="fas fa-calendar-alt"></i>
+        <h3>Reservas</h3>
+        <p>0</p>
+    </div>
+    <div class="card">
+        <i class="fas fa-ticket-alt"></i>
+        <h3>Tickets</h3>
+        <p>0</p>
+    </div>
+</div>
+
+        <div class="chart">
+            <h2>Gráfico de Actividad</h2>
+            <canvas id="lineChart"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('lineChart').getContext('2d');
+        const lineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                datasets: [
+                    {
+                        label: 'Ingresos',
+                        data: [1200, 1500, 1100, 1800, 1700, 2000],
+                        borderColor: 'orange',
+                        fill: false
+                    },
+                    {
+                        label: 'Consumo',
+                        data: [300, 280, 350, 400, 370, 390],
+                        borderColor: 'blue',
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
