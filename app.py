@@ -1,22 +1,16 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, jsonify
+from flask_mail import Mail, Message
+from flask_login import LoginManager, login_required, login_user, logout_user, current_user, UserMixin
 import mysql.connector
 from mysql.connector import Error
 from werkzeug.security import generate_password_hash, check_password_hash
-import random, string
-from flask import send_file
+import random, string, secrets, datetime, re
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-from flask_mail import Mail, Message
-import mysql.connector
-from mysql.connector import Error
-from werkzeug.security import generate_password_hash, check_password_hash
-import secrets
-import datetime
-from flask import Flask
-from flask_mail import Mail
-from flask import request, jsonify, session
-import re
+from invitaciones import crear_invitacion, validar_codigo, marcar_codigo_como_usado
+from db import get_db_connection
+from models import Usuario
+
 
 app = Flask(__name__)
 app.secret_key = "supersecreto"  # Necesario para manejar sesiones
@@ -28,28 +22,58 @@ app.config['MAIL_USERNAME'] = 'vc3070934@gmail.com'   # 👉 tu correo
 app.config['MAIL_PASSWORD'] = 'fpnn mqpy itgk edhf'  # 👉 tu contraseña o app password
 app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
 
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'  # 👈 nombre de tu vista de login
+
+
+
 mail = Mail(app)
-# 🔹 Conexión a la base de datos
-def get_db_connection():
-    try:
-        connection = mysql.connector.connect(
-            host="127.0.0.1",
-            port=3306,
-            user="root",
-            password="123456",
-            database="bdedificio"
-        )
-        if connection.is_connected():
-            return connection
-    except Error as e:
-        print("❌ Error al conectar:", e)
-        return None
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM usuario WHERE id_usuario = %s", (user_id,))
+    data = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if data:
+        return Usuario(data)  # 👈 asegúrate de tener esta clase definida
+    return None
+
+@app.route('/enviar_invitacion', methods=['POST'])
+@login_required
+def enviar_invitacion():
+    if current_user.id_rol != 1:
+        abort(403)
+
+    correo = request.form['correo']
+    rol_destino = 'empleado'  # 👈 fijo para empleados
+    codigo = crear_invitacion(rol_destino)
+
+    mensaje = Message(
+        subject="Invitación para registrarte",
+        recipients=[correo],
+        body=f"""
+Hola,
+
+Has sido invitado a registrarte como empleado en la plataforma.
+Usa el siguiente código de invitación: {codigo}
+
+Ingresa a: http://localhost:5000/register
+""")
+    mail.send(mensaje)
+    from invitaciones import obtener_invitaciones_activas
+    codigos = obtener_invitaciones_activas()
+    return render_template("dashboard_admin.html", usuario=current_user, codigos=codigos)
+
 
 
 # 🔹 Generar Captcha aleatorio
 def generar_captcha():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
-
 
 # 🔹 Ruta para generar captcha en imagen
 @app.route("/captcha")
@@ -110,9 +134,10 @@ def login():
             conn.close()
 
         if user and check_password_hash(user["contrasena"], password):
-            session["usuario"] = user["nombre"]
+            usuario_obj = Usuario(user)
+            login_user(usuario_obj)
             flash(f"¡Bienvenido {user['nombre']}!", "success")
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("panel_admin"))
         else:
             flash("Usuario o contraseña incorrectos", "danger")
 
@@ -133,8 +158,14 @@ def es_correo_valido(correo):
 
     return dominio in dominios_permitidos
 
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    # Solo permitir acceso si el código está en sesión
+    codigo_invitacion = session.get("codigo_invitacion")
+    if not codigo_invitacion:
+        return redirect(url_for("verificar_codigo"))
+
     if request.method == "POST":
         nombre = request.form["nombre"]
         ap_paterno = request.form["ap_paterno"]
@@ -143,20 +174,17 @@ def register():
         telefono = request.form["telefono"]
         password = request.form["password"]
 
-        hashed_password = generate_password_hash(password)
-        id_rol = int(request.form["id_rol"]) 
-
         if not es_correo_valido(correo):
             flash("Formato de correo inválido ❌", "danger")
             return redirect(url_for("register"))
         if not es_contrasena_valida(password):
-            flash("La contraseña debe tener al menos 8 caracteres una mayuscula, minuscula,numero")
-            return redirect(url_for ("register"))
-        hashed_password=generate_password_hash(password)
-
+            flash("La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula y un número ❌", "danger")
+            return redirect(url_for("register"))
         if not es_telefono_valido(telefono):
             flash("El teléfono debe contener solo números (7 a 15 dígitos) ❌", "danger")
             return redirect(url_for("register"))
+
+        hashed_password = generate_password_hash(password)
         conn = get_db_connection()
         if not conn:
             flash("Error de conexión con la base de datos.", "danger")
@@ -170,6 +198,14 @@ def register():
                 return redirect(url_for("register"))
             cursor.close()
 
+            # Validar el código de invitación
+            from invitaciones import validar_codigo, marcar_codigo_como_usado
+            invitacion = validar_codigo(codigo_invitacion)
+            if not invitacion or invitacion["rol_destino"] != "empleado":
+                flash("Código inválido o no autorizado ❌", "danger")
+                return redirect(url_for("verificar_codigo"))
+            id_rol = 2  # Rol empleado
+
             cursor = conn.cursor()
             cursor.execute("""
                 INSERT INTO usuario (nombre, ap_paterno, ap_materno, correo, telefono, contrasena, id_rol)
@@ -178,6 +214,8 @@ def register():
 
             conn.commit()
             flash("Usuario registrado con éxito ✅. Ahora inicia sesión.", "success")
+            marcar_codigo_como_usado(codigo_invitacion)
+            session.pop("codigo_invitacion", None)
 
         except Error as e:
             print("❌ Error en register:", e)
@@ -190,6 +228,7 @@ def register():
         return redirect(url_for("login"))
 
     return render_template("register.html")
+
 def es_telefono_valido(telefono):
     return re.fullmatch(r"\d{7,15}", telefono) is not None
 
@@ -212,6 +251,14 @@ def dashboard():
         return render_template("dashboard_admin.html", usuario=session["usuario"])
     else:
         return redirect(url_for("login"))
+
+# 🔹 Panel Admin
+@app.route("/panel_admin")
+@login_required
+def panel_admin():
+    from invitaciones import obtener_invitaciones_activas
+    codigos = obtener_invitaciones_activas()
+    return render_template("dashboard_admin.html", usuario=current_user, codigos=codigos)
 
 
 # 🔹 Logout
@@ -261,6 +308,15 @@ def forgot_password():
 
     return render_template("forgot_password.html")
 
+@app.route('/generar_invitacion', methods=['POST'])
+@login_required
+def generar_invitacion():
+    if current_user.id_rol != 1:
+        abort(403)
+    rol_destino = request.form['rol_destino']
+    codigo = crear_invitacion(rol_destino)
+    flash(f"Código generado: {codigo} para rol {rol_destino}", "success")
+    return redirect('/panel_admin')
 
 # 🔹 Restablecer contraseña
 @app.route("/reset_password/<token>", methods=["GET", "POST"])
@@ -303,6 +359,21 @@ def verificar_captcha():
     captcha_correcto = session.get("captcha", "")
 
     return jsonify({"valido": captcha_ingresado == captcha_correcto})
+
+
+# 🔹 Verificar código de invitación antes del registro
+@app.route('/verificar_codigo', methods=['GET', 'POST'])
+def verificar_codigo():
+    if request.method == 'POST':
+        codigo = request.form['codigo'].strip()
+        from invitaciones import validar_codigo
+        invitacion = validar_codigo(codigo)
+        if invitacion:
+            session['codigo_invitacion'] = codigo
+            return redirect(url_for('register'))
+        else:
+            flash('Código inválido o ya usado ❌', 'danger')
+    return render_template('verificar_codigo.html')
 
 
 if __name__ == "__main__":

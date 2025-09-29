@@ -8,6 +8,7 @@
 </head>
 <body>
 
+
     <div class="sidebar">
         <h2>Panel</h2>
         <ul>
@@ -55,6 +56,46 @@
             <canvas id="lineChart"></canvas>
         </div>
     </div>
+
+    <div class="invitaciones">
+    <h2>Generar nuevo código de invitación</h2>
+    <form action="{{ url_for('generar_invitacion') }}" method="POST">
+        <label for="rol_destino">Rol destino:</label>
+        <select name="rol_destino" id="rol_destino" required>
+            <option value="empleado">Empleado</option>
+            <option value="admin">Administrador</option>
+        </select>
+        <button type="submit">Generar código</button>
+    </form>
+</div>
+<div class="lista-codigos">
+    <h2>Códigos activos</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Rol destino</th>
+                <th>Fecha de creación</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in codigos %}
+            <tr>
+                <td>{{ c.codigo }}</td>
+                <td>{{ c.rol_destino }}</td>
+                <td>{{ c.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h2>Enviar invitación por correo (solo empleados)</h2>
+<form action="{{ url_for('enviar_invitacion') }}" method="POST">
+    <label for="correo">Correo del empleado:</label>
+    <input type="email" name="correo" required>
+    <button type="submit">Enviar invitación</button>
+</form>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
