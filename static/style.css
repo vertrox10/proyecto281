@@ -62,19 +62,19 @@ body {
 
 /* ✏️ Íconos por tipo */
 .input-group.icon-user::before {
-    content: "👤";
+    content: "";
 }
 .input-group.icon-mail::before {
-    content: "📧";
+    content: "";
 }
 .input-group.icon-phone::before {
-    content: "📱";
+    content: "";
 }
 .input-group.icon-pass::before {
-    content: "🔒";
+    content: "";
 }
 .input-group.icon-role::before {
-    content: "🏷";
+    content: "";
 }
 
 /* 📌 Estilo base de todos los íconos */

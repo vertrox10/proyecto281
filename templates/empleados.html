@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Empleados Registrados</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="main">
+        <h1>Empleados Registrados</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Apellido Paterno</th>
+                    <th>Apellido Materno</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if empleados|length == 0 %}
+                <tr>
+                    <td colspan="5" style="text-align:center;">No hay empleados registrados.</td>
+                </tr>
+                {% else %}
+                {% for e in empleados %}
+                <tr>
+                    <td>{{ e.nombre }}</td>
+                    <td>{{ e.ap_paterno }}</td>
+                    <td>{{ e.ap_materno }}</td>
+                    <td>{{ e.correo }}</td>
+                    <td>{{ e.telefono }}</td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

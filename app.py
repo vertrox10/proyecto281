@@ -375,6 +375,16 @@ def verificar_codigo():
             flash('Código inválido o ya usado ❌', 'danger')
     return render_template('verificar_codigo.html')
 
+@app.route('/empleados')
+@login_required
+def empleados():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT nombre, ap_paterno, ap_materno, correo, telefono FROM usuario WHERE id_rol = 2")
+    empleados = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template('empleados.html', empleados=empleados)
 
 if __name__ == "__main__":
     app.run(debug=True)
