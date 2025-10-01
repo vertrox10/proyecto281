@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Usuarios Registrados</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_usuario.css')}}"> 
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_administrador.css')}}"> 
+    <style>
+        .logout-btn {
+            position: absolute;
+            top: 30px;
+            right: 40px;
+        }
+        body {
+            position: relative;
+        }
+        .table-container {
+            margin-bottom: 40px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Panel</h2>
+        <ul>
+            <li><a href="{{ url_for('panel_admin') }}">Dashboard</a></li>
+            <li><a href="#">Finanzas</a></li>
+            <li><a href="#">Consumos</a></li>
+            <li><a href="#">Reservas</a></li>
+            <li><a href="#">Tickets</a></li>
+            <li><a href="{{ url_for('usuarios') }}">Usuarios</a></li>
+        </ul>
+    </div>
+    <a href="{{ url_for('logout') }}" class="logout-btn">Cerrar sesión</a>
+
+    <div class="main-content">
+        <div class="table-container">
+            <div class="table-title">
+                Empleados
+                <a href="{{ url_for('generar_reporte_usuarios') }}" class="btn-reporte" style="float:right; margin-right:10px;">Generar reporte</a>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Apellido Paterno</th>
+                        <th>Apellido Materno</th>
+                        <th>Correo</th>
+                        <th>Teléfono</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                        {% if usuario.id_rol == 2 %}
+                        <tr>
+                            <td>{{ usuario.id }}</td>
+                            <td>{{ usuario.nombre }}</td>
+                            <td>{{ usuario.ap_paterno }}</td>
+                            <td>{{ usuario.ap_materno }}</td>
+                            <td>{{ usuario.correo }}</td>
+                            <td>{{ usuario.telefono }}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-container">
+            <div class="table-title">Residentes</div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Apellido Paterno</th>
+                        <th>Apellido Materno</th>
+                        <th>Correo</th>
+                        <th>Teléfono</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                        {% if usuario.id_rol == 3 %}
+                        <tr>
+                            <td>{{ usuario.id }}</td>
+                            <td>{{ usuario.nombre }}</td>
+                            <td>{{ usuario.ap_paterno }}</td>
+                            <td>{{ usuario.ap_materno }}</td>
+                            <td>{{ usuario.correo }}</td>
+                            <td>{{ usuario.telefono }}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
