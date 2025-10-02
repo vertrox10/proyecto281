@@ -1,0 +1,7 @@
+Flask==2.3.3
+Flask-Login==0.6.3
+Flask-Mail==0.9.1
+mysql-connector-python==8.1.0
+Werkzeug==2.3.7
+Pillow==10.0.1
+email-validator==2.0.0
