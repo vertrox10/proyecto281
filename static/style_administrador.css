@@ -1,3 +1,112 @@
+/* Botón cerrar sesión moderno */
+.logout-btn {
+    background: linear-gradient(90deg, #00bcd4 0%, #1976d2 100%);
+    color: #fff;
+    padding: 10px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1rem;
+    box-shadow: 0 2px 8px rgba(25, 118, 210, 0.10);
+    border: none;
+    outline: none;
+    transition: background 0.3s, box-shadow 0.3s, transform 0.2s;
+    display: inline-block;
+    margin-left: 12px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+}
+.logout-btn:hover, .logout-btn:focus {
+    background: linear-gradient(90deg, #1976d2 0%, #00bcd4 100%);
+    box-shadow: 0 4px 16px rgba(25, 118, 210, 0.18);
+    transform: translateY(-2px) scale(1.04);
+    color: #fff;
+    text-decoration: none;
+}
+/* Sidebar animación hamburguesa */
+.sidebar {
+    transition: width 0.3s cubic-bezier(.4,2,.6,1), min-width 0.3s cubic-bezier(.4,2,.6,1);
+}
+.sidebar-collapsed {
+    width: 60px !important;
+    min-width: 60px !important;
+    overflow-x: hidden;
+}
+.sidebar-collapsed ul li a {
+    text-align: center;
+}
+.sidebar-collapsed .sidebar-text {
+    display: none;
+}
+.sidebar-collapsed ul li a i {
+    font-size: 22px;
+    margin-right: 0;
+}
+.sidebar ul li a i {
+    margin-right: 10px;
+    font-size: 18px;
+    vertical-align: middle;
+}
+.sidebar ul li a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sidebar-collapsed img {
+    margin: 0 auto;
+    display: block;
+}
+/* Formulario de invitación por correo */
+.correo-invitacion-container {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    padding: 24px 32px 24px 32px;
+    margin: 30px auto 0 auto;
+    max-width: 500px;
+}
+.correo-invitacion-container h2 {
+    margin-bottom: 18px;
+    font-size: 22px;
+    font-weight: bold;
+    color: #263238;
+}
+.correo-invitacion-form {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.correo-invitacion-form label {
+    font-weight: 500;
+    color: #37474f;
+    font-size: 16px;
+}
+.correo-invitacion-form input[type="email"] {
+    padding: 7px 12px;
+    border: 1px solid #b0bec5;
+    border-radius: 5px;
+    font-size: 15px;
+    width: 220px;
+    outline: none;
+    transition: border 0.2s;
+}
+.correo-invitacion-form input[type="email"]:focus {
+    border: 1.5px solid #1976d2;
+}
+.correo-invitacion-form button {
+    background: #1976d2;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 18px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.correo-invitacion-form button:hover {
+    background: #1256a3;
+}
 /* Reset básico */
 * {
     margin: 0;
@@ -65,19 +174,7 @@ body {
     color: #37474f;
 }
 
-.logout-btn {
-    background-color: #00bcd4;
-    color: #fff;
-    padding: 8px 16px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    transition: background-color 0.3s;
-}
-
-.logout-btn:hover {
-    background-color: #0097a7;
-}
+/* .logout-btn eliminado para evitar que aparezca en la barra lateral */
 
 /* Overview cards */
 .overview {

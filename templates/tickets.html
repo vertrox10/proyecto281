@@ -1,12 +1,10 @@
 {% extends 'base.html' %}
-{% block title %}Panel de Reservas{% endblock %}
+{% block title %}Tickets{% endblock %}
 {% block content %}
     <div class="header" style="display: flex; align-items: center; gap: 18px;">
-        <h1 style="margin:0;">Panel de Reservas</h1>
+        <h1 style="margin:0;">Tickets</h1>
         <span style="margin-left:auto;"></span>
         <a href="{{ url_for('logout') }}" class="logout-btn">Cerrar sesión</a>
     </div>
-    <div class="body">
-        <p>Bienvenido, {{ usuario }}!</p>
-    </div>
+    <p>Contenido de la sección Tickets.</p>
 {% endblock %}

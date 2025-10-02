@@ -1,41 +1,37 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Empleados Registrados</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="main">
-        <h1>Empleados Registrados</h1>
-        <table>
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Apellido Paterno</th>
-                    <th>Apellido Materno</th>
-                    <th>Correo</th>
-                    <th>Teléfono</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if empleados|length == 0 %}
-                <tr>
-                    <td colspan="5" style="text-align:center;">No hay empleados registrados.</td>
-                </tr>
-                {% else %}
-                {% for e in empleados %}
-                <tr>
-                    <td>{{ e.nombre }}</td>
-                    <td>{{ e.ap_paterno }}</td>
-                    <td>{{ e.ap_materno }}</td>
-                    <td>{{ e.correo }}</td>
-                    <td>{{ e.telefono }}</td>
-                </tr>
-                {% endfor %}
-                {% endif %}
-            </tbody>
-        </table>
+{% extends 'base.html' %}
+{% block title %}Empleados Registrados{% endblock %}
+{% block content %}
+    <div class="header" style="display: flex; align-items: center; gap: 18px;">
+        <h1 style="margin:0;">Empleados Registrados</h1>
+        <span style="margin-left:auto;"></span>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Cerrar sesión</a>
     </div>
-</body>
-</html>
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Apellido Paterno</th>
+                <th>Apellido Materno</th>
+                <th>Correo</th>
+                <th>Teléfono</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if empleados|length == 0 %}
+            <tr>
+                <td colspan="5" style="text-align:center;">No hay empleados registrados.</td>
+            </tr>
+            {% else %}
+            {% for e in empleados %}
+            <tr>
+                <td>{{ e.nombre }}</td>
+                <td>{{ e.ap_paterno }}</td>
+                <td>{{ e.ap_materno }}</td>
+                <td>{{ e.correo }}</td>
+                <td>{{ e.telefono }}</td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+        </tbody>
+    </table>
+{% endblock %}

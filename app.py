@@ -1,4 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, jsonify, abort
+from flask_mail import Mail, Message
+from flask_login import LoginManager, login_required, login_user, logout_user, current_user, UserMixin
+import mysql.connector
+from mysql.connector import Error
+from werkzeug.security import generate_password_hash, check_password_hash
+import random, string, secrets, datetime, re
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
+from invitaciones import crear_invitacion, validar_codigo, marcar_codigo_como_usado
+from db import get_db_connection
 from flask_mail import Mail, Message
 from flask_login import LoginManager, login_required, login_user, logout_user, current_user, UserMixin
 import mysql.connector
@@ -12,8 +22,65 @@ from db import get_db_connection
 from models import Usuario
 
 
+
+
+
 app = Flask(__name__)
 app.secret_key = "supersecreto"  # Necesario para manejar sesiones
+
+# Rutas vacías para las secciones del menú
+@app.route('/finanzas')
+@login_required
+def finanzas():
+    return render_template('finanzas.html')
+
+@app.route('/consumos')
+@login_required
+def consumos():
+    return render_template('consumos.html')
+
+@app.route('/reservas')
+@login_required
+def reservas():
+    return render_template('reservas.html')
+
+@app.route('/tickets')
+@login_required
+def tickets():
+    return render_template('tickets.html')
+
+# Ruta para cambiar el rol de un usuario
+@app.route('/cambiar_rol', methods=['POST'])
+@login_required
+def cambiar_rol():
+    id_usuario = request.form.get('id_usuario')
+    nuevo_rol = request.form.get('nuevo_rol')
+    if not id_usuario or not nuevo_rol:
+        flash('Datos incompletos para cambiar el rol.', 'danger')
+        return redirect(url_for('usuarios'))
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE usuario SET id_rol = %s WHERE id_usuario = %s", (nuevo_rol, id_usuario))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        flash('Rol actualizado correctamente.', 'success')
+    except Exception as e:
+        flash(f'Error al actualizar el rol: {e}', 'danger')
+    return redirect(url_for('usuarios'))
+
+# Ruta para usuarios (debe ir después de crear app)
+@app.route('/usuarios')
+@login_required
+def usuarios():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT id_usuario, nombre, ap_paterno, ap_materno, correo, telefono, id_rol FROM usuario WHERE id_rol = 2")
+    empleados = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return render_template('usuarios.html', empleados=empleados)
 
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
