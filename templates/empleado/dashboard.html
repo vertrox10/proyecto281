@@ -1,0 +1,32 @@
+{% extends "empleado/base_empleado.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='empleado/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<h1>Panel Principal</h1>
+<div class="cards-container">
+    <div class="card">
+        <i class="fas fa-coins"></i>
+        <h3>Finanzas</h3>
+        <p>Ver movimientos recientes</p>
+    </div>
+    <div class="card">
+        <i class="fas fa-bolt"></i>
+        <h3>Consumos</h3>
+        <p>Monitoreo en tiempo real</p>
+    </div>
+    <div class="card">
+        <i class="fas fa-tools"></i>
+        <h3>Mantenimientos</h3>
+        <p>Ver próximos servicios</p>
+    </div>
+    <div class="card">
+        <i class="fas fa-ticket-alt"></i>
+        <h3>Tickets</h3>
+        <p>Seguimiento de incidencias</p>
+    </div>
+</div>
+{% endblock %}

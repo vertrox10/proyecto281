@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Panel Empleado{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='empleado/base_empleado.css') }}">
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <i class="fas fa-building"></i>
+            <h2>Edificio</h2>
+        </div>
+        <ul class="menu">
+            <li><a href="{{ url_for('empleados.dashboard') }}"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li><a href="{{ url_for('empleados.tickets') }}"><i class="fas fa-ticket-alt"></i> Tickets</a></li>
+            <li><a href="{{ url_for('empleados.reportes') }}"><i class="fas fa-file-alt"></i> Reportes</a></li>
+            <li><a href="{{ url_for('empleados.consumos') }}"><i class="fas fa-chart-line"></i> Consumos</a></li>
+            <li><a href="{{ url_for('empleados.mantenimientos') }}"><i class="fas fa-tools"></i> Mantenimientos</a></li>
+        </ul>
+        <a href="{{ url_for('auth.logout') }}" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <div class="main-content">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+
+</html>

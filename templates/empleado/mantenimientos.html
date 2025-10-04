@@ -1,0 +1,30 @@
+{% extends "empleado/base_empleado.html" %}
+{% block title %}Mantenimientos{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='empleado/mantenimientos.css') }}">
+{% endblock %}
+
+{% block content %}
+<h1>Mantenimientos Programados</h1>
+<table class="mant-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Equipo</th>
+            <th>Tipo</th>
+            <th>Fecha</th>
+            <th>Especialista</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>01</td>
+            <td>Ascensor</td>
+            <td>Preventivo</td>
+            <td>10/10/2025</td>
+            <td>Juan Pérez</td>
+        </tr>
+    </tbody>
+</table>
+{% endblock %}

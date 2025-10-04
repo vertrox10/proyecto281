@@ -1,0 +1,18 @@
+.mant-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.mant-table th, .mant-table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+}
+
+.mant-table th {
+  background: #20344c;
+  color: white;
+}
+
+.mant-table tr:nth-child(even) {
+  background: #f9f9f9;
+}

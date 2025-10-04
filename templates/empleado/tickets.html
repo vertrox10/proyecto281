@@ -1,0 +1,77 @@
+{% extends "empleado/base_empleado.html" %}
+
+{% block title %}Mis Tickets{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='empleado/tickets.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Mis Tickets Asignados</h1>
+
+    <!-- Estadísticas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Total Tickets</h3>
+            <p>{{ tickets|length }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>En Progreso</h3>
+            <p>{{ tickets|selectattr("3", "equalto", "en_progreso")|list|length }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Abiertos</h3>
+            <p>{{ tickets|selectattr("3", "equalto", "abierto")|list|length }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Cerrados</h3>
+            <p>{{ tickets|selectattr("3", "equalto", "cerrado")|list|length }}</p>
+        </div>
+    </div>
+
+    <!-- Tabla de tickets -->
+    <div class="table-container">
+        <table class="ticket-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Descripción</th>
+                    <th>Prioridad</th>
+                    <th>Estado</th>
+                    <th>Fecha Emisión</th>
+                    <th>Fecha Finalización</th>
+                    <th>Departamento</th>
+                    <th>Residente</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ticket in tickets %}
+                <tr>
+                    <td>{{ ticket[0] }}</td>
+                    <td>{{ ticket[1] }}</td>
+                    <td>
+                        <span class="prioridad prioridad-{{ ticket[2] }}">
+                            {{ ticket[2]|upper }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="estado estado-{{ ticket[3] }}">
+                            {{ ticket[3]|replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                    <td>{{ ticket[4] }}</td>
+                    <td>{{ ticket[5] if ticket[5] else 'Pendiente' }}</td>
+                    <td>Piso {{ ticket[6] }} - {{ ticket[7] }}</td>
+                    <td>{{ ticket[8] }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="no-tickets">No hay tickets asignados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

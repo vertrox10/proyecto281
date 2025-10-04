@@ -1,0 +1,27 @@
+.report-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.report-card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  flex: 1;
+  min-width: 250px;
+}
+
+.report-card button {
+  background: #20344c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.report-card button:hover {
+  background: #35597a;
+}

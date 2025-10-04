@@ -40,7 +40,7 @@ def login():
                 if usuario.id_rol == 3:  # Residente
                     return redirect(url_for("auth.ingresar_base"))
                 elif usuario.id_rol == 2:  # Empleado
-                    return redirect(url_for("auth.ingresar_base_empleado"))
+                   return redirect(url_for("empleados.dashboard"))
                 elif usuario.id_rol == 1:  # Administrador
                     return redirect(url_for("admin.panel_admin"))
                 else:

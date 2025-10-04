@@ -1,0 +1,22 @@
+{% extends "empleado/base_empleado.html" %}
+{% block title %}Reportes{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='empleado/reportes.css') }}">
+{% endblock %}
+
+{% block content %}
+<h1>Reportes de Actividad</h1>
+<div class="report-container">
+    <div class="report-card">
+        <h3>Reporte Financiero</h3>
+        <p>Descargar informe mensual en PDF</p>
+        <button>Descargar</button>
+    </div>
+    <div class="report-card">
+        <h3>Reporte de Consumos</h3>
+        <p>Generar informe por fechas</p>
+        <button>Generar</button>
+    </div>
+</div>
+{% endblock %}

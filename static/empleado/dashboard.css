@@ -1,0 +1,23 @@
+.cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card i {
+  font-size: 2rem;
+  color: #20344c;
+  margin-bottom: 10px;
+}
+
+.card:hover {
+  background: #f0f4f8;
+}

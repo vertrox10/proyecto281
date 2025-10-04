@@ -18,11 +18,13 @@ login_manager.login_view = "auth.login"
 from routes.auth import auth_bp
 from routes.admin import admin_bp
 from routes.password import password_bp
+from routes.empleados import empleados_bp   # 🟢 <--- AÑADIR ESTA LÍNEA
 
+# Registrar blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(password_bp)
-
+app.register_blueprint(empleados_bp, url_prefix="/empleados")  # 🟢 <--- AÑADIR ESTA LÍNEA
 
 # Flask-Login
 @login_manager.user_loader

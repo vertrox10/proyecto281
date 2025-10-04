@@ -1,0 +1,23 @@
+.consumo-container {
+  display: flex;
+  gap: 30px;
+}
+
+.consumo-item {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  flex: 1;
+  text-align: center;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+.bar {
+  height: 20px;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.agua { background: #5bc0de; width: 70%; }
+.luz { background: #f0ad4e; width: 50%; }
+.gas { background: #d9534f; width: 40%; }
