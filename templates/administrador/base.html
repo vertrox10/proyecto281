@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Panel{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style_administrador.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+  <div class="sidebar" id="sidebar">
+    <div class="menu-hamburguesa" style="display:flex;justify-content:center;align-items:center;margin-bottom:24px;">
+      <div id="menu-toggle" class="menu-icon-hamburguesa">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+    <ul>
+      <li><a href="{{ url_for('admin.panel_admin') }}"><i class="fas fa-home"></i> <span
+            class="sidebar-text">Dashboard</span></a></li>
+      <li><a href="{{ url_for('admin.finanzas') }}"><i class="fas fa-coins"></i> <span
+            class="sidebar-text">Finanzas</span></a></li>
+      <li><a href="{{ url_for('admin.consumos') }}"><i class="fas fa-bolt"></i> <span
+            class="sidebar-text">Consumos</span></a></li>
+      <li><a href="{{ url_for('admin.reservas') }}"><i class="fas fa-calendar-alt"></i> <span
+            class="sidebar-text">Reservas</span></a></li>
+      <li><a href="{{ url_for('admin.tickets') }}"><i class="fas fa-ticket-alt"></i> <span
+            class="sidebar-text">Tickets</span></a></li>
+      <li><a href="{{ url_for('admin.usuarios') }}"><i class="fas fa-users"></i> <span
+            class="sidebar-text">Usuarios</span></a></li>
+    </ul>
+  </div>
+
+  <div class="main-content">
+    {% block content %}{% endblock %}
+  </div>
+
+  <style>
+    .menu-icon-hamburguesa {
+      width: 36px;
+      height: 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      gap: 5px;
+    }
+
+    .menu-icon-hamburguesa span {
+      display: block;
+      width: 32px;
+      height: 4px;
+      background: #fff;
+      border-radius: 2px;
+    }
+  </style>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

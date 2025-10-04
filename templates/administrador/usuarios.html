@@ -1,0 +1,118 @@
+{% extends 'administrador/base.html' %}
+
+{% block title %}Usuarios Registrados{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='style_usuario.css')}}">
+{% endblock %}
+
+{% block content %}
+<div class="header" style="display: flex; align-items: center; gap: 18px; margin-bottom: 2rem;">
+    <h1 style="margin:0;">Usuarios Registrados</h1>
+    <span style="margin-left:auto;"></span>
+    <a href="{{ url_for('admin.logout') }}" class="logout-btn">Cerrar sesión</a>
+</div>
+
+<div class="main-content">
+    <!-- Tabla de Administradores y Empleados -->
+    <div class="table-container">
+        <div class="table-title">
+            Administradores y Empleados
+        </div>
+        <form method="post" action="{{ url_for('admin.cambiar_rol') }}"> <!-- Cambiar esta ruta -->
+            <table class="data-table editable-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Apellido Paterno</th>
+                        <th>Apellido Materno</th>
+                        <th>Correo</th>
+                        <th>Teléfono</th>
+                        <th>Rol</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    {% if usuario.id_rol in [1, 2] %} <!-- Solo administradores y empleados -->
+                    <tr>
+                        <td>{{ usuario.id_usuario }}</td>
+                        <td>{{ usuario.nombre }}</td>
+                        <td>{{ usuario.ap_paterno }}</td>
+                        <td>{{ usuario.ap_materno }}</td>
+                        <td>{{ usuario.correo }}</td>
+                        <td>{{ usuario.telefono }}</td>
+                        <td>
+                            <div class="rol-options">
+                                <input type="hidden" name="id_usuario_{{ loop.index }}"
+                                    value="{{ usuario.id_usuario }}">
+                                <div class="rol-option {% if usuario.id_rol == 1 %}selected{% endif %}"
+                                    onclick="selectRol(this, '{{ loop.index }}', 1)">Administrador</div>
+                                <div class="rol-option {% if usuario.id_rol == 2 %}selected{% endif %}"
+                                    onclick="selectRol(this, '{{ loop.index }}', 2)">Empleado</div>
+                                <input type="hidden" name="nuevo_rol_{{ loop.index }}" id="rol-input-{{ loop.index }}"
+                                    value="{{ usuario.id_rol }}">
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div style="text-align:right;margin-top:10px;">
+                <button type="submit" class="guardar-btn">Guardar Cambios de Rol</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabla de Residentes -->
+    <div class="table-container">
+        <div class="table-title">Residentes</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Apellido Paterno</th>
+                    <th>Apellido Materno</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                    <th>Rol</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                {% if usuario.id_rol == 3 %} <!-- Solo residentes -->
+                <tr>
+                    <td>{{ usuario.id_usuario }}</td>
+                    <td>{{ usuario.nombre }}</td>
+                    <td>{{ usuario.ap_paterno }}</td>
+                    <td>{{ usuario.ap_materno }}</td>
+                    <td>{{ usuario.correo }}</td>
+                    <td>{{ usuario.telefono }}</td>
+                    <td>Residente</td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function selectRol(element, idx, rol) {
+        // Quitar selección previa en esta fila
+        let parent = element.parentElement;
+        let options = parent.querySelectorAll('.rol-option');
+        options.forEach(opt => opt.classList.remove('selected'));
+
+        // Seleccionar actual
+        element.classList.add('selected');
+
+        // Cambiar valor del input oculto
+        document.getElementById('rol-input-' + idx).value = rol;
+    }
+</script>
+{% endblock %}

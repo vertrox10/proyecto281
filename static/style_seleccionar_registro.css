@@ -1,0 +1,97 @@
+/* Reset básico */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* 🎨 Fondo general */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #6BAE75, #F0F4F8);
+    min-height: 100vh;
+    height: auto;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+/* Contenedor principal */
+.container {
+    text-align: center;
+}
+
+/* Título */
+.container h2 {
+    margin-bottom: 40px;
+    font-size: 2rem;
+    color: #2c3e50;
+}
+
+/* Contenedor de cartas */
+.cards {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+}
+
+/* Carta individual */
+.card {
+    background-color: #ffffff;
+    width: 220px;
+    padding: 30px 20px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+/* Icono de carta */
+.card i {
+    margin-bottom: 15px;
+}
+
+/* Título de carta */
+.card h3 {
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* Colores según rol */
+.card.admin {
+    background-color: #e74c3c; /* rojo */
+}
+
+.card.empleado {
+    background-color: #3498db; /* azul */
+}
+
+.card.residente {
+    background-color: #2ecc71; /* verde */
+}
+
+/* Hover efecto */
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+    .cards {
+        flex-direction: row;
+        justify-content: center;
+    }
+}

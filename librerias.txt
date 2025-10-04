@@ -1,7 +1,7 @@
 Flask==2.3.3
 Flask-Login==0.6.3
 Flask-Mail==0.9.1
-mysql-connector-python==8.1.0
+pg8000==1.30.4
 Werkzeug==2.3.7
-Pillow==10.0.1
+Pillow==10.1.0  # ← Versión más reciente
 email-validator==2.0.0
