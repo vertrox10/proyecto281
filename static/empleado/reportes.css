@@ -1,27 +1,121 @@
-.report-container {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
+/* reportes.css */
+.reportes-header {
+    margin-bottom: 30px;
 }
 
-.report-card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-  flex: 1;
-  min-width: 250px;
+.reporte-section {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border: 1px solid var(--beige-suave);
 }
 
-.report-card button {
-  background: #20344c;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
+.reporte-section h3 {
+    color: var(--azul-profundo);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 2px solid var(--durazno-suave);
+    padding-bottom: 10px;
 }
 
-.report-card button:hover {
-  background: #35597a;
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.stat-card.large {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 20px;
+    background: var(--gris-claro);
+    border-radius: 8px;
+    border: 1px solid var(--beige-suave);
+}
+
+.stat-card.large .stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--celeste-claro);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--azul-profundo);
+    font-size: 1.5rem;
+}
+
+.stat-content h4 {
+    margin: 0 0 15px 0;
+    color: var(--azul-profundo);
+}
+
+.stat-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--beige-suave);
+}
+
+.stat-item:last-child {
+    border-bottom: none;
+}
+
+.stat-label {
+    color: var(--marron-oscuro);
+    font-weight: 500;
+}
+
+.stat-value {
+    color: var(--azul-profundo);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.charts-placeholder {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.chart-container p {
+    margin: 0 0 10px 0;
+    color: var(--verde-oliva);
+    font-weight: 600;
+}
+
+.chart-placeholder {
+    height: 200px;
+    background: var(--gris-claro);
+    border: 2px dashed var(--beige-suave);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--verde-oliva);
+    gap: 10px;
+}
+
+.chart-placeholder i {
+    font-size: 2rem;
+    opacity: 0.5;
+}
+
+.export-actions {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
 }

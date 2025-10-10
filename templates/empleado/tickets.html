@@ -7,8 +7,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1>Mis Tickets Asignados</h1>
+<div class="tickets-header">
+    <h1><i class="fas fa-ticket-alt"></i> Gestión de Tickets</h1>
+    <p>Gestiona y da seguimiento a los tickets asignados</p>
+</div>
 
     <!-- Estadísticas como en la imagen -->
     <div class="stats-section">
@@ -88,4 +90,116 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- Lista de Tickets -->
+<div class="tickets-container">
+    {% if tickets %}
+    <div class="tickets-grid">
+        {% for ticket in tickets %}
+        <div class="ticket-card" data-estado="{{ ticket[3] }}" data-prioridad="{{ ticket[2] }}"
+            data-id="{{ ticket[0] }}">
+            <div class="ticket-header">
+                <h3>Ticket #{{ ticket[0] }}</h3>
+                <span class="priority-badge priority-{{ ticket[2] }}">{{ ticket[2]|upper }}</span>
+            </div>
+
+            <div class="ticket-content">
+                <p class="ticket-desc">{{ ticket[1] }}</p>
+
+                <div class="ticket-info">
+                    <div class="info-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Área: {{ ticket[6] }}</span> <!-- ticket[6] ahora es area_comun -->
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-clock"></i>
+                        <span>Emisión: {{ ticket[4] }}</span>
+                    </div>
+                    {% if ticket[5] %}
+                    <div class="info-item">
+                        <i class="fas fa-flag-checkered"></i>
+                        <span>Finalización: {{ ticket[5] }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="ticket-footer">
+                <span class="status-badge status-{{ ticket[3] }}">{{ ticket[3]|replace('_', ' ')|title }}</span>
+                <div class="ticket-actions">
+                    {% if ticket[3] == 'abierto' %}
+                    <button class="btn btn-primary btn-small tomar-ticket" data-id="{{ ticket[0] }}">
+                        <i class="fas fa-play"></i> Tomar
+                    </button>
+                    {% elif ticket[3] == 'en_progreso' %}
+                    <button class="btn btn-success btn-small completar-ticket" data-id="{{ ticket[0] }}">
+                        <i class="fas fa-check"></i> Completar
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-inbox"></i>
+        <h3>No hay tickets asignados</h3>
+        <p>No tienes tickets asignados en este momento.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Event listeners para los botones
+    document.addEventListener('DOMContentLoaded', function () {
+        // Botones de tomar ticket
+        document.querySelectorAll('.tomar-ticket').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const ticketId = this.getAttribute('data-id');
+                cambiarEstado(ticketId, 'en_progreso');
+            });
+        });
+
+        // Botones de completar ticket
+        document.querySelectorAll('.completar-ticket').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const ticketId = this.getAttribute('data-id');
+                cambiarEstado(ticketId, 'cerrado');
+            });
+        });
+
+        // Filtros
+        document.getElementById('filter-estado').addEventListener('change', filtrarTickets);
+        document.getElementById('filter-prioridad').addEventListener('change', filtrarTickets);
+    });
+
+    function cambiarEstado(ticketId, nuevoEstado) {
+        if (confirm('¿Estás seguro de cambiar el estado del ticket?')) {
+            // Aquí iría la llamada AJAX para cambiar el estado
+            alert('Cambiando ticket ' + ticketId + ' a estado: ' + nuevoEstado);
+            // Recargar la página para ver los cambios
+            setTimeout(function () {
+                location.reload();
+            }, 1000);
+        }
+    }
+
+    function filtrarTickets() {
+        const estado = document.getElementById('filter-estado').value;
+        const prioridad = document.getElementById('filter-prioridad').value;
+
+        document.querySelectorAll('.ticket-card').forEach(function (card) {
+            const cardEstado = card.getAttribute('data-estado');
+            const cardPrioridad = card.getAttribute('data-prioridad');
+
+            const mostrar = (estado === 'todos' || cardEstado === estado) &&
+                (prioridad === 'todos' || cardPrioridad === prioridad);
+
+            card.style.display = mostrar ? 'block' : 'none';
+        });
+    }
+</script>
 {% endblock %}
