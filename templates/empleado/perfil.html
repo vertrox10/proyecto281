@@ -1,0 +1,121 @@
+{% extends "empleado/base_empleado.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='empleado/perfil.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+    <h1><i class="fas fa-user-circle"></i> Mi Perfil</h1>
+    <p>Gestiona tu información personal y profesional</p>
+</div>
+
+<div class="profile-container">
+    <!-- Foto de Perfil -->
+    <div class="profile-section">
+        <div class="profile-photo-section">
+            <img src="{{ url_for('static', filename='img/default-avatar.jpeg') }}" alt="Foto de perfil"
+                class="profile-photo">
+            <div class="photo-actions">
+                <button class="btn btn-primary btn-small">
+                    <i class="fas fa-camera"></i> Cambiar Foto
+                </button>
+                <button class="btn btn-secondary btn-small">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información Personal -->
+    <div class="profile-section">
+        <h3><i class="fas fa-id-card"></i> Información Personal</h3>
+        <div class="profile-info">
+            <div class="info-group">
+                <label>Nombre completo:</label>
+                <span>{{ empleado.nombre }} {{ empleado.ap_paterno }} {{ empleado.ap_materno }}</span>
+            </div>
+            <div class="info-group">
+                <label>Correo electrónico:</label>
+                <span>{{ empleado.correo }}</span>
+            </div>
+            <div class="info-group">
+                <label>Teléfono:</label>
+                <span>{{ empleado.telefono if empleado.telefono else 'No registrado' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información Profesional -->
+    <div class="profile-section">
+        <h3><i class="fas fa-briefcase"></i> Información Profesional</h3>
+        <div class="profile-info">
+            <div class="info-group">
+                <label>Puesto:</label>
+                <span>{{ empleado.puesto }}</span>
+            </div>
+            <div class="info-group">
+                <label>Fecha de contratación:</label>
+                <span>
+                    {% if empleado.fecha_contratacion %}
+                    {{ empleado.fecha_contratacion.strftime('%d/%m/%Y') }}
+                    {% else %}
+                    No especificada
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-group">
+                <label>Salario:</label>
+                <span>
+                    {% if empleado.salario %}
+                    {{ "Bs. {:,.2f}".format(empleado.salario) }}
+                    {% else %}
+                    No especificado
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas de Trabajo -->
+    <div class="profile-section">
+        <h3><i class="fas fa-chart-line"></i> Mis Estadísticas</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ tickets_completados }}</div>
+                <div class="stat-label">Tickets Completados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ mantenimientos_realizados }}</div>
+                <div class="stat-label">Mantenimientos Realizados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ tickets_pendientes }}</div>
+                <div class="stat-label">Tickets Pendientes</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="profile-actions">
+        <button class="btn btn-primary" onclick="editarPerfil()">
+            <i class="fas fa-edit"></i> Editar Información
+        </button>
+        <button class="btn btn-secondary" onclick="cambiarPassword()">
+            <i class="fas fa-key"></i> Cambiar Contraseña
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function editarPerfil() {
+        alert('Funcionalidad de edición en desarrollo...');
+    }
+
+    function cambiarPassword() {
+        alert('Funcionalidad de cambio de contraseña en desarrollo...');
+    }
+</script>
+{% endblock %}

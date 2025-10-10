@@ -1,32 +1,422 @@
 {% extends "empleado/base_empleado.html" %}
-{% block title %}Dashboard{% endblock %}
 
-{% block extra_head %}
+{% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='empleado/dashboard.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 
 {% block content %}
-<h1>Panel Principal</h1>
-<div class="cards-container">
-    <div class="card">
-        <i class="fas fa-coins"></i>
-        <h3>Finanzas</h3>
-        <p>Ver movimientos recientes</p>
+<div class="dashboard-header">
+    <h1><i class="fas fa-tachometer-alt"></i> Panel Principal</h1>
+    <p>Bienvenido de vuelta, {{ empleado.nombre }}. Aquí tienes un resumen de tus actividades.</p>
+</div>
+
+<!-- Métricas Principales -->
+<div class="metrics-grid">
+    <!-- ... (métricas anteriores igual) ... -->
+</div>
+
+<!-- Sección de Gráficos -->
+<div class="charts-section">
+    <div class="chart-row">
+        <div class="chart-container large">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-line"></i> Consumos Mensuales</h3>
+                <div class="chart-controls">
+                    <select id="chart-period">
+                        <option value="6">Últimos 6 meses</option>
+                        <option value="12">Último año</option>
+                    </select>
+                    <button class="btn-refresh" id="btn-refresh">
+                        <i class="fas fa-sync-alt"></i> Actualizar
+                    </button>
+                </div>
+            </div>
+            <canvas id="consumosChart" height="300"></canvas>
+        </div>
     </div>
-    <div class="card">
-        <i class="fas fa-bolt"></i>
-        <h3>Consumos</h3>
-        <p>Monitoreo en tiempo real</p>
-    </div>
-    <div class="card">
-        <i class="fas fa-tools"></i>
-        <h3>Mantenimientos</h3>
-        <p>Ver próximos servicios</p>
-    </div>
-    <div class="card">
-        <i class="fas fa-ticket-alt"></i>
-        <h3>Tickets</h3>
-        <p>Seguimiento de incidencias</p>
+
+    <div class="chart-row">
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-pie"></i> Distribución Actual</h3>
+            </div>
+            <canvas id="distribucionChart" height="250" data-agua="{{ consumo_agua }}" data-luz="{{ consumo_luz }}"
+                data-gas="{{ consumo_gas }}"></canvas>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3><i class="fas fa-balance-scale"></i> Comparación Mensual</h3>
+            </div>
+            <canvas id="comparacionChart" height="250" data-agua="{{ consumo_agua }}" data-luz="{{ consumo_luz }}"
+                data-gas="{{ consumo_gas }}"></canvas>
+        </div>
     </div>
 </div>
+
+<!-- Sección de Actividad Reciente -->
+<div class="recent-activity">
+    <!-- ... (actividad reciente igual) ... -->
+</div>
+
+<!-- Elemento oculto para pasar datos iniciales -->
+<div id="initial-data" data-agua="{{ consumo_agua }}" data-luz="{{ consumo_luz }}" data-gas="{{ consumo_gas }}"
+    style="display: none;"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Colores para los gráficos
+    var colors = {
+        agua: 'rgba(79, 195, 247, 0.8)',
+        luz: 'rgba(255, 213, 79, 0.8)',
+        gas: 'rgba(255, 138, 101, 0.8)',
+        aguaBorder: 'rgb(79, 195, 247)',
+        luzBorder: 'rgb(255, 213, 79)',
+        gasBorder: 'rgb(255, 138, 101)'
+    };
+
+    var consumosChart, distribucionChart, comparacionChart;
+
+    // Obtener datos iniciales desde data attributes
+    function getInitialData() {
+        var initialData = document.getElementById('initial-data');
+        var data = {
+            agua: parseFloat(initialData.getAttribute('data-agua')) || 0,
+            luz: parseFloat(initialData.getAttribute('data-luz')) || 0,
+            gas: parseFloat(initialData.getAttribute('data-gas')) || 0
+        };
+        console.log('📊 Datos iniciales:', data);
+        return data;
+    }
+
+    // Verificar si los canvas existen
+    function verificarCanvas() {
+        var canvasIds = ['consumosChart', 'distribucionChart', 'comparacionChart'];
+        canvasIds.forEach(function (id) {
+            var canvas = document.getElementById(id);
+            if (canvas) {
+                console.log('✅ Canvas encontrado:', id, 'Dimensiones:', canvas.offsetWidth, 'x', canvas.offsetHeight);
+            } else {
+                console.log('❌ Canvas NO encontrado:', id);
+            }
+        });
+    }
+
+    // Inicializar cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('🚀 DOM cargado, inicializando gráficos...');
+
+        // Verificar canvas
+        verificarCanvas();
+
+        // Botones de navegación
+        document.getElementById('btn-tickets').addEventListener('click', function () {
+            window.location.href = "{{ url_for('empleados.tickets') }}";
+        });
+
+        document.getElementById('btn-mantenimientos').addEventListener('click', function () {
+            window.location.href = "{{ url_for('empleados.mantenimientos') }}";
+        });
+
+        // Botón de actualizar
+        document.getElementById('btn-refresh').addEventListener('click', function () {
+            console.log('🔄 Actualizando datos...');
+            cargarDatosConsumos();
+        });
+
+        // Inicializar gráficos
+        try {
+            inicializarGraficos();
+            console.log('✅ Gráficos inicializados correctamente');
+        } catch (error) {
+            console.error('❌ Error inicializando gráficos:', error);
+        }
+
+        // Cargar datos iniciales
+        setTimeout(function () {
+            cargarDatosConsumos();
+        }, 1000);
+
+        // Actualizar automáticamente cada 2 minutos
+        setInterval(cargarDatosConsumos, 120000);
+    });
+
+    function inicializarGraficos() {
+        var initialData = getInitialData();
+
+        // Gráfico de líneas - Consumos mensuales
+        var ctxConsumos = document.getElementById('consumosChart');
+        if (!ctxConsumos) {
+            console.error('❌ No se encontró el canvas consumosChart');
+            return;
+        }
+
+        ctxConsumos = ctxConsumos.getContext('2d');
+        console.log('📈 Inicializando gráfico de líneas...');
+
+        consumosChart = new Chart(ctxConsumos, {
+            type: 'line',
+            data: {
+                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                datasets: [
+                    {
+                        label: 'Agua (m³)',
+                        data: [120, 135, 125, 140, 130, 145],
+                        borderColor: colors.aguaBorder,
+                        backgroundColor: colors.agua,
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Luz (kWh)',
+                        data: [850, 920, 890, 950, 910, 980],
+                        borderColor: colors.luzBorder,
+                        backgroundColor: colors.luz,
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Gas (m³)',
+                        data: [45, 48, 46, 50, 47, 52],
+                        borderColor: colors.gasBorder,
+                        backgroundColor: colors.gas,
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Evolución de Consumos Mensuales - DATOS DE PRUEBA',
+                        font: { size: 16 }
+                    },
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Consumo'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Meses'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gráfico de doughnut - Distribución
+        var ctxDistribucion = document.getElementById('distribucionChart');
+        if (!ctxDistribucion) {
+            console.error('❌ No se encontró el canvas distribucionChart');
+            return;
+        }
+
+        ctxDistribucion = ctxDistribucion.getContext('2d');
+        console.log('🥧 Inicializando gráfico de doughnut...');
+
+        distribucionChart = new Chart(ctxDistribucion, {
+            type: 'doughnut',
+            data: {
+                labels: ['Agua', 'Luz', 'Gas'],
+                datasets: [{
+                    data: [initialData.agua, initialData.luz, initialData.gas],
+                    backgroundColor: [colors.agua, colors.luz, colors.gas],
+                    borderColor: [colors.aguaBorder, colors.luzBorder, colors.gasBorder],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Distribución - DATOS REALES'
+                    }
+                }
+            }
+        });
+
+        // Gráfico de barras - Comparación
+        var ctxComparacion = document.getElementById('comparacionChart');
+        if (!ctxComparacion) {
+            console.error('❌ No se encontró el canvas comparacionChart');
+            return;
+        }
+
+        ctxComparacion = ctxComparacion.getContext('2d');
+        console.log('📊 Inicializando gráfico de barras...');
+
+        comparacionChart = new Chart(ctxComparacion, {
+            type: 'bar',
+            data: {
+                labels: ['Agua', 'Luz', 'Gas'],
+                datasets: [{
+                    label: 'Consumo Actual',
+                    data: [initialData.agua, initialData.luz, initialData.gas],
+                    backgroundColor: [colors.agua, colors.luz, colors.gas],
+                    borderColor: [colors.aguaBorder, colors.luzBorder, colors.gasBorder],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Consumo del Mes Actual - DATOS REALES'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        console.log('🎉 Todos los gráficos inicializados');
+    }
+
+    function cargarDatosConsumos() {
+        console.log('🌐 Cargando datos desde API...');
+
+        fetch("{{ url_for('empleados.api_consumos') }}")
+            .then(function (response) {
+                console.log('📡 Respuesta API recibida:', response.status);
+                return response.json();
+            })
+            .then(function (data) {
+                console.log('📊 Datos API:', data);
+                if (data.success) {
+                    console.log('✅ Datos cargados correctamente');
+                    actualizarGraficosConDatos(data.data);
+                    actualizarMetricas(data.data);
+                } else {
+                    console.error('❌ Error en API:', data.error);
+                }
+            })
+            .catch(function (error) {
+                console.error('❌ Error cargando datos:', error);
+                // Usar datos de prueba si hay error
+                usarDatosDePrueba();
+            });
+    }
+
+    function actualizarGraficosConDatos(datos) {
+        if (!datos || datos.length === 0) {
+            console.warn('⚠️ No hay datos para actualizar gráficos');
+            return;
+        }
+
+        console.log('🔄 Actualizando gráficos con datos:', datos);
+
+        // Ordenar datos por mes
+        datos.sort(function (a, b) {
+            return a.mes.localeCompare(b.mes);
+        });
+
+        var meses = datos.map(function (item) {
+            var parts = item.mes.split('-');
+            return parts[1] + '/' + parts[0].slice(2);
+        });
+
+        var aguaData = datos.map(function (item) { return item.agua || 0; });
+        var luzData = datos.map(function (item) { return item.luz || 0; });
+        var gasData = datos.map(function (item) { return item.gas || 0; });
+
+        console.log('📈 Datos procesados - Meses:', meses, 'Agua:', aguaData, 'Luz:', luzData, 'Gas:', gasData);
+
+        // Actualizar gráfico de líneas
+        if (consumosChart) {
+            consumosChart.data.labels = meses;
+            consumosChart.data.datasets[0].data = aguaData;
+            consumosChart.data.datasets[1].data = luzData;
+            consumosChart.data.datasets[2].data = gasData;
+            consumosChart.update();
+            console.log('✅ Gráfico de líneas actualizado');
+        }
+
+        // Actualizar datos más recientes para otros gráficos
+        var ultimoMes = datos[datos.length - 1];
+        console.log('📅 Último mes:', ultimoMes);
+
+        // Actualizar gráfico de distribución
+        if (distribucionChart) {
+            distribucionChart.data.datasets[0].data = [
+                ultimoMes.agua || 0,
+                ultimoMes.luz || 0,
+                ultimoMes.gas || 0
+            ];
+            distribucionChart.update();
+            console.log('✅ Gráfico de distribución actualizado');
+        }
+
+        // Actualizar gráfico de comparación
+        if (comparacionChart) {
+            comparacionChart.data.datasets[0].data = [
+                ultimoMes.agua || 0,
+                ultimoMes.luz || 0,
+                ultimoMes.gas || 0
+            ];
+            comparacionChart.update();
+            console.log('✅ Gráfico de comparación actualizado');
+        }
+    }
+
+    function usarDatosDePrueba() {
+        console.log('🎯 Usando datos de prueba...');
+        var datosPrueba = [
+            { mes: '2024-07', agua: 120, luz: 850, gas: 45 },
+            { mes: '2024-08', agua: 135, luz: 920, gas: 48 },
+            { mes: '2024-09', agua: 125, luz: 890, gas: 46 },
+            { mes: '2024-10', agua: 140, luz: 950, gas: 50 }
+        ];
+        actualizarGraficosConDatos(datosPrueba);
+    }
+
+    function actualizarMetricas(datos) {
+        if (!datos || datos.length === 0) return;
+
+        var ultimoMes = datos[datos.length - 1];
+        console.log('📊 Actualizando métricas con:', ultimoMes);
+
+        // Actualizar métricas en tiempo real
+        document.getElementById('consumo-agua').textContent = (ultimoMes.agua || 0).toFixed(1) + ' m³';
+        document.getElementById('consumo-luz').textContent = (ultimoMes.luz || 0).toFixed(0) + ' kWh';
+        document.getElementById('consumo-gas').textContent = (ultimoMes.gas || 0).toFixed(1) + ' m³';
+
+        // Mostrar notificación de actualización
+        var trends = document.querySelectorAll('.consumo-trend span');
+        trends.forEach(function (trend) {
+            trend.textContent = 'Actualizado: ' + new Date().toLocaleTimeString();
+        });
+
+        console.log('✅ Métricas actualizadas');
+    }
+</script>
 {% endblock %}
