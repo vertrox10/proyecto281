@@ -4,6 +4,7 @@ from invitaciones import crear_invitacion, obtener_invitaciones_activas
 from db import get_db_connection  # <- Importar la conexión a la BD
 from datetime import datetime
 
+
 admin_bp = Blueprint("admin", __name__)
 
 @admin_bp.route("/panel_admin")
@@ -21,91 +22,162 @@ def panel_admin():
 @admin_bp.route("/consumos")
 @login_required
 def consumos():
-    # Verificación de rol
     if current_user.id_rol != 1:
         flash("Acceso no autorizado.", "danger")
         return redirect(url_for("auth.login"))
 
     try:
-        # Obtener fecha actual
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
         current_date = datetime.now().strftime('%Y-%m-%d')
         current_month = datetime.now().strftime('%B %Y')
-        
-        # CONSULTA CORREGIDA - BUSCAR DATOS DE 2024
-        consumo_query = """
+
+        def ejecutar_query(query):
+            cursor.execute(query)
+            columnas = [desc[0] for desc in cursor.description]
+            return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+
+        # 1. Sensor
+        sensores_query = """
+            SELECT id_sensor, id_area, id_departamento, num_serie, capacidad, disponibilidad, descripcion
+            FROM sensor
+            ORDER BY id_departamento, id_sensor
+        """
+        sensores_data = ejecutar_query(sensores_query)
+
+        metricas_sensores_query = """
             SELECT 
-                id_consumo,
+                COUNT(*) as total_sensores,
+                COUNT(CASE WHEN disponibilidad = true THEN 1 END) as sensores_activos,
+                COUNT(DISTINCT id_departamento) as deptos_con_sensores
+            FROM sensor
+        """
+        cursor.execute(metricas_sensores_query)
+        columnas = [desc[0] for desc in cursor.description]
+        metricas_sensores = dict(zip(columnas, cursor.fetchone()))
+
+        # 2. Consumo Agua
+        agua_query = """
+            SELECT 
+                id_consumo_agua as id_consumo,
                 id_sensor,
                 id_departamento,
                 cantidad_registrada,
                 lectura_inicial,
                 lectura_final,
                 fecha_registro,
-                id_usuario,
                 ROUND(lectura_final - lectura_inicial, 2) as consumo_calculado
-            FROM consumos 
-            WHERE fecha_registro >= '2024-01-01'  -- ¡BUSCAR DESDE ENERO 2024!
-            ORDER BY fecha_registro DESC, id_departamento
-            LIMIT 100
+            FROM consumo_agua 
+            WHERE fecha_registro >= '2024-01-01'
+            ORDER BY fecha_registro DESC
+            LIMIT 30
         """
-        
-        # Ejecutar consulta
-        sensores_data = db.session.execute(consumo_query).fetchall()
-        
-        # Calcular métricas agregadas para el dashboard (también corregir fecha)
-        metricas_query = """
+        agua_data = ejecutar_query(agua_query)
+
+        # 3. Consumo Gas
+        gas_query = """
             SELECT 
-                COUNT(DISTINCT id_departamento) as total_departamentos,
-                COUNT(DISTINCT id_sensor) as total_sensores,
-                ROUND(AVG(cantidad_registrada), 2) as consumo_promedio,
-                SUM(cantidad_registrada) as consumo_total_mes
-            FROM consumos 
-            WHERE fecha_registro >= '2024-01-01'  -- ¡CORREGIDO!
+                id_consumo_gas as id_consumo,
+                id_sensor,
+                id_departamento,
+                cantidad_registrada,
+                lectura_inicial,
+                lectura_final,
+                fecha_registro,
+                ROUND(lectura_final - lectura_inicial, 2) as consumo_calculado
+            FROM consumo_gas 
+            WHERE fecha_registro >= '2024-01-01'
+            ORDER BY fecha_registro DESC
+            LIMIT 30
         """
-        
-        metricas = db.session.execute(metricas_query).fetchone()
-        
-        # Datos para servicios
+        gas_data = ejecutar_query(gas_query)
+
+        # 4. Consumo Luz
+        luz_query = """
+            SELECT 
+                id_consumo_luz as id_consumo,
+                id_sensor,
+                id_departamento,
+                cantidad_registrada,
+                lectura_inicial,
+                lectura_final,
+                fecha_registro,
+                ROUND(lectura_final - lectura_inicial, 2) as consumo_calculado
+            FROM consumo_luz 
+            WHERE fecha_registro >= '2024-01-01'
+            ORDER BY fecha_registro DESC
+            LIMIT 30
+        """
+        luz_data = ejecutar_query(luz_query)
+
+        # Combinar consumos
+        todos_consumos = []
+        for registro in agua_data:
+            registro['servicio'] = 'agua'
+            todos_consumos.append(registro)
+        for registro in gas_data:
+            registro['servicio'] = 'gas'
+            todos_consumos.append(registro)
+        for registro in luz_data:
+            registro['servicio'] = 'luz'
+            todos_consumos.append(registro)
+
+        todos_consumos.sort(key=lambda x: x['fecha_registro'], reverse=True)
+
+        # Métricas de consumo
+        metricas_consumo_query = """
+            SELECT 'agua' as servicio, COUNT(*) as total_registros, SUM(cantidad_registrada) as consumo_total
+            FROM consumo_agua WHERE fecha_registro >= '2024-01-01'
+            UNION ALL
+            SELECT 'gas', COUNT(*), SUM(cantidad_registrada) FROM consumo_gas WHERE fecha_registro >= '2024-01-01'
+            UNION ALL
+            SELECT 'luz', COUNT(*), SUM(cantidad_registrada) FROM consumo_luz WHERE fecha_registro >= '2024-01-01'
+        """
+        metricas_consumo = ejecutar_query(metricas_consumo_query)
+
+        def buscar(servicio, campo):
+            return next((m[campo] for m in metricas_consumo if m['servicio'] == servicio), 0)
+
         agua = {
-            "costo": 320, 
+            "costo": 320,
             "variacion": -15,
-            "consumo_total": metricas.consumo_total_mes if metricas else 0,
-            "departamentos_activos": metricas.total_departamentos if metricas else 0
+            "consumo_total": buscar('agua', 'consumo_total'),
+            "registros": buscar('agua', 'total_registros')
         }
-        
         gas = {
-            "costo": 180, 
+            "costo": 180,
             "variacion": -5,
-            "consumo_total": 0,
-            "departamentos_activos": 0
+            "consumo_total": buscar('gas', 'consumo_total'),
+            "registros": buscar('gas', 'total_registros')
         }
-        
         luz = {
-            "costo": 240, 
+            "costo": 240,
             "variacion": -8,
-            "consumo_total": 0,
-            "departamentos_activos": 0
+            "consumo_total": buscar('luz', 'consumo_total'),
+            "registros": buscar('luz', 'total_registros')
         }
 
-        # DEBUG: Ver cuántos registros encontramos
-        print(f"📊 Registros encontrados: {len(sensores_data)}")
+        cursor.close()
+        conn.close()
 
     except Exception as e:
-        flash(f"Error al cargar datos de consumo: {str(e)}", "danger")
-        # Datos por defecto en caso de error
-        agua = {"costo": 0, "variacion": 0, "consumo_total": 0, "departamentos_activos": 0}
-        gas = {"costo": 0, "variacion": 0, "consumo_total": 0, "departamentos_activos": 0}
-        luz = {"costo": 0, "variacion": 0, "consumo_total": 0, "departamentos_activos": 0}
+        print("❌ ERROR EN /consumos:", str(e))
+        flash(f"Error al cargar datos: {str(e)}", "danger")
         sensores_data = []
-        metricas = None
+        todos_consumos = []
+        metricas_sensores = None
+        agua = {"costo": 0, "variacion": 0, "consumo_total": 0, "registros": 0}
+        gas = {"costo": 0, "variacion": 0, "consumo_total": 0, "registros": 0}
+        luz = {"costo": 0, "variacion": 0, "consumo_total": 0, "registros": 0}
 
-    # Renderizar template
     return render_template("administrador/consumos.html",
         agua=agua,
         gas=gas,
         luz=luz,
         sensores=sensores_data,
-        metricas=metricas,
+        consumos=todos_consumos,
+        metricas_sensores=metricas_sensores,
         current_date=current_date,
         current_month=current_month
     )
