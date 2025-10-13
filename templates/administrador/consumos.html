@@ -1,10 +1,268 @@
 {% extends 'administrador/base.html' %}
-{% block title %}Consumos{% endblock %}
+{% block title %}Dashboard de Consumos{% endblock %}
+
 {% block content %}
 <div class="header" style="display: flex; align-items: center; gap: 18px;">
-    <h1 style="margin:0;">Consumos</h1>
-    <span style="margin-left:auto;"></span>
-    <a href="{{ url_for('admin.logout') }}" class="logout-btn">Cerrar sesión</a>
+  <h1 style="margin:0;">📊 Dashboard de Consumos</h1>
+  <span style="margin-left:auto;"></span>
+  <link rel="stylesheet" href="{{ url_for('static', filename='administrador/style_consumo.css') }}">
+  <a href="{{ url_for('admin.logout') }}" class="logout-btn">Cerrar sesión</a>
 </div>
-<p>Contenido de la sección Consumos.</p>
+
+<!-- RESUMEN EJECUTIVO -->
+<div class="resumen-ejecutivo mb-4">
+  <div class="resumen-card">
+    <h4>💰 Resumen Ejecutivo - {{ current_month }}</h4>
+    <div class="resumen-grid">
+      <div class="resumen-item">
+        <span class="resumen-label">Gasto Total Servicios:</span>
+        <span class="resumen-valor">${{ (agua.costo + gas.costo + luz.costo) }}/mes</span>
+      </div>
+      <div class="resumen-item">
+        <span class="resumen-label">Tendencia General:</span>
+        <span class="resumen-valor {% if (agua.variacion + gas.variacion + luz.variacion) < 0 %}text-success{% else %}text-danger{% endif %}">
+          {% set promedio_variacion = (agua.variacion + gas.variacion + luz.variacion) / 3 %}
+          {{ "↘️ " if promedio_variacion < 0 else "↗️ " }}{{ promedio_variacion | abs | round(1) }}%
+        </span>
+      </div>
+      <div class="resumen-item">
+        <span class="resumen-label">Departamentos Activos:</span>
+        <span class="resumen-valor">{{ agua.departamentos_activos + gas.departamentos_activos + luz.departamentos_activos }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COSTOS DE SERVICIOS MENSUALES -->
+<div class="consumo-mensual-section mb-5">
+  <h4>💧 COSTOS DE SERVICIOS MENSUALES</h4>
+  <div class="consumo-grid">
+
+    <!-- Agua -->
+    <div class="consumo-card {% if agua.variacion <= 5 %}verde{% elif agua.variacion <= 15 %}amarillo{% else %}rojo{% endif %}">
+      <div class="consumo-header">
+        <h5>💧 Agua</h5>
+        <span class="consumo-badge {% if agua.variacion <= 5 %}bg-success{% elif agua.variacion <= 15 %}bg-warning{% else %}bg-danger{% endif %}">
+          {% if agua.variacion <= 5 %}✅{% elif agua.variacion <= 15 %}🟡{% else %}🔴{% endif %}
+        </span>
+      </div>
+      <p class="costo">${{ agua.costo }}/mes</p>
+      <p class="consumo-detalle">Consumo: {{ agua.consumo_total | default(0) }} unidades</p>
+      <p class="consumo-detalle">Departamentos: {{ agua.departamentos_activos | default(0) }}</p>
+      
+      {% if agua.variacion < 0 %}
+        <p class="variacion down">↘️ {{ agua.variacion | abs }}% vs mes anterior</p>
+      {% else %}
+        <p class="variacion up">↗️ {{ agua.variacion }}% vs mes anterior</p>
+      {% endif %}
+      
+      <div class="accion-recomendada">
+        {% if agua.variacion <= 5 %}
+          <small>✅ Mantener eficiencia actual</small>
+        {% elif agua.variacion <= 15 %}
+          <small>🟡 Revisar tarifas y consumo</small>
+        {% else %}
+          <small>🔴 Investigar posibles fugas</small>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Gas -->
+    <div class="consumo-card {% if gas.variacion <= 5 %}verde{% elif gas.variacion <= 15 %}amarillo{% else %}rojo{% endif %}">
+      <div class="consumo-header">
+        <h5>🔥 Gas</h5>
+        <span class="consumo-badge {% if gas.variacion <= 5 %}bg-success{% elif gas.variacion <= 15 %}bg-warning{% else %}bg-danger{% endif %}">
+          {% if gas.variacion <= 5 %}✅{% elif gas.variacion <= 15 %}🟡{% else %}🔴{% endif %}
+        </span>
+      </div>
+      <p class="costo">${{ gas.costo }}/mes</p>
+      <p class="consumo-detalle">Consumo: {{ gas.consumo_total | default(0) }} unidades</p>
+      <p class="consumo-detalle">Departamentos: {{ gas.departamentos_activos | default(0) }}</p>
+      
+      {% if gas.variacion < 0 %}
+        <p class="variacion down">↘️ {{ gas.variacion | abs }}% vs mes anterior</p>
+      {% else %}
+        <p class="variacion up">↗️ {{ gas.variacion }}% vs mes anterior</p>
+      {% endif %}
+      
+      <div class="accion-recomendada">
+        {% if gas.variacion <= 5 %}
+          <small>✅ Optimización adecuada</small>
+        {% elif gas.variacion <= 15 %}
+          <small>🟡 Revisar horarios de uso</small>
+        {% else %}
+          <small>🔴 Auditoría de instalaciones</small>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Luz -->
+    <div class="consumo-card {% if luz.variacion <= 5 %}verde{% elif luz.variacion <= 15 %}amarillo{% else %}rojo{% endif %}">
+      <div class="consumo-header">
+        <h5>💡 Luz</h5>
+        <span class="consumo-badge {% if luz.variacion <= 5 %}bg-success{% elif luz.variacion <= 15 %}bg-warning{% else %}bg-danger{% endif %}">
+          {% if luz.variacion <= 5 %}✅{% elif luz.variacion <= 15 %}🟡{% else %}🔴{% endif %}
+        </span>
+      </div>
+      <p class="costo">${{ luz.costo }}/mes</p>
+      <p class="consumo-detalle">Consumo: {{ luz.consumo_total | default(0) }} unidades</p>
+      <p class="consumo-detalle">Departamentos: {{ luz.departamentos_activos | default(0) }}</p>
+      
+      {% if luz.variacion < 0 %}
+        <p class="variacion down">↘️ {{ luz.variacion | abs }}% vs mes anterior</p>
+      {% else %}
+        <p class="variacion up">↗️ {{ luz.variacion }}% vs mes anterior</p>
+      {% endif %}
+      
+      <div class="accion-recomendada">
+        {% if luz.variacion <= 5 %}
+          <small>✅ Eficiencia energética óptima</small>
+        {% elif luz.variacion <= 15 %}
+          <small>🟡 Revisar contratos de suministro</small>
+        {% else %}
+          <small>🔴 Urgente: Optimizar consumo</small>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOP DEPARTAMENTOS CON MAYOR CONSUMO -->
+{% if top_departamentos %}
+<div class="top-departamentos-section mb-5">
+  <h4>🏆 Top Departamentos - Mayor Consumo</h4>
+  <div class="table-responsive">
+    <table class="tabla-sensores">
+      <thead>
+        <tr>
+          <th>DEPARTAMENTO</th>
+          <th>SERVICIO</th>
+          <th>CONSUMO</th>
+          <th>COSTO APROX.</th>
+          <th>% SOBRE PROMEDIO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for depto in top_departamentos %}
+        <tr>
+          <td><strong>Depto {{ depto.id_departamento }}</strong></td>
+          <td>
+            {% if depto.servicio == 'agua' %}💧
+            {% elif depto.servicio == 'gas' %}🔥
+            {% else %}💡{% endif %}
+            {{ depto.servicio | title }}
+          </td>
+          <td>{{ depto.consumo_total }} unidades</td>
+          <td>${{ depto.costo_aproximado }}</td>
+          <td>
+            {% set porcentaje_sobre_promedio = (depto.consumo_total / depto.promedio_servicio * 100 - 100) | round(1) %}
+            <span class="{% if porcentaje_sobre_promedio > 20 %}text-danger{% elif porcentaje_sobre_promedio > 10 %}text-warning{% else %}text-success{% endif %}">
+              {{ porcentaje_sobre_promedio }}%
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- DETALLE POR SENSOR -->
+<div class="sensores-section">
+  <div class="section-header">
+    <h4>🔍 Detalle de Consumo por Sensor</h4>
+    <div class="filtros">
+      <select class="form-select form-select-sm">
+        <option>Todos los servicios</option>
+        <option>Agua</option>
+        <option>Gas</option>
+        <option>Luz</option>
+      </select>
+      <input type="date" class="form-control form-control-sm" value="{{ current_date }}">
+    </div>
+  </div>
+  
+  <div class="table-responsive">
+    <table class="tabla-sensores">
+      <thead>
+        <tr>
+          <th>SENSOR</th>
+          <th>DEPARTAMENTO</th>
+          <th>LECT. INICIAL</th>
+          <th>LECT. FINAL</th>
+          <th>CONSUMO</th>
+          <th>FECHA REGISTRO</th>
+          <th>ESTADO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sensores %}
+        <tr>
+          <td>
+            <span class="badge 
+              {% if s.id_sensor.startswith('AGUA') %}bg-primary
+              {% elif s.id_sensor.startswith('GAS') %}bg-warning
+              {% else %}bg-info{% endif %}">
+              {{ s.id_sensor }}
+            </span>
+          </td>
+          <td>Depto {{ s.id_departamento }}</td>
+          <td>{{ s.lectura_inicial }}</td>
+          <td>{{ s.lectura_final }}</td>
+          <td>
+            <strong>{{ s.consumo }} m³</strong>
+          </td>
+          <td>{{ s.fecha_registro.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>
+            {% set consumo_promedio = 50 %}  <!-- Valor ejemplo -->
+            {% if s.consumo > consumo_promedio * 1.5 %}
+              <span class="badge bg-danger">Alto</span>
+            {% elif s.consumo < consumo_promedio * 0.5 %}
+              <span class="badge bg-success">Bajo</span>
+            {% else %}
+              <span class="badge bg-secondary">Normal</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="text-center text-muted">
+            No hay datos de sensores para el período seleccionado
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ALERTAS Y RECOMENDACIONES -->
+<div class="alertas-section mt-4">
+  <h4>⚠️ Alertas y Recomendaciones</h4>
+  <div class="alertas-grid">
+    {% if agua.variacion > 15 %}
+    <div class="alerta alerta-roja">
+      <strong>🔴 Agua: Consumo elevado</strong>
+      <p>El consumo de agua aumentó {{ agua.variacion }}%. Verificar posibles fugas.</p>
+    </div>
+    {% endif %}
+    
+    {% if luz.variacion > 15 %}
+    <div class="alerta alerta-roja">
+      <strong>🔴 Luz: Sobre costo</strong>
+      <p>Revisar tarifas y optimizar consumo en horarios pico.</p>
+    </div>
+    {% endif %}
+    
+    {% if gas.variacion < 0 %}
+    <div class="alerta alerta-verde">
+      <strong>✅ Gas: Eficiencia mejorada</strong>
+      <p>El consumo disminuyó {{ gas.variacion | abs }}%. Mantener estrategias.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
 {% endblock %}
