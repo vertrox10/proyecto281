@@ -1,0 +1,118 @@
+{% extends "empleado/base_empleado.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='empleado/mantenimientos.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="mantenimientos-header">
+    <h1><i class="fas fa-calendar-alt"></i> Mantenimientos Programados</h1>
+    <p>Gestiona los mantenimientos asignados</p>
+</div>
+
+<div class="mantenimientos-container">
+    {% if mantenimientos %}
+    <div class="mantenimientos-list">
+        {% for mantenimiento in mantenimientos %}
+        <div class="mantenimiento-card" data-id="{{ mantenimiento[0] }}">
+            <div class="mantenimiento-header">
+                <h3>Mantenimiento #{{ mantenimiento[0] }}</h3>
+                <span class="status-badge status-{{ mantenimiento[3] }}">{{ mantenimiento[3]|title }}</span>
+            </div>
+
+            <div class="mantenimiento-content">
+                <p class="mantenimiento-desc">{{ mantenimiento[1] }}</p>
+
+                <div class="mantenimiento-info">
+                    <div class="info-item">
+                        <i class="fas fa-calendar"></i>
+                        <span>Fecha programada: {{ mantenimiento[2] }}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-building"></i>
+                        <span>Ubicación: Piso {{ mantenimiento[4] }} - Depto {{ mantenimiento[5] }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mantenimiento-footer">
+                <div class="mantenimiento-actions">
+                    {% if mantenimiento[3] == 'programado' %}
+                    <button class="btn btn-primary btn-small iniciar-mantenimiento" data-id="{{ mantenimiento[0] }}">
+                        <i class="fas fa-play"></i> Iniciar
+                    </button>
+                    {% elif mantenimiento[3] == 'en_proceso' %}
+                    <button class="btn btn-success btn-small completar-mantenimiento" data-id="{{ mantenimiento[0] }}">
+                        <i class="fas fa-check"></i> Completar
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-secondary btn-small detalles-mantenimiento" data-id="{{ mantenimiento[0] }}">
+                        <i class="fas fa-eye"></i> Detalles
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-tools"></i>
+        <h3>No hay mantenimientos asignados</h3>
+        <p>No tienes mantenimientos programados en este momento.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Event listeners para los botones
+    document.addEventListener('DOMContentLoaded', function () {
+        // Botones de iniciar mantenimiento
+        document.querySelectorAll('.iniciar-mantenimiento').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                iniciarMantenimiento(id);
+            });
+        });
+
+        // Botones de completar mantenimiento
+        document.querySelectorAll('.completar-mantenimiento').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                completarMantenimiento(id);
+            });
+        });
+
+        // Botones de detalles
+        document.querySelectorAll('.detalles-mantenimiento').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                verDetalles(id);
+            });
+        });
+    });
+
+    function iniciarMantenimiento(id) {
+        if (confirm('¿Iniciar este mantenimiento?')) {
+            alert('Iniciando mantenimiento ' + id);
+            setTimeout(function () {
+                location.reload();
+            }, 1000);
+        }
+    }
+
+    function completarMantenimiento(id) {
+        if (confirm('¿Marcar este mantenimiento como completado?')) {
+            alert('Completando mantenimiento ' + id);
+            setTimeout(function () {
+                location.reload();
+            }, 1000);
+        }
+    }
+
+    function verDetalles(id) {
+        alert('Mostrando detalles del mantenimiento ' + id);
+    }
+</script>
+{% endblock %}

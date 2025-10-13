@@ -1,81 +1,148 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Login</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <style>
+        .captcha-text {
+            font-size: 24px;
+            font-weight: bold;
+            background: #f0f0f0;
+            padding: 15px;
+            text-align: center;
+            letter-spacing: 8px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: "Courier New", monospace;
+        }
+
+        .captcha-refresh {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .captcha-refresh:hover {
+            background: #0056b3;
+        }
+
+        .valid {
+            color: green;
+            font-weight: bold;
+        }
+
+        .invalid {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
 </head>
+
 <body>
     <div class="login-container">
         <h1>Iniciar Sesión</h1>
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
-    <div class="alert alert-{{ category }}">{{ message }}</div>
-         {% endfor %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
         {% endif %}
         {% endwith %}
+
         <form method="POST">
             <div class="input-group icon-user">
                 <label for="correo">Correo</label>
-                 <input type="email" id="correo" name="correo" required pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$" title="Solo se permite correo de Gmail">
+                <input type="email" id="correo" name="correo" required pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$"
+                    title="Solo se permite correo de Gmail" />
             </div>
+
             <div class="input-group">
                 <label for="password">Contraseña</label>
-                <input type="password" id="password" name="password" required>
+                <input type="password" id="password" name="password" required />
             </div>
 
-            <!-- CAPTCHA -->
-            <!-- CAPTCHA -->
-         <div class="input-group captcha-group">
-             <label for="captcha">Verificación</label>
-                <img src="{{ url_for('captcha') }}" alt="Captcha" class="captcha-image">
-             <input type="text" name="captcha" id="captcha" class="captcha-box" placeholder="Escribe el texto de la imagen" required>
-             <span id="captcha-status"></span>
+            <!-- CAPTCHA COMO TEXTO PLANO -->
+            <div class="input-group captcha-group">
+                <label for="captcha">Verificación CAPTCHA</label>
+                <div class="captcha-text">
+                    {{ captcha_text }}
+                    <button type="button" class="captcha-refresh" onclick="location.reload()"
+                        title="Generar nuevo CAPTCHA">
+                        🔄
+                    </button>
+                </div>
+                <input type="text" name="captcha" id="captcha" class="captcha-box"
+                    placeholder="Escribe el texto de arriba" required />
+                <span id="captcha-status"></span>
             </div>
-
 
             <button type="submit">Ingresar</button>
         </form>
 
         <div class="register-text">
-            <p>¿No tienes cuenta? <a href="{{ url_for('register') }}">Regístrate</a></p>
-            <p><a href="{{ url_for('forgot_password') }}">¿Olvidaste tu contraseña?</a></p>
+            <p>
+                ¿No tienes cuenta?
+                <a href="{{ url_for('auth.seleccionar_registro') }}">Regístrate aquí</a>
+            </p>
+            <p>
+                <a href="{{ url_for('password.forgot_password') }}">¿Olvidaste tu contraseña?</a>
+            </p>
         </div>
     </div>
 </body>
+
 <script>
-document.getElementById("captcha").addEventListener("blur", async function() {
-    let captchaValue = this.value;
-    let statusIcon = document.getElementById("captcha-status");
+    document
+        .getElementById("captcha")
+        .addEventListener("blur", async function () {
+            let captchaValue = this.value;
+            let statusIcon = document.getElementById("captcha-status");
 
-    if (captchaValue.trim() === "") {
-        statusIcon.textContent = "";
-        return;
-    }
+            if (captchaValue.trim() === "") {
+                statusIcon.textContent = "";
+                return;
+            }
 
-    try {
-        let response = await fetch("/verificar_captcha", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ captcha: captchaValue })
+            try {
+                let response = await fetch("/verificar_captcha", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ captcha: captchaValue }),
+                });
+
+                let data = await response.json();
+
+                if (data.valido) {
+                    statusIcon.textContent = " ✔ Correcto";
+                    statusIcon.className = "valid";
+                } else {
+                    statusIcon.textContent = " ✖ Incorrecto";
+                    statusIcon.className = "invalid";
+                }
+            } catch (error) {
+                console.error("Error verificando captcha:", error);
+                statusIcon.textContent = " ⚠ Error al verificar";
+                statusIcon.className = "invalid";
+            }
         });
 
-        let data = await response.json();
-
-        if (data.valido) {
-            statusIcon.textContent = "✔";
-            statusIcon.className = "valid";
-        } else {
-            statusIcon.textContent = "✖";
-            statusIcon.className = "invalid";
+    // También verificar al enviar el formulario
+    document.querySelector("form").addEventListener("submit", function (e) {
+        let captchaValue = document.getElementById("captcha").value;
+        if (!captchaValue.trim()) {
+            e.preventDefault();
+            alert("Por favor completa el CAPTCHA");
         }
-    } catch (error) {
-        console.error("Error verificando captcha:", error);
-    }
-});
+    });
 </script>
 
 </html>

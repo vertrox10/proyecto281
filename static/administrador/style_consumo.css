@@ -1,0 +1,168 @@
+/* Resumen Ejecutivo */
+.resumen-ejecutivo {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.resumen-item {
+  text-align: center;
+}
+
+.resumen-label {
+  display: block;
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+
+.resumen-valor {
+  display: block;
+  font-size: 1.4em;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+/* Mejoras para las tarjetas de consumo */
+.consumo-card {
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+.consumo-card:hover {
+  transform: translateY(-2px);
+}
+
+.consumo-card.verde { border-left: 4px solid #28a745; }
+.consumo-card.amarillo { border-left: 4px solid #ffc107; }
+.consumo-card.rojo { border-left: 4px solid #dc3545; }
+
+.consumo-header {
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.consumo-badge {
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 0.8em;
+}
+
+.consumo-detalle {
+  font-size: 0.9em;
+  color: #666;
+  margin: 5px 0;
+}
+
+.accion-recomendada {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+/* Mejoras para tablas */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.filtros {
+  display: flex;
+  gap: 10px;
+}
+
+.tabla-sensores {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tabla-sensores th {
+  background-color: #f8f9fa;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.tabla-sensores td {
+  padding: 12px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* Alertas */
+.alertas-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.alerta {
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+
+.alerta-roja {
+  background-color: #f8d7da;
+  border-left-color: #dc3545;
+}
+
+.alerta-verde {
+  background-color: #d1edff;
+  border-left-color: #28a745;
+}
+
+/* Estilos para la tabla detallada */
+.tabla-sensores {
+  font-size: 0.85em;
+}
+
+.tabla-sensores th {
+  background-color: #2c3e50;
+  color: white;
+  font-weight: 600;
+  padding: 10px 8px;
+}
+
+.tabla-sensores td {
+  padding: 8px;
+  vertical-align: middle;
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.stat-card {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  border-left: 4px solid #007bff;
+}
+
+.stat-number {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+/* Badges mejorados */
+.badge {
+  font-size: 0.7em;
+  padding: 4px 8px;
+}

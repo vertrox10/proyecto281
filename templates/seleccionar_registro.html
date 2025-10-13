@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Seleccionar tipo de registro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_seleccionar_registro.css') }}">
+    <!-- Para los íconos usando Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <h2>¿Cómo deseas registrarte?</h2>
+        <div class="cards">
+            <a href="{{ url_for('auth.verificar_codigo', rol='Administrador') }}" class="card admin">
+                <i class="fas fa-user-shield fa-3x"></i>
+                <h3>Administrador</h3>
+            </a>
+            <a href="{{ url_for('auth.verificar_codigo', rol='empleado') }}" class="card empleado">
+                <i class="fas fa-briefcase fa-3x"></i>
+                <h3>Empleado</h3>
+            </a>
+            <a href="{{ url_for('auth.register_residente') }}" class="card residente">
+                <i class="fas fa-home fa-3x"></i>
+                <h3>Residente</h3>
+            </a>
+        </div>
+    </div>
+</body>
+
+</html>

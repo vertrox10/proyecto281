@@ -1,17 +1,19 @@
-import mysql.connector
-from mysql.connector import Error
+import pg8000.dbapi
+import ssl
 
 def get_db_connection():
     try:
-        connection = mysql.connector.connect(
-            host="127.0.0.1",
-            port=3306,
-            user="root",
-            password="123456",
-            database="bdedificio"
+        ssl_context = ssl.create_default_context()
+        conn = pg8000.dbapi.connect(
+            host="ep-billowing-boat-adtj0hh6-pooler.c-2.us-east-1.aws.neon.tech",
+            database="bdedificio",
+            user="neondb_owner",
+            password="npg_qxZSRobC4y7L",
+            port=5432,
+            ssl_context=ssl_context  # requerido por Neon
         )
-        if connection.is_connected():
-            return connection
-    except Error as e:
-        print("❌ Error al conectar:", e)
+        return conn
+    except Exception as e:
+        print(f"❌ Error al conectar a PostgreSQL: {e}")
         return None
+

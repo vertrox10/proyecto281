@@ -1,0 +1,145 @@
+/* 🎨 Fondo general */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #6BAE75, #F0F4F8);
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 2rem 1rem 4rem;
+    box-sizing: border-box;
+}
+
+/* 📦 Caja del registro */
+.login-container {
+    background: #ffffff;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+    text-align: center;
+    border: 2px solid #6BAE75;
+    box-sizing: border-box;
+}
+
+/* 📝 Título */
+.login-container h1 {
+    margin-bottom: 2rem;
+    color: #2C3E50;
+    font-size: clamp(1.5rem, 4vw, 1.8rem);
+    font-weight: bold;
+}
+
+/* 🔹 Inputs con iconos */
+.input-group {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.input-group i:first-child {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #4A90A4;
+    font-size: 1.1rem;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px 40px 10px 35px; /* 👈 más espacio a la derecha para el ojito */
+    border: 1px solid #4A90A4;
+    border-radius: 8px;
+    background: #F0F4F8;
+    font-size: 1rem;
+    box-sizing: border-box;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.input-group input:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+    outline: none;
+}
+
+/* 👁️ Contenedor de contraseña */
+.password-container {
+    position: relative;
+    width: 100%;
+}
+
+/* 👁️ Ojo para mostrar/ocultar contraseña */
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #666;
+    font-size: 1.1rem;
+    z-index: 3; /* se asegura de que quede arriba del input */
+}
+
+/* ✅ Mensajes de validación de contraseña */
+.password-match {
+    color: green;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    text-align: left;
+}
+
+.password-mismatch {
+    color: red;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    text-align: left;
+}
+
+.input-group small {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+    font-size: 0.8rem;
+    text-align: left;
+}
+
+/* 🔘 Botón */
+button {
+    width: 100%;
+    padding: 12px;
+    background: #7A6BBE;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s;
+}
+
+button:hover {
+    background: #5A4CA0;
+    transform: translateY(-2px);
+}
+
+button:disabled {
+    background: #aaa;
+    cursor: not-allowed;
+}
+
+/* 📱 Ajustes móviles */
+@media (max-width: 480px) {
+    .login-container {
+        padding: 1rem;
+        max-width: 100%;
+    }
+    .login-container h1 {
+        font-size: 1.5rem;
+    }
+    button {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+}
