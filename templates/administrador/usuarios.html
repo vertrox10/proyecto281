@@ -77,7 +77,9 @@
                     <th>Apellido Materno</th>
                     <th>Correo</th>
                     <th>Teléfono</th>
-                    <th>Rol</th>
+                    <th>Piso</th>
+                    <th>Nro Departamento</th>
+                    <th>Fecha Ingreso</th>
                 </tr>
             </thead>
             <tbody>
@@ -90,6 +92,9 @@
                     <td>{{ usuario.ap_materno }}</td>
                     <td>{{ usuario.correo }}</td>
                     <td>{{ usuario.telefono }}</td>
+                    <td>{{ usuario.piso }}</td>
+                    <td>{{ usuario.nro_departamento }}</td>
+                    <td>{{ usuario.fecha_ingreso.strftime('%d/%m/%Y') }}</td>
                     <td>Residente</td>
                 </tr>
                 {% endif %}
