@@ -1,22 +1,91 @@
 {% extends "empleado/base_empleado.html" %}
-{% block title %}Reportes{% endblock %}
 
-{% block extra_head %}
+{% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='empleado/reportes.css') }}">
 {% endblock %}
 
 {% block content %}
-<h1>Reportes de Actividad</h1>
-<div class="report-container">
-    <div class="report-card">
-        <h3>Reporte Financiero</h3>
-        <p>Descargar informe mensual en PDF</p>
-        <button>Descargar</button>
+<div class="reportes-header">
+    <h1><i class="fas fa-chart-bar"></i> Reportes de Trabajo</h1>
+    <p>Estadísticas y reportes de tu actividad</p>
+</div>
+
+<div class="reportes-container">
+    <!-- Resumen General -->
+    <div class="reporte-section">
+        <h3><i class="fas fa-chart-pie"></i> Resumen General</h3>
+        <div class="stats-grid">
+            <div class="stat-card large">
+                <div class="stat-icon">
+                    <i class="fas fa-ticket-alt"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>Tickets</h4>
+                    <div class="stat-details">
+                        {% for estado, count in reporte_tickets %}
+                        <div class="stat-item">
+                            <span class="stat-label">{{ estado|replace('_', ' ')|title }}:</span>
+                            <span class="stat-value">{{ count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card large">
+                <div class="stat-icon">
+                    <i class="fas fa-tools"></i>
+                </div>
+                <div class="stat-content">
+                    <h4>Mantenimientos</h4>
+                    <div class="stat-details">
+                        {% for estado, count in reporte_mantenimientos %}
+                        <div class="stat-item">
+                            <span class="stat-label">{{ estado|title }}:</span>
+                            <span class="stat-value">{{ count }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="report-card">
-        <h3>Reporte de Consumos</h3>
-        <p>Generar informe por fechas</p>
-        <button>Generar</button>
+
+    <!-- Gráficos (placeholder) -->
+    <div class="reporte-section">
+        <h3><i class="fas fa-chart-line"></i> Actividad Mensual</h3>
+        <div class="charts-placeholder">
+            <div class="chart-container">
+                <p>Gráfico de tickets por mes</p>
+                <div class="chart-placeholder">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Gráfico se mostrará aquí</span>
+                </div>
+            </div>
+            <div class="chart-container">
+                <p>Gráfico de mantenimientos por mes</p>
+                <div class="chart-placeholder">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Gráfico se mostrará aquí</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exportar Reportes -->
+    <div class="reporte-section">
+        <h3><i class="fas fa-file-export"></i> Exportar Reportes</h3>
+        <div class="export-actions">
+            <button class="btn btn-primary">
+                <i class="fas fa-file-pdf"></i> Exportar PDF
+            </button>
+            <button class="btn btn-success">
+                <i class="fas fa-file-excel"></i> Exportar Excel
+            </button>
+            <button class="btn btn-secondary">
+                <i class="fas fa-print"></i> Imprimir Reporte
+            </button>
+        </div>
     </div>
 </div>
 {% endblock %}
