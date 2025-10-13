@@ -21,7 +21,7 @@
     <ul>
       <li><a href="{{ url_for('admin.panel_admin') }}"><i class="fas fa-home"></i> <span
             class="sidebar-text">Dashboard</span></a></li>
-      <li><a href="{{ url_for('admin.finanzas') }}"><i class="fas fa-coins"></i> <span
+      <li><a href="{{ url_for('admin.dashboard_finanzas') }}"><i class="fas fa-coins"></i> <span
             class="sidebar-text">Finanzas</span></a></li>
       <li><a href="{{ url_for('admin.consumos') }}"><i class="fas fa-bolt"></i> <span
             class="sidebar-text">Consumos</span></a></li>
@@ -58,7 +58,11 @@
       border-radius: 2px;
     }
   </style>
-
+<script>
+  document.getElementById('menu-toggle').addEventListener('click', function () {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+  });
+</script>
   {% block extra_scripts %}{% endblock %}
 </body>
 
