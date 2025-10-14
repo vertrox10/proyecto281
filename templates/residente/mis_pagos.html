@@ -1,0 +1,383 @@
+{% extends "residente/base_residente.html" %}
+
+{% block title %}Mis Pagos{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='residente/pagos.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="pagos-header">
+    <h1><i class="fas fa-money-bill-wave"></i> Mis Pagos</h1>
+    <p>Gestiona tus pagos y métodos de pago</p>
+</div>
+
+<div class="pagos-content">
+    <div class="balance-summary">
+        <div class="balance-card">
+            <h3>Saldo Actual</h3>
+            <div class="balance-amount">${{ saldo_actual }}</div>
+            <span class="balance-status {% if saldo_actual <= 0 %}estado-pagado{% else %}estado-pendiente{% endif %}">
+                {% if saldo_actual <= 0 %}Al día{% else %}Pendiente{% endif %} </span>
+        </div>
+    </div>
+
+    <div class="pagos-grid">
+        <!-- Próximos Vencimientos -->
+        <div class="section-card">
+            <div class="card-header">
+                <h3><i class="fas fa-clock"></i> Próximos Vencimientos</h3>
+            </div>
+            <div class="vencimientos-list">
+                {% if proximos_vencimientos %}
+                {% for vencimiento in proximos_vencimientos %}
+                <div class="vencimiento-item">
+                    <div class="vencimiento-info">
+                        <h4>{{ vencimiento.concepto }}</h4>
+                        <p>Vence: {{ vencimiento.fecha_vencimiento }}</p>
+                    </div>
+                    <div class="vencimiento-monto">
+                        <span class="amount">${{ vencimiento.monto }}</span>
+                        <button class="btn btn-primary btn-sm pagar-btn" data-id="{{ vencimiento.id_factura }}">
+                            Pagar Ahora
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-check-circle"></i>
+                    <p>No tienes pagos pendientes</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Métodos de Pago -->
+        <div class="section-card">
+            <div class="card-header">
+                <h3><i class="fas fa-credit-card"></i> Métodos de Pago</h3>
+                <button class="btn btn-secondary" id="agregarMetodoBtn">
+                    <i class="fas fa-plus"></i> Agregar
+                </button>
+            </div>
+            <div class="metodos-list">
+                {% if metodos_pago %}
+                {% for metodo in metodos_pago %}
+                <div class="metodo-item">
+                    <div class="metodo-icon">
+                        <i class="fas {{ metodo.icono }}"></i>
+                    </div>
+                    <div class="metodo-info">
+                        <h4>{{ metodo.nombre }}</h4>
+                        <p>{{ metodo.detalles }}</p>
+                    </div>
+                    <div class="metodo-actions">
+                        <button class="btn-icon editar-metodo" data-id="{{ metodo.id_metodo_pago }}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon btn-danger eliminar-metodo" data-id="{{ metodo.id_metodo_pago }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-credit-card"></i>
+                    <p>No tienes métodos de pago registrados</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial de Pagos -->
+    <div class="section-card">
+        <div class="card-header">
+            <h3><i class="fas fa-history"></i> Historial de Pagos</h3>
+            <div class="filtros">
+                <select id="filtroMes" class="form-control">
+                    <option value="">Todos los meses</option>
+                    {% for mes in meses %}
+                    <option value="{{ mes.value }}">{{ mes.nombre }}</option>
+                    {% endfor %}
+                </select>
+                <select id="filtroEstado" class="form-control">
+                    <option value="">Todos los estados</option>
+                    <option value="completado">Completado</option>
+                    <option value="pendiente">Pendiente</option>
+                </select>
+            </div>
+        </div>
+        <div class="table-container">
+            {% if historial_pagos %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Concepto</th>
+                        <th>Monto</th>
+                        <th>Método</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pago in historial_pagos %}
+                    <tr>
+                        <td>{{ pago.fecha_pago }}</td>
+                        <td>{{ pago.concepto }}</td>
+                        <td>${{ pago.monto }}</td>
+                        <td>{{ pago.metodo }}</td>
+                        <td>
+                            <span class="estado estado-{{ pago.estado }}">
+                                {{ pago.estado }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="acciones">
+                                {% if pago.estado == 'pendiente' and pago.id_factura %}
+                                <button class="btn-icon pagar-factura-btn" data-id="{{ pago.id_factura }}">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </button>
+                                {% endif %}
+                                {% if pago.id_pago %}
+                                <button class="btn-icon descargar-comprobante-btn" data-id="{{ pago.id_pago }}">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-receipt"></i>
+                <h3>No hay historial de pagos</h3>
+                <p>No se han registrado pagos aún.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Métodos de Pago -->
+<div id="modalMetodos" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Agregar Método de Pago</h3>
+            <button class="btn-icon" id="cerrarModalBtn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="formMetodoPago">
+                <div class="form-group">
+                    <label class="form-label">Tipo de Método</label>
+                    <select name="tipo" class="form-control" required>
+                        <option value="tigo_money">Tigo Money</option>
+                        <option value="billetera_virtual">Billetera Virtual</option>
+                        <option value="criptomoneda">Criptomoneda</option>
+                        <option value="tarjeta">Tarjeta de Crédito/Débito</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Información</label>
+                    <input type="text" name="informacion" class="form-control" placeholder="Número/Usuario" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Detalles Adicionales</label>
+                    <textarea name="detalles" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="es_principal">
+                        <span class="checkmark"></span>
+                        Establecer como método principal
+                    </label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelarModalBtn">Cancelar</button>
+            <button class="btn btn-primary" id="guardarMetodoBtn">Guardar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Event listeners para botones de pago
+        document.querySelectorAll('.pagar-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const idFactura = this.getAttribute('data-id');
+                realizarPago(idFactura);
+            });
+        });
+
+        document.querySelectorAll('.pagar-factura-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const idFactura = this.getAttribute('data-id');
+                realizarPago(idFactura);
+            });
+        });
+
+        // Event listeners para métodos de pago
+        document.getElementById('agregarMetodoBtn').addEventListener('click', mostrarModalMetodos);
+        document.getElementById('cerrarModalBtn').addEventListener('click', cerrarModalMetodos);
+        document.getElementById('cancelarModalBtn').addEventListener('click', cerrarModalMetodos);
+        document.getElementById('guardarMetodoBtn').addEventListener('click', guardarMetodoPago);
+
+        document.querySelectorAll('.editar-metodo').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                editarMetodo(id);
+            });
+        });
+
+        document.querySelectorAll('.eliminar-metodo').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                eliminarMetodo(id);
+            });
+        });
+
+        document.querySelectorAll('.descargar-comprobante-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const idPago = this.getAttribute('data-id');
+                descargarComprobante(idPago);
+            });
+        });
+
+        // Filtros
+        document.getElementById('filtroMes').addEventListener('change', filtrarHistorial);
+        document.getElementById('filtroEstado').addEventListener('change', filtrarHistorial);
+
+        // Cerrar modal al hacer clic fuera
+        document.getElementById('modalMetodos').addEventListener('click', function (event) {
+            if (event.target === this) {
+                cerrarModalMetodos();
+            }
+        });
+    });
+
+    function realizarPago(idFactura) {
+        if (!idFactura) {
+            alert('Error: ID de factura no válido');
+            return;
+        }
+
+        if (confirm('¿Desea proceder con el pago de esta factura?')) {
+            const metodoPago = prompt('Seleccione método de pago:\n1. Tigo Money\n2. Billetera Virtual\n3. Criptomoneda');
+
+            if (metodoPago) {
+                fetch('/residentes/api/realizar_pago', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id_factura: idFactura,
+                        metodo: metodoPago
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Pago realizado exitosamente');
+                            location.reload();
+                        } else {
+                            alert('Error al procesar el pago: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error al procesar el pago');
+                    });
+            }
+        }
+    }
+
+    function mostrarModalMetodos() {
+        document.getElementById('modalMetodos').style.display = 'flex';
+    }
+
+    function cerrarModalMetodos() {
+        document.getElementById('modalMetodos').style.display = 'none';
+        document.getElementById('formMetodoPago').reset();
+    }
+
+    function guardarMetodoPago() {
+        const formData = new FormData(document.getElementById('formMetodoPago'));
+        const data = Object.fromEntries(formData);
+
+        fetch('/residentes/api/agregar_metodo_pago', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Método de pago agregado exitosamente');
+                    cerrarModalMetodos();
+                    location.reload();
+                } else {
+                    alert('Error al agregar método de pago: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al agregar método de pago');
+            });
+    }
+
+    function editarMetodo(id) {
+        alert('Editando método de pago ' + id);
+    }
+
+    function eliminarMetodo(id) {
+        if (confirm('¿Está seguro de eliminar este método de pago?')) {
+            fetch('/residentes/api/eliminar_metodo_pago/' + id, {
+                method: 'DELETE'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Método de pago eliminado exitosamente');
+                        location.reload();
+                    } else {
+                        alert('Error al eliminar método de pago: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar método de pago');
+                });
+        }
+    }
+
+    function descargarComprobante(idPago) {
+        if (!idPago) {
+            alert('Error: ID de pago no válido');
+            return;
+        }
+
+        alert('Descargando comprobante del pago ' + idPago);
+        window.open('/residentes/descargar_comprobante/' + idPago, '_blank');
+    }
+
+    function filtrarHistorial() {
+        const mes = document.getElementById('filtroMes').value;
+        const estado = document.getElementById('filtroEstado').value;
+        console.log('Filtrando por:', { mes, estado });
+    }
+</script>
+{% endblock %}

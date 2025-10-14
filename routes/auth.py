@@ -38,7 +38,7 @@ def login():
                 flash("Usuario y contraseña correctos.", "success")
                 # Redirige según el rol
                 if usuario.id_rol == 3:  # Residente
-                    return redirect(url_for("auth.ingresar_base"))
+                    return redirect(url_for("residentes.dashboard"))
                 elif usuario.id_rol == 2:  # Empleado
                    return redirect(url_for("empleados.dashboard"))
                 elif usuario.id_rol == 1:  # Administrador
@@ -254,7 +254,7 @@ def ingresar_base():
     if current_user.id_rol != 3:
         flash("Acceso solo para residentes.", "danger")
         return redirect(url_for("auth.login"))
-    return render_template("residente/ingresar_base.html")
+    return render_template("residente/ingresar_bae.html")
 
 @auth_bp.route("/residente/guardar_base", methods=["POST"])
 @login_required
