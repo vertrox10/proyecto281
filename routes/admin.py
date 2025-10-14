@@ -1,7 +1,10 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, send_file
 from flask_login import login_required, current_user, logout_user
 from invitaciones import crear_invitacion, obtener_invitaciones_activas
-from db import get_db_connection  # <- Importar la conexión a la BD
+from db import get_db_connection
+from datetime import datetime
+import pdfkit
+from io import BytesIO
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -12,16 +15,34 @@ def panel_admin():
     if current_user.id_rol != 1:
         flash("Acceso no autorizado.", "danger")
         return redirect(url_for("auth.login"))
-    
-    return render_template("administrador/dashboard_admin.html")
 
-@admin_bp.route("/finanzas")
-@login_required
-def finanzas():
-    if current_user.id_rol != 1:
-        flash("Acceso no autorizado.", "danger")
-        return redirect(url_for("auth.login"))
-    return render_template("administrador/finanzas.html")
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Consulta para sumar todos los consumos registrados desde enero 2024
+        metricas_query = """
+            SELECT SUM(cantidad_registrada) as consumo_total
+            FROM (
+                SELECT cantidad_registrada FROM consumo_agua WHERE fecha_registro >= '2024-01-01'
+                UNION ALL
+                SELECT cantidad_registrada FROM consumo_gas WHERE fecha_registro >= '2024-01-01'
+                UNION ALL
+                SELECT cantidad_registrada FROM consumo_luz WHERE fecha_registro >= '2024-01-01'
+            ) as consumos
+        """
+        cursor.execute(metricas_query)
+        consumo_total = cursor.fetchone()[0] or 0
+
+        cursor.close()
+        conn.close()
+
+    except Exception as e:
+        print("❌ ERROR EN /panel_admin:", str(e))
+        consumo_total = 0
+
+    return render_template("administrador/dashboard_admin.html", consumo_total=consumo_total)
+## Eliminada función duplicada finanzas()
 
 @admin_bp.route("/consumos")
 @login_required
@@ -29,7 +50,162 @@ def consumos():
     if current_user.id_rol != 1:
         flash("Acceso no autorizado.", "danger")
         return redirect(url_for("auth.login"))
-    return render_template("administrador/consumos.html")
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        current_month = datetime.now().strftime('%B %Y')
+
+        def ejecutar_query(query):
+            cursor.execute(query)
+            columnas = [desc[0] for desc in cursor.description]
+            return [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+
+        # 1. Sensor
+        sensores_query = """
+            SELECT id_sensor, id_area, id_departamento, num_serie, capacidad, disponibilidad, descripcion
+            FROM sensor
+            ORDER BY id_departamento, id_sensor
+        """
+        sensores_data = ejecutar_query(sensores_query)
+
+        metricas_sensores_query = """
+            SELECT 
+                COUNT(*) as total_sensores,
+                COUNT(CASE WHEN disponibilidad = true THEN 1 END) as sensores_activos,
+                COUNT(DISTINCT id_departamento) as deptos_con_sensores
+            FROM sensor
+        """
+        cursor.execute(metricas_sensores_query)
+        columnas = [desc[0] for desc in cursor.description]
+        metricas_sensores = dict(zip(columnas, cursor.fetchone()))
+
+        # 2. Consumo Agua
+        agua_query = """
+            SELECT 
+                id_consumo_agua as id_consumo,
+                id_sensor,
+                id_departamento,
+                cantidad_registrada,
+                lectura_inicial,
+                lectura_final,
+                fecha_registro,
+                ROUND(lectura_final - lectura_inicial, 2) as consumo_calculado
+            FROM consumo_agua 
+            WHERE fecha_registro >= '2024-01-01'
+            ORDER BY fecha_registro DESC
+            LIMIT 30
+        """
+        agua_data = ejecutar_query(agua_query)
+
+        # 3. Consumo Gas
+        gas_query = """
+            SELECT 
+                id_consumo_gas as id_consumo,
+                id_sensor,
+                id_departamento,
+                cantidad_registrada,
+                lectura_inicial,
+                lectura_final,
+                fecha_registro,
+                ROUND(lectura_final - lectura_inicial, 2) as consumo_calculado
+            FROM consumo_gas 
+            WHERE fecha_registro >= '2024-01-01'
+            ORDER BY fecha_registro DESC
+            LIMIT 30
+        """
+        gas_data = ejecutar_query(gas_query)
+
+        # 4. Consumo Luz
+        luz_query = """
+            SELECT 
+                id_consumo_luz as id_consumo,
+                id_sensor,
+                id_departamento,
+                cantidad_registrada,
+                lectura_inicial,
+                lectura_final,
+                fecha_registro,
+                ROUND(lectura_final - lectura_inicial, 2) as consumo_calculado
+            FROM consumo_luz 
+            WHERE fecha_registro >= '2024-01-01'
+            ORDER BY fecha_registro DESC
+            LIMIT 30
+        """
+        luz_data = ejecutar_query(luz_query)
+
+        # Combinar consumos
+        todos_consumos = []
+        for registro in agua_data:
+            registro['servicio'] = 'agua'
+            todos_consumos.append(registro)
+        for registro in gas_data:
+            registro['servicio'] = 'gas'
+            todos_consumos.append(registro)
+        for registro in luz_data:
+            registro['servicio'] = 'luz'
+            todos_consumos.append(registro)
+
+        todos_consumos.sort(key=lambda x: x['fecha_registro'], reverse=True)
+
+        # Métricas de consumo
+        metricas_consumo_query = """
+            SELECT 'agua' as servicio, COUNT(*) as total_registros, SUM(cantidad_registrada) as consumo_total
+            FROM consumo_agua WHERE fecha_registro >= '2024-01-01'
+            UNION ALL
+            SELECT 'gas', COUNT(*), SUM(cantidad_registrada) FROM consumo_gas WHERE fecha_registro >= '2024-01-01'
+            UNION ALL
+            SELECT 'luz', COUNT(*), SUM(cantidad_registrada) FROM consumo_luz WHERE fecha_registro >= '2024-01-01'
+        """
+        metricas_consumo = ejecutar_query(metricas_consumo_query)
+
+        def buscar(servicio, campo):
+            return next((m[campo] for m in metricas_consumo if m['servicio'] == servicio), 0)
+
+        agua = {
+            "costo": 320,
+            "variacion": -15,
+            "consumo_total": buscar('agua', 'consumo_total'),
+            "registros": buscar('agua', 'total_registros')
+        }
+        gas = {
+            "costo": 180,
+            "variacion": -5,
+            "consumo_total": buscar('gas', 'consumo_total'),
+            "registros": buscar('gas', 'total_registros')
+        }
+        luz = {
+            "costo": 240,
+            "variacion": -8,
+            "consumo_total": buscar('luz', 'consumo_total'),
+            "registros": buscar('luz', 'total_registros')
+        }
+
+        cursor.close()
+        conn.close()
+
+    except Exception as e:
+        print("❌ ERROR EN /consumos:", str(e))
+        flash(f"Error al cargar datos: {str(e)}", "danger")
+        sensores_data = []
+        todos_consumos = []
+        metricas_sensores = None
+        agua = {"costo": 0, "variacion": 0, "consumo_total": 0, "registros": 0}
+        gas = {"costo": 0, "variacion": 0, "consumo_total": 0, "registros": 0}
+        luz = {"costo": 0, "variacion": 0, "consumo_total": 0, "registros": 0}
+
+    return render_template("administrador/consumos.html",
+        agua=agua,
+        gas=gas,
+        luz=luz,
+        sensores=sensores_data,
+        consumos=todos_consumos,
+        metricas_sensores=metricas_sensores,
+        current_date=current_date,
+        current_month=current_month
+    )
 
 @admin_bp.route("/reservas")
 @login_required
@@ -59,11 +235,13 @@ def usuarios():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Obtener todos los usuarios
+        # Obtener todos los usuarios y residentes con JOIN para mostrar datos completos
         cursor.execute("""
             SELECT u.id_usuario, u.nombre, u.ap_paterno, u.ap_materno, 
-                   u.correo, u.telefono, u.id_rol 
+                   u.correo, u.telefono, u.id_rol,
+                   r.piso, r.nro_departamento, r.fecha_ingreso
             FROM usuario u
+            LEFT JOIN residente r ON u.id_usuario = r.id_usuario
             ORDER BY u.id_rol, u.nombre
         """)
         usuarios = cursor.fetchall()
@@ -78,7 +256,10 @@ def usuarios():
                 'ap_materno': user[3],
                 'correo': user[4],
                 'telefono': user[5],
-                'id_rol': user[6]
+                'id_rol': user[6],
+                'piso': user[7],
+                'nro_departamento': user[8],
+                'fecha_ingreso': user[9]
             })
         
         cursor.close()
@@ -157,9 +338,42 @@ def cambiar_rol():
     
     return redirect(url_for("admin.usuarios"))
 
+@admin_bp.route("/dashboard_finanzas")
+@login_required
+def dashboard_finanzas():
+    factura = {
+        "id": 101,
+        "fecha": datetime.now().strftime("%Y-%m-%d"),
+        "cliente": "Marcelo G.",
+        "servicio": "Consumo eléctrico",
+        "total": 1280.50
+    }
+    return render_template("administrador/finanzas.html", factura=factura)
+
+# Ruta para generar el PDF
+@admin_bp.route("/generar_pdf/<int:id>", methods=["POST"])
+@login_required
+def generar_pdf(id):
+    factura = {
+        "id": id,
+        "fecha": datetime.now().strftime("%Y-%m-%d"),
+        "cliente": "Marcelo G.",
+        "servicio": "Consumo eléctrico",
+        "total": 1280.50
+    }
+    config = pdfkit.configuration(wkhtmltopdf=r'C:\wkhtmltopdf\bin\wkhtmltopdf.exe')
+    html = render_template("administrador/factura.html", factura=factura)
+    pdf = pdfkit.from_string(html, False, configuration=config)
+    return send_file(BytesIO(pdf), download_name=f"factura_{id}.pdf", as_attachment=True)
+
+
 @admin_bp.route("/logout")
 @login_required
 def logout():
     logout_user()
     flash("Sesión cerrada correctamente.", "info")
     return redirect(url_for("auth.login"))
+
+
+
+
