@@ -1,123 +1,509 @@
 {% extends 'administrador/base.html' %}
 
-{% block title %}Usuarios Registrados{% endblock %}
+{% block title %}Gestión de Usuarios{% endblock %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='style_usuario.css')}}">
+<style>
+    /* Estilos mejorados */
+    .dashboard-container {
+        padding: 20px;
+        max-width: 100%;
+        overflow-x: auto;
+    }
+
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        text-align: center;
+        border-left: 4px solid #007bff;
+    }
+
+    .stat-card.admin {
+        border-left-color: #dc3545;
+    }
+
+    .stat-card.empleado {
+        border-left-color: #28a745;
+    }
+
+    .stat-card.residente {
+        border-left-color: #6f42c1;
+    }
+
+    .stat-number {
+        font-size: 2em;
+        font-weight: bold;
+        display: block;
+    }
+
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9em;
+    }
+
+    .table-section {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+        overflow: hidden;
+    }
+
+    .table-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-title {
+        font-size: 1.3em;
+        font-weight: 600;
+    }
+
+    .table-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .search-box {
+        padding: 8px 12px;
+        border: none;
+        border-radius: 5px;
+        width: 250px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9em;
+    }
+
+    .data-table th {
+        background-color: #f8f9fa;
+        padding: 15px 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #2c3e50;
+        border-bottom: 2px solid #dee2e6;
+        position: sticky;
+        top: 0;
+    }
+
+    .data-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e9ecef;
+        vertical-align: middle;
+    }
+
+    .data-table tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .rol-options {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    .rol-option {
+        padding: 6px 12px;
+        border: 2px solid #e9ecef;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.8em;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .rol-option.selected {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    .rol-option:hover:not(.selected) {
+        background: #e9ecef;
+        border-color: #007bff;
+    }
+
+    .badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75em;
+        font-weight: 600;
+    }
+
+    .badge-admin {
+        background: #dc3545;
+        color: white;
+    }
+
+    .badge-empleado {
+        background: #28a745;
+        color: white;
+    }
+
+    .badge-residente {
+        background: #6f42c1;
+        color: white;
+    }
+
+    .badge-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: #007bff;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #1e7e34;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .table-header {
+            flex-direction: column;
+            gap: 15px;
+            align-items: stretch;
+        }
+
+        .search-box {
+            width: 100%;
+        }
+
+        .stats-cards {
+            grid-template-columns: 1fr;
+        }
+
+        .data-table {
+            font-size: 0.8em;
+        }
+
+        .rol-options {
+            flex-direction: column;
+        }
+    }
+
+    /* Scroll personalizado */
+    .table-container {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .table-container::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .table-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .table-container::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+
+    .table-container::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="header" style="display: flex; align-items: center; gap: 18px; margin-bottom: 2rem;">
-    <h1 style="margin:0;">Usuarios Registrados</h1>
-    <span style="margin-left:auto;"></span>
-    <a href="{{ url_for('admin.logout') }}" class="logout-btn">Cerrar sesión</a>
-</div>
-
-<div class="main-content">
-    <!-- Tabla de Administradores y Empleados -->
-    <div class="table-container">
-        <div class="table-title">
-            Administradores y Empleados
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="header-section">
+        <div>
+            <h1 style="margin: 0; color: #2c3e50;">👥 Gestión de Usuarios</h1>
+            <p style="margin: 5px 0 0 0; color: #6c757d;">Administra los usuarios del sistema</p>
         </div>
-        <form method="post" action="{{ url_for('admin.cambiar_rol') }}"> <!-- Cambiar esta ruta -->
-            <table class="data-table editable-table">
+        <a href="{{ url_for('admin.logout') }}" class="btn btn-primary">Cerrar sesión</a>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="stats-cards">
+        <div class="stat-card admin">
+            <span class="stat-number">{{ usuarios|selectattr('id_rol', 'equalto', 1)|list|length }}</span>
+            <span class="stat-label">Administradores</span>
+        </div>
+        <div class="stat-card empleado">
+            <span class="stat-number">{{ usuarios|selectattr('id_rol', 'equalto', 2)|list|length }}</span>
+            <span class="stat-label">Empleados</span>
+        </div>
+        <div class="stat-card residente">
+            <span class="stat-number">{{ usuarios|selectattr('id_rol', 'equalto', 3)|list|length }}</span>
+            <span class="stat-label">Residentes</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-number">{{ usuarios|length }}</span>
+            <span class="stat-label">Total Usuarios</span>
+        </div>
+    </div>
+
+    <!-- Tabla de Administradores y Empleados -->
+    <div class="table-section">
+        <div class="table-header">
+            <div class="table-title">🏢 Personal Administrativo</div>
+            <div class="table-actions">
+                <input type="text" class="search-box" placeholder="Buscar usuario..." id="searchAdmin">
+                <span class="badge badge-admin">{{ usuarios|selectattr('id_rol', 'in', [1, 2])|list|length }} registros</span>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table" id="tableAdmin">
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Nombre</th>
-                        <th>Apellido Paterno</th>
-                        <th>Apellido Materno</th>
-                        <th>Correo</th>
-                        <th>Teléfono</th>
-                        <th>Rol</th>
+                        <th>Nombre Completo</th>
+                        <th>Contacto</th>
+                        <th>Rol Actual</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for usuario in usuarios %}
-                    {% if usuario.id_rol in [1, 2] %} <!-- Solo administradores y empleados -->
+                    {% if usuario.id_rol in [1, 2] %}
                     <tr>
-                        <td>{{ usuario.id_usuario }}</td>
-                        <td>{{ usuario.nombre }}</td>
-                        <td>{{ usuario.ap_paterno }}</td>
-                        <td>{{ usuario.ap_materno }}</td>
-                        <td>{{ usuario.correo }}</td>
-                        <td>{{ usuario.telefono }}</td>
+                        <td><strong>#{{ usuario.id_usuario }}</strong></td>
+                        <td>
+                            <div style="font-weight: 600;">{{ usuario.nombre }} {{ usuario.ap_paterno }} {{ usuario.ap_materno }}</div>
+                        </td>
+                        <td>
+                            <div>{{ usuario.correo }}</div>
+                            <small style="color: #6c757d;">{{ usuario.telefono or 'Sin teléfono' }}</small>
+                        </td>
+                        <td>
+                            {% if usuario.id_rol == 1 %}
+                                <span class="badge badge-admin">👑 Administrador</span>
+                            {% else %}
+                                <span class="badge badge-empleado">👨‍💼 Empleado</span>
+                            {% endif %}
+                        </td>
                         <td>
                             <div class="rol-options">
-                                <input type="hidden" name="id_usuario_{{ loop.index }}"
-                                    value="{{ usuario.id_usuario }}">
-                                <div class="rol-option {% if usuario.id_rol == 1 %}selected{% endif %}"
-                                    onclick="selectRol(this, '{{ loop.index }}', 1)">Administrador</div>
-                                <div class="rol-option {% if usuario.id_rol == 2 %}selected{% endif %}"
-                                    onclick="selectRol(this, '{{ loop.index }}', 2)">Empleado</div>
-                                <input type="hidden" name="nuevo_rol_{{ loop.index }}" id="rol-input-{{ loop.index }}"
-                                    value="{{ usuario.id_rol }}">
+                                <div class="rol-option {% if usuario.id_rol == 1 %}selected{% endif %}" 
+                                     onclick="cambiarRol({{ usuario.id_usuario }}, 1)">
+                                    👑 Admin
+                                </div>
+                                <div class="rol-option {% if usuario.id_rol == 2 %}selected{% endif %}" 
+                                     onclick="cambiarRol({{ usuario.id_usuario }}, 2)">
+                                    👨‍💼 Empleado
+                                </div>
                             </div>
                         </td>
                     </tr>
                     {% endif %}
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <h5>👥 No hay personal administrativo</h5>
+                            <p>No se encontraron administradores o empleados registrados.</p>
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
-            <div style="text-align:right;margin-top:10px;">
-                <button type="submit" class="guardar-btn">Guardar Cambios de Rol</button>
-            </div>
-        </form>
+        </div>
     </div>
 
     <!-- Tabla de Residentes -->
-    <div class="table-container">
-        <div class="table-title">Residentes</div>
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nombre</th>
-                    <th>Apellido Paterno</th>
-                    <th>Apellido Materno</th>
-                    <th>Correo</th>
-                    <th>Teléfono</th>
-                    <th>Piso</th>
-                    <th>Nro Departamento</th>
-                    <th>Fecha Ingreso</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for usuario in usuarios %}
-                {% if usuario.id_rol == 3 %} <!-- Solo residentes -->
-                <tr>
-                    <td>{{ usuario.id_usuario }}</td>
-                    <td>{{ usuario.nombre }}</td>
-                    <td>{{ usuario.ap_paterno }}</td>
-                    <td>{{ usuario.ap_materno }}</td>
-                    <td>{{ usuario.correo }}</td>
-                    <td>{{ usuario.telefono }}</td>
-                    <td>{{ usuario.piso }}</td>
-                    <td>{{ usuario.nro_departamento }}</td>
-                    <td>{{ usuario.fecha_ingreso.strftime('%d/%m/%Y') }}</td>
-                    <td>Residente</td>
-                </tr>
-                {% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
+    <div class="table-section">
+        <div class="table-header">
+            <div class="table-title">🏠 Residentes</div>
+            <div class="table-actions">
+                <input type="text" class="search-box" placeholder="Buscar residente..." id="searchResident">
+                <span class="badge badge-residente">{{ usuarios|selectattr('id_rol', 'equalto', 3)|list|length }} registros</span>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table class="data-table" id="tableResident">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre Completo</th>
+                        <th>Contacto</th>
+                        <th>Departamento</th>
+                        <th>Fecha Ingreso</th>
+                        <th>Tipo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    {% if usuario.id_rol == 3 %}
+                    <tr>
+                        <td><strong>#{{ usuario.id_usuario }}</strong></td>
+                        <td>
+                            <div style="font-weight: 600;">{{ usuario.nombre }} {{ usuario.ap_paterno }} {{ usuario.ap_materno }}</div>
+                        </td>
+                        <td>
+                            <div>{{ usuario.correo }}</div>
+                            <small style="color: #6c757d;">{{ usuario.telefono or 'Sin teléfono' }}</small>
+                        </td>
+                        <td>
+                            {% if usuario.piso and usuario.nro_departamento %}
+                                <span class="badge badge-residente">
+                                    Piso {{ usuario.piso }} - Depto {{ usuario.nro_departamento }}
+                                </span>
+                            {% else %}
+                                <span class="badge badge-secondary">Sin asignar</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if usuario.fecha_ingreso %}
+                                {{ usuario.fecha_ingreso.strftime('%d/%m/%Y') }}
+                            {% else %}
+                                <span style="color: #6c757d;">No especificada</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-residente">Residente</span>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <h5>🏠 No hay residentes</h5>
+                            <p>No se encontraron residentes registrados.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    function selectRol(element, idx, rol) {
-        // Quitar selección previa en esta fila
-        let parent = element.parentElement;
-        let options = parent.querySelectorAll('.rol-option');
-        options.forEach(opt => opt.classList.remove('selected'));
+    // Funcionalidad de búsqueda
+    document.getElementById('searchAdmin').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#tableAdmin tbody tr');
+        
+        let visibleCount = 0;
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Actualizar contador
+        document.querySelector('#tableAdmin').closest('.table-section').querySelector('.badge').textContent = visibleCount + ' registros';
+    });
 
-        // Seleccionar actual
-        element.classList.add('selected');
+    document.getElementById('searchResident').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#tableResident tbody tr');
+        
+        let visibleCount = 0;
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Actualizar contador
+        document.querySelector('#tableResident').closest('.table-section').querySelector('.badge').textContent = visibleCount + ' registros';
+    });
 
-        // Cambiar valor del input oculto
-        document.getElementById('rol-input-' + idx).value = rol;
+    // Función para cambiar rol (necesitarías implementar el endpoint)
+    function cambiarRol(idUsuario, nuevoRol) {
+        if (confirm('¿Estás seguro de que quieres cambiar el rol de este usuario?')) {
+            fetch('{{ url_for("admin.cambiar_rol") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id_usuario: idUsuario,
+                    nuevo_rol: nuevoRol
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Rol cambiado exitosamente');
+                    location.reload();
+                } else {
+                    alert('Error al cambiar el rol: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al cambiar el rol');
+            });
+        }
     }
+
+    // Mejorar la UI de selección de roles
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('rol-option')) {
+            const parent = e.target.parentElement;
+            const options = parent.querySelectorAll('.rol-option');
+            options.forEach(opt => opt.classList.remove('selected'));
+            e.target.classList.add('selected');
+        }
+    });
 </script>
 {% endblock %}

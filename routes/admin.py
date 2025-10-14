@@ -272,6 +272,7 @@ def usuarios():
         flash("Error al cargar los usuarios.", "danger")
         return render_template("administrador/usuarios.html", usuarios=[])
 
+
 @admin_bp.route("/generar_invitacion", methods=["POST"])
 @login_required
 def generar_invitacion():
@@ -338,7 +339,7 @@ def cambiar_rol():
     
     return redirect(url_for("admin.usuarios"))
 
-@admin_bp.route("/dashboard_finanzas")
+@admin_bp.route("/dashboard_finanzas ", endpoint="dashboard_finanzas")
 @login_required
 def dashboard_finanzas():
     factura = {
@@ -361,10 +362,31 @@ def generar_pdf(id):
         "servicio": "Consumo eléctrico",
         "total": 1280.50
     }
-    config = pdfkit.configuration(wkhtmltopdf=r'C:\wkhtmltopdf\bin\wkhtmltopdf.exe')
+    config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
     html = render_template("administrador/factura.html", factura=factura)
     pdf = pdfkit.from_string(html, False, configuration=config)
     return send_file(BytesIO(pdf), download_name=f"factura_{id}.pdf", as_attachment=True)
+
+@admin_bp.route("/registrar_movimiento", methods=["POST"])
+@login_required
+def registrar_movimiento():
+    try:
+        nuevo = Movimiento(
+            tipo=request.form['tipo'],
+            monto=float(request.form['monto']),
+            categoria=request.form['categoria'],
+            descripcion=request.form.get('descripcion', ''),
+            fecha=datetime.strptime(request.form['fecha'], '%Y-%m-%d')
+        )
+        db.session.add(nuevo)
+        db.session.commit()
+        flash("Movimiento registrado correctamente.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error al registrar movimiento: {str(e)}", "danger")
+
+    return redirect(url_for("admin.dashboard_finanzas"))
+
 
 
 @admin_bp.route("/logout")

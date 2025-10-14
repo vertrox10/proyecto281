@@ -8,6 +8,7 @@
     <a href="{{ url_for('admin.logout') }}" class="logout-btn">Cerrar sesión</a>
 </div>
 
+<!-- Sección de factura -->
 <div class="factura-box" style="margin-top: 30px; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
     <h2>Factura #{{ factura.id }}</h2>
     <p><strong>Fecha:</strong> {{ factura.fecha }}</p>
@@ -18,5 +19,79 @@
     <form action="{{ url_for('admin.generar_pdf', id=factura.id) }}" method="post" target="_blank">
         <button type="submit" class="btn-pdf">Generar PDF</button>
     </form>
+</div>
+
+<!-- Registro de movimientos -->
+<div class="form-container" style="margin-top: 40px;">
+    <h2>Registrar Movimiento</h2>
+    <form method="post" action="{{ url_for('admin.registrar_movimiento') }}">
+        <label>Tipo:</label>
+        <select name="tipo" required>
+            <option value="ingreso">Ingreso</option>
+            <option value="egreso">Egreso</option>
+        </select>
+
+        <label>Monto:</label>
+        <input type="number" name="monto" step="0.01" required>
+
+        <label>Categoría:</label>
+        <input type="text" name="categoria" required>
+
+        <label>Descripción:</label>
+        <input type="text" name="descripcion">
+
+        <label>Fecha:</label>
+        <input type="date" name="fecha" required>
+
+        <button type="submit">Registrar</button>
+    </form>
+</div>
+
+<!-- Filtros -->
+<div class="filter-container" style="margin-top: 30px;">
+    <h2>Filtrar Movimientos</h2>
+    <form method="get" action="{{ url_for('admin.dashboard_finanzas') }}">
+        <label>Tipo:</label>
+        <select name="filtro_tipo">
+            <option value="">Todos</option>
+            <option value="ingreso">Ingreso</option>
+            <option value="egreso">Egreso</option>
+        </select>
+
+        <label>Desde:</label>
+        <input type="date" name="fecha_inicio">
+
+        <label>Hasta:</label>
+        <input type="date" name="fecha_fin">
+
+        <button type="submit">Aplicar filtros</button>
+    </form>
+</div>
+
+<!-- Tabla de movimientos -->
+<div class="table-container" style="margin-top: 30px;">
+    <h2>Movimientos Registrados</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Monto</th>
+                <th>Categoría</th>
+                <th>Descripción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for movimiento in movimientos %}
+            <tr>
+                <td>{{ movimiento.fecha.strftime('%d/%m/%Y') }}</td>
+                <td>{{ movimiento.tipo }}</td>
+                <td>Bs {{ "%.2f"|format(movimiento.monto) }}</td>
+                <td>{{ movimiento.categoria }}</td>
+                <td>{{ movimiento.descripcion }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% endblock %}
