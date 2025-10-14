@@ -1,0 +1,306 @@
+{% extends "empleado/base_empleado.html" %}
+
+{% block title %}Historial de Pagos{% endblock %}
+
+{% block extra_css %}
+<style>
+    .salario-actual {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .salario-monto {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+
+    .pago-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: transform 0.2s;
+        background: white;
+    }
+
+    .pago-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .pago-completado {
+        border-left: 4px solid #28a745;
+    }
+
+    .pago-pendiente {
+        border-left: 4px solid #ffc107;
+    }
+
+    .detalles-pago {
+        font-size: 0.9em;
+        color: #666;
+    }
+
+    .evolucion-item {
+        padding: 10px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .evolucion-item:last-child {
+        border-bottom: none;
+    }
+
+    .hours-worked {
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    .bonos-deducciones small {
+        font-size: 0.75em;
+    }
+
+    .header-section {
+        margin-bottom: 30px;
+    }
+
+    .header-section h1 {
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header-section">
+        <h1><i class="fas fa-money-bill-wave"></i> Historial de Pagos y Salarios</h1>
+        <p class="text-muted">Consulta tu historial de pagos y evolución salarial</p>
+    </div>
+
+    <!-- Salario Actual -->
+    <div class="salario-actual">
+        <h3><i class="fas fa-wallet"></i> Salario Actual</h3>
+        <div class="salario-monto">S/ {{ "%.2f"|format(salario_actual) }}</div>
+        <p>Actualizado al corriente</p>
+    </div>
+
+    <div class="row">
+        <!-- Historial de Pagos -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4><i class="fas fa-receipt"></i> Últimos Pagos Recibidos</h4>
+                    <span class="badge bg-primary">{{ pagos|length }} pagos</span>
+                </div>
+                <div class="card-body">
+                    {% if pagos %}
+                    {% for pago in pagos %}
+                    <div class="pago-card pago-{{ pago[9] }}">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <h5 class="text-success">S/ {{ "%.2f"|format(pago[4]) }}</h5>
+                                <p class="detalles-pago mb-1">
+                                    <strong>Período:</strong> {{ pago[1] }} al {{ pago[2] }}
+                                </p>
+                                <p class="detalles-pago mb-1">
+                                    <strong>Pagado:</strong> {{ pago[3] }}
+                                </p>
+                                <p class="detalles-pago mb-0">
+                                    <strong>Método:</strong> {{ pago[8] }}
+                                </p>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <div class="hours-worked">
+                                    <small class="text-muted">Horas Trabajadas</small>
+                                    <div class="h5 mb-0">{{ pago[5] }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <span class="badge bg-{{ 'success' if pago[9] == 'completado' else 'warning' }} mb-2">
+                                    {{ pago[9]|title }}
+                                </span>
+                                <div class="bonos-deducciones">
+                                    {% if pago[6] > 0 %}
+                                    <small class="text-success d-block">+ Bonos: S/ {{ "%.2f"|format(pago[6]) }}</small>
+                                    {% endif %}
+                                    {% if pago[7] > 0 %}
+                                    <small class="text-danger d-block">- Deducciones: S/ {{ "%.2f"|format(pago[7])
+                                        }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay registros de pagos disponibles.</p>
+                        <small class="text-muted">Los pagos aparecerán aquí una vez que sean procesados.</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar con Evolución Salarial y Gráficos -->
+        <div class="col-md-4">
+            <!-- Evolución Salarial -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-line"></i> Evolución Salarial</h5>
+                </div>
+                <div class="card-body">
+                    {% if historial_salarios %}
+                    {% for cambio in historial_salarios %}
+                    <div class="evolucion-item">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <small class="text-muted">{{ cambio[0] }}</small>
+                            <span class="badge bg-info">Cambio</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-danger"><small>S/ {{ "%.2f"|format(cambio[1]) }}</small></span>
+                            <i class="fas fa-arrow-right text-muted mx-2"></i>
+                            <span class="text-success"><strong>S/ {{ "%.2f"|format(cambio[2]) }}</strong></span>
+                        </div>
+                        {% if cambio[3] %}
+                        <small class="text-muted d-block mt-1">{{ cambio[3] }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-chart-line fa-2x text-muted mb-2"></i>
+                        <p class="text-muted">No hay cambios de salario registrados.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Gráfico de Distribución -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-pie"></i> Distribución Mensual</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoPagos" width="300" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Resumen Rápido -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Resumen Financiero</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Pagado (6 meses):</span>
+                        <strong class="text-success">S/ {{ "%.2f"|format(pagos|sum(attribute=4) if pagos else 0)
+                            }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Promedio Mensual:</span>
+                        <strong>S/ {{ "%.2f"|format((pagos|sum(attribute=4)/pagos|length) if pagos else 0) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Bonos Totales:</span>
+                        <strong class="text-success">S/ {{ "%.2f"|format(pagos|sum(attribute=6) if pagos else 0)
+                            }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Próximo pago estimado:</span>
+                        <strong class="text-info">05 Nov 2024</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Cargar datos reales para el gráfico
+        fetch('/empleados/api/pagos-estadisticas')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    actualizarGraficos(data.data);
+                } else {
+                    // Usar datos de ejemplo si hay error
+                    actualizarGraficos({
+                        categorias: [
+                            { 'categoria': 'Salario Base', 'monto': 2100 },
+                            { 'categoria': 'Bonos', 'monto': 200 },
+                            { 'categoria': 'Deducciones', 'monto': 120 }
+                        ]
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error cargando estadísticas:', error);
+                // Usar datos de ejemplo si hay error
+                actualizarGraficos({
+                    categorias: [
+                        { 'categoria': 'Salario Base', 'monto': 2100 },
+                        { 'categoria': 'Bonos', 'monto': 200 },
+                        { 'categoria': 'Deducciones', 'monto': 120 }
+                    ]
+                });
+            });
+
+        function actualizarGraficos(datos) {
+            // Gráfico de distribución de pagos
+            const ctx = document.getElementById('graficoPagos').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: datos.categorias.map(item => item.categoria),
+                    datasets: [{
+                        data: datos.categorias.map(item => Math.abs(item.monto)),
+                        backgroundColor: [
+                            '#3498db',  // Azul para Salario Base
+                            '#2ecc71',  // Verde para Bonos
+                            '#e74c3c'   // Rojo para Deducciones
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    return `${label}: S/ ${value.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '60%'
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

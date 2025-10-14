@@ -1,4 +1,11 @@
-/* empleado/dashboard.css */
+/* ==================== */
+/* EMPLEADO/DASHBOARD.CSS */
+/* Estilos para el panel principal de empleados */
+/* ==================== */
+
+/* ==================== */
+/* 1. ENCABEZADO DEL DASHBOARD */
+/* ==================== */
 .dashboard-header {
     margin-bottom: 30px;
 }
@@ -17,6 +24,9 @@
     font-size: 1rem;
 }
 
+/* ==================== */
+/* 2. MÉTRICAS PRINCIPALES */
+/* ==================== */
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -55,23 +65,23 @@
 }
 
 /* Iconos específicos para consumo */
-.metric-icon.consumo-agua {
+.metric-icon.agua {
     background: linear-gradient(135deg, #4fc3f7, #0288d1);
 }
 
-.metric-icon.consumo-luz {
+.metric-icon.luz {
     background: linear-gradient(135deg, #ffd54f, #ff8f00);
 }
 
-.metric-icon.consumo-gas {
+.metric-icon.gas {
     background: linear-gradient(135deg, #ff8a65, #d84315);
 }
 
-.metric-content {
+.metric-info {
     flex: 1;
 }
 
-.metric-content h3 {
+.metric-info h3 {
     margin: 0 0 10px 0;
     color: var(--azul-profundo);
     font-size: 1.2rem;
@@ -84,10 +94,10 @@
     color: var(--marron-oscuro);
 }
 
-.metric-description {
+.consumo-trend {
     color: var(--verde-oliva);
-    margin: 0 0 15px 0;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    margin-top: 5px;
 }
 
 .btn-card {
@@ -111,9 +121,8 @@
 }
 
 /* ==================== */
-/* ESTILOS PARA GRÁFICOS */
+/* 3. SECCIÓN DE GRÁFICOS - SISTEMA CORREGIDO */
 /* ==================== */
-
 .charts-section {
     margin: 30px 0;
 }
@@ -125,24 +134,49 @@
     margin-bottom: 25px;
 }
 
+/* Para la segunda fila: dos gráficos lado a lado */
 .chart-row:last-child {
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
 }
 
+/* ==================== */
+/* 4. CONTENEDORES DE GRÁFICOS - DIMENSIONES FIJAS */
+/* ==================== */
+
+/**
+ * NOTA: Los contenedores tienen alturas fijas para evitar
+ * que los gráficos se expandan infinitamente
+ */
+
+/* Contenedor base para gráficos */
 .chart-container {
+    position: relative;
     background: white;
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     border: 1px solid var(--beige-suave);
-    position: relative;
+    
+    /* DIMENSIONES FIJAS - Base para gráficos normales */
+    height: 450px;
+    min-height: 450px;
+    max-height: 450px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
+/* Contenedor para gráficos grandes (líneas) */
 .chart-container.large {
-    grid-column: 1 / -1;
-    min-height: 400px;
+    /* Misma altura que los normales para consistencia */
+    height: 450px;
+    min-height: 450px;
+    max-height: 450px;
 }
 
+/* ==================== */
+/* 5. HEADER DE GRÁFICOS */
+/* ==================== */
 .chart-header {
     display: flex;
     justify-content: space-between;
@@ -150,6 +184,11 @@
     margin-bottom: 20px;
     border-bottom: 2px solid var(--beige-suave);
     padding-bottom: 15px;
+    
+    /* Altura fija para el header */
+    height: 60px;
+    min-height: 60px;
+    flex-shrink: 0; /* Evita que se encoja */
 }
 
 .chart-header h3 {
@@ -161,6 +200,25 @@
     font-size: 1.1rem;
 }
 
+/* ==================== */
+/* 6. CANVAS DE GRÁFICOS - ÁREA DE DIBUJO */
+/* ==================== */
+
+/**
+ * El canvas ocupa el espacio restante después del header
+ * y antes de la descripción (si existe)
+ */
+.chart-container canvas {
+    width: 100% !important;
+    height: calc(100% - 60px) !important; /* Solo resta el header */
+    min-height: 300px;
+    display: block;
+    flex: 1; /* Ocupa el espacio disponible */
+}
+
+/* ==================== */
+/* 7. CONTROLES DE GRÁFICOS */
+/* ==================== */
 .chart-controls {
     display: flex;
     gap: 10px;
@@ -195,164 +253,79 @@
     transform: translateY(-1px);
 }
 
-/* Estilos para las tarjetas de consumo */
-.consumo-trend {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    color: var(--verde-oliva);
-    font-size: 0.8rem;
-    margin-top: 5px;
-}
-
-.consumo-trend i {
-    font-size: 0.7rem;
-}
-
 /* ==================== */
-/* ACTIVIDAD RECIENTE */
+/* 8. DESCRIPCIONES DE GRÁFICOS */
 /* ==================== */
 
-.recent-activity {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 30px;
-}
-
-.activity-section, .quick-stats {
-    background: white;
-    padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    border: 1px solid var(--beige-suave);
-}
-
-.activity-section h3, .quick-stats h3 {
-    color: var(--azul-profundo);
-    margin-bottom: 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    border-bottom: 2px solid var(--beige-suave);
-    padding-bottom: 10px;
-}
-
-.activity-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.activity-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 15px;
+/**
+ * Las descripciones se agregan como elemento adicional
+ * y requieren ajustar las alturas del canvas
+ */
+.chart-description {
+    margin-top: 15px;
     padding: 15px;
-    border-radius: 8px;
     background: var(--gris-claro);
-    transition: all 0.3s ease;
+    border-radius: 8px;
+    border-left: 4px solid var(--verde-oliva);
+    flex-shrink: 0; /* Evita que se encoja */
 }
 
-.activity-item:hover {
-    background: var(--beige-suave);
+.chart-description p {
+    margin: 0;
+    color: var(--marron-oscuro);
+    font-size: 0.9rem;
+    line-height: 1.5;
 }
 
-.activity-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-}
-
-.activity-icon.success {
-    background: var(--celeste-claro);
+.chart-description strong {
     color: var(--azul-profundo);
-}
-
-.activity-icon.warning {
-    background: var(--durazno-suave);
-    color: var(--marron-oscuro);
-}
-
-.activity-icon.info {
-    background: var(--beige-suave);
-    color: var(--verde-oliva);
-}
-
-.activity-content {
-    flex: 1;
-}
-
-.activity-content p {
-    margin: 0 0 5px 0;
-    font-weight: 600;
-    color: var(--marron-oscuro);
+    display: block;
+    margin-bottom: 5px;
     font-size: 0.95rem;
 }
 
-.activity-content small {
-    color: var(--verde-oliva);
-    font-size: 0.8rem;
-    line-height: 1.4;
-}
-
-.stats-cards {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.stat-mini {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px;
-    background: var(--gris-claro);
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-.stat-mini:hover {
-    background: var(--beige-suave);
-    transform: translateX(5px);
-}
-
-.stat-mini i {
-    font-size: 1.5rem;
-    flex-shrink: 0;
-}
-
-.stat-mini div {
-    flex: 1;
-}
-
-.stat-mini strong {
-    font-size: 1.4rem;
-    color: var(--azul-profundo);
-    display: block;
-    line-height: 1.2;
-}
-
-.stat-mini span {
-    color: var(--verde-oliva);
-    font-size: 0.9rem;
+/* Cuando hay descripción, el canvas se hace más pequeño */
+.chart-container:has(.chart-description) canvas {
+    height: calc(100% - 60px - 80px) !important; /* Header + Descripción */
 }
 
 /* ==================== */
-/* RESPONSIVE */
+/* 9. ESTADOS DE LOS GRÁFICOS */
+/* ==================== */
+.chart-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--verde-oliva);
+    font-style: italic;
+    font-size: 1.1rem;
+}
+
+.chart-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #e74c3c;
+    text-align: center;
+    padding: 20px;
+    font-size: 1rem;
+}
+
+/* ==================== */
+/* 10. DISEÑO RESPONSIVE */
 /* ==================== */
 
 @media (max-width: 1024px) {
-    .recent-activity {
+    .chart-row:last-child {
         grid-template-columns: 1fr;
     }
     
-    .chart-row:last-child {
-        grid-template-columns: 1fr;
+    .chart-container {
+        height: 400px;
+        min-height: 400px;
+        max-height: 400px;
     }
 }
 
@@ -361,16 +334,19 @@
         grid-template-columns: 1fr;
     }
     
-    .metric-card {
-        flex-direction: column;
-        text-align: center;
-        gap: 15px;
+    .chart-container {
+        height: 350px;
+        min-height: 350px;
+        max-height: 350px;
+        padding: 20px;
     }
     
     .chart-header {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+        height: auto;
+        min-height: 80px;
     }
     
     .chart-controls {
@@ -378,31 +354,27 @@
         justify-content: space-between;
     }
     
-    .chart-controls select {
-        flex: 1;
+    /* Ajuste de canvas para móviles */
+    .chart-container canvas {
+        height: calc(100% - 80px) !important;
     }
     
-    .activity-item {
-        flex-direction: column;
-        text-align: center;
-        gap: 10px;
-    }
-    
-    .stat-mini {
-        flex-direction: column;
-        text-align: center;
-        gap: 10px;
+    .chart-container:has(.chart-description) canvas {
+        height: calc(100% - 80px - 80px) !important;
     }
 }
 
 @media (max-width: 480px) {
     .chart-container {
+        height: 300px;
+        min-height: 300px;
+        max-height: 300px;
         padding: 15px;
     }
     
     .chart-controls {
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
     }
     
     .chart-controls select,
@@ -410,4 +382,25 @@
         width: 100%;
         justify-content: center;
     }
+    
+    .metric-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+}
+
+/* ==================== */
+/* 11. UTILIDADES */
+/* ==================== */
+
+/* Variables CSS personalizadas (deben estar definidas en :root) */
+:root {
+    --azul-profundo: #2c3e50;
+    --verde-oliva: #7e8c5d;
+    --marron-oscuro: #5d4037;
+    --beige-suave: #f5f5dc;
+    --durazno-suave: #ffccbc;
+    --gris-claro: #f8f9fa;
+    --celeste-claro: #e3f2fd;
 }

@@ -34,10 +34,15 @@
                     class="{% if request.endpoint == 'empleados.reportes' %}active{% endif %}">
                     <i class="fas fa-chart-bar"></i> Reportes
                 </a></li>
+            <li><a href="{{ url_for('empleados.historial_pagos') }}"
+                    class="{% if request.endpoint == 'empleados.historial_pagos' %}active{% endif %}">
+                    <i class="fas fa-money-bill-wave"></i> Mis Pagos
+                </a></li>
             <li><a href="{{ url_for('empleados.perfil') }}"
                     class="{% if request.endpoint == 'empleados.perfil' %}active{% endif %}">
                     <i class="fas fa-user"></i> Mi Perfil
                 </a></li>
+
         </ul>
         <a href="{{ url_for('auth.logout') }}" class="logout">
             <i class="fas fa-sign-out-alt"></i> Cerrar Sesión

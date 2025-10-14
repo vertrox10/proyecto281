@@ -492,3 +492,4 @@ def register_admin():
     
     # GET request - mostrar formulario vacío
     return render_template("administrador/register_admin.html")
+

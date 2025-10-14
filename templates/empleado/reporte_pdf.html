@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .info-empleado {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .table th {
+            background: #34495e;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+
+        .table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-urgente {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge-alta {
+            background: #e67e22;
+            color: white;
+        }
+
+        .badge-media {
+            background: #f39c12;
+            color: black;
+        }
+
+        .badge-baja {
+            background: #27ae60;
+            color: white;
+        }
+
+        .badge-abierto {
+            background: #f39c12;
+            color: black;
+        }
+
+        .badge-en_progreso {
+            background: #3498db;
+            color: white;
+        }
+
+        .badge-cerrado {
+            background: #27ae60;
+            color: white;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>🎫 Reporte de Tickets</h1>
+        <p>Generado el: {{ fecha_generacion }}</p>
+    </div>
+
+    <div class="info-empleado">
+        <h3>Información del Empleado</h3>
+        <p><strong>Nombre:</strong> {{ empleado_nombre }}</p>
+        <p><strong>Puesto:</strong> {{ puesto }}</p>
+        <p><strong>Total de Tickets:</strong> {{ total_tickets }}</p>
+    </div>
+
+    {% if tickets %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Descripción</th>
+                <th>Prioridad</th>
+                <th>Estado</th>
+                <th>Área</th>
+                <th>Fecha Emisión</th>
+                <th>Duración</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+            <tr>
+                <td><strong>#{{ ticket.id_ticket }}</strong></td>
+                <td>{{ ticket.descripcion }}</td>
+                <td>
+                    <span class="badge badge-{{ ticket.prioridad }}">
+                        {{ ticket.prioridad }}
+                    </span>
+                </td>
+                <td>
+                    <span class="badge badge-{{ ticket.estado }}">
+                        {{ ticket.estado }}
+                    </span>
+                </td>
+                <td>{{ ticket.area }}</td>
+                <td>{{ ticket.fecha_emision }}</td>
+                <td>{{ ticket.tiempo_transcurrido }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No hay tickets para mostrar.</p>
+    {% endif %}
+
+    <div class="footer">
+        <p>Sistema de Gestión - Reporte generado automáticamente</p>
+    </div>
+</body>
+
+</html>

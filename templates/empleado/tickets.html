@@ -2,7 +2,7 @@
 
 {% block title %}Mis Tickets{% endblock %}
 
-{% block extra_head %}
+{% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='empleado/tickets.css') }}?v=1.0">
 {% endblock %}
 
@@ -12,84 +12,27 @@
     <p>Gestiona y da seguimiento a los tickets asignados</p>
 </div>
 
-    <!-- Estadísticas como en la imagen -->
-    <div class="stats-section">
-        <h2>Total Tickets: {{ tickets|length }}</h2>
-        <div class="stats-grid">
-            <div class="stat-item">
-                <strong>{{ tickets|selectattr("3", "equalto", "en_progreso")|list|length }}</strong>
-                <span>En Progreso</span>
-            </div>
-            <div class="stat-item">
-                <strong>{{ tickets|selectattr("3", "equalto", "abierto")|list|length }}</strong>
-                <span>Abiertos</span>
-            </div>
-            <div class="stat-item">
-                <strong>{{ tickets|selectattr("3", "equalto", "cerrado")|list|length }}</strong>
-                <span>Cerrados</span>
-            </div>
+<!-- Estadísticas como en la imagen -->
+<div class="stats-section">
+    <h2>Total Tickets: {{ tickets|length }}</h2>
+    <div class="stats-grid">
+        <div class="stat-item">
+            <strong>{{ tickets|selectattr("3", "equalto", "en_progreso")|list|length }}</strong>
+            <span>En Progreso</span>
         </div>
-    </div>
-
-    <div class="section-divider"></div>
-
-    <!-- Tickets en tarjetas como en la imagen -->
-    <div class="tickets-grid">
-        {% for ticket in tickets %}
-        <div class="ticket-card">
-            <div class="ticket-header">
-                <div class="ticket-id">#{{ ticket[0] }}</div>
-                <span class="prioridad prioridad-{{ ticket[2] }}">
-                    {{ ticket[2]|upper }}
-                </span>
-            </div>
-
-            <div class="ticket-description">
-                {{ ticket[1] }}
-            </div>
-
-            <div class="ticket-details">
-                <div class="detail-row">
-                    <span class="detail-label">Estado:</span>
-                    <span class="estado estado-{{ ticket[3] }}">
-                        {{ ticket[3]|replace('_', ' ')|title }}
-                    </span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Fecha Emisión:</span>
-                    <span class="detail-value">{{ ticket[4] }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Fecha Finalización:</span>
-                    <span class="detail-value">
-                        {% if ticket[5] %}
-                        {{ ticket[5] }}
-                        {% else %}
-                        Pendiente
-                        {% endif %}
-                    </span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Departamento:</span>
-                    <span class="detail-value">Piso {{ ticket[6] }} - {{ ticket[7] }}</span>
-                </div>
-
-                <div class="detail-row">
-                    <span class="detail-label">Residente:</span>
-                    <span class="detail-value">{{ ticket[8] }}</span>
-                </div>
-            </div>
+        <div class="stat-item">
+            <strong>{{ tickets|selectattr("3", "equalto", "abierto")|list|length }}</strong>
+            <span>Abiertos</span>
         </div>
-        {% else %}
-        <div class="no-tickets">
-            No hay tickets asignados
+        <div class="stat-item">
+            <strong>{{ tickets|selectattr("3", "equalto", "cerrado")|list|length }}</strong>
+            <span>Cerrados</span>
         </div>
-        {% endfor %}
     </div>
 </div>
+
+<div class="section-divider"></div>
+
 
 <!-- Lista de Tickets -->
 <div class="tickets-container">
