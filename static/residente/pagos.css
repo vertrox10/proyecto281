@@ -1,0 +1,274 @@
+.pagos-header {
+    margin-bottom: 30px;
+}
+
+.pagos-header h1 {
+    color: var(--azul-profundo);
+    margin-bottom: 20px;
+}
+
+.balance-summary {
+    display: flex;
+    gap: 20px;
+}
+
+.balance-card {
+    background: linear-gradient(135deg, var(--azul-profundo), #1a3340);
+    color: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: var(--sombra-suave);
+    min-width: 250px;
+}
+
+.balance-card h3 {
+    margin: 0 0 10px 0;
+    opacity: 0.9;
+    font-size: 1rem;
+}
+
+.balance-amount {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.balance-status {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.pagos-content {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.pagos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 25px;
+}
+
+.section-card {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: var(--sombra-suave);
+}
+
+.vencimientos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.vencimiento-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: var(--beige-suave);
+    border-radius: 8px;
+    transition: var(--transicion-rapida);
+}
+
+.vencimiento-item:hover {
+    background: #e8dfd8;
+}
+
+.vencimiento-info h4 {
+    margin: 0 0 5px 0;
+    color: var(--azul-profundo);
+}
+
+.vencimiento-info p {
+    margin: 0;
+    color: var(--marron-oscuro);
+    opacity: 0.7;
+    font-size: 0.9rem;
+}
+
+.vencimiento-monto {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.vencimiento-monto .amount {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--marron-oscuro);
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+.metodos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.metodo-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: var(--beige-suave);
+    border-radius: 8px;
+    transition: var(--transicion-rapida);
+}
+
+.metodo-item:hover {
+    background: #e8dfd8;
+}
+
+.metodo-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--celeste-claro);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+.metodo-info {
+    flex: 1;
+}
+
+.metodo-info h4 {
+    margin: 0 0 5px 0;
+    color: var(--azul-profundo);
+}
+
+.metodo-info p {
+    margin: 0;
+    color: var(--marron-oscuro);
+    opacity: 0.7;
+    font-size: 0.9rem;
+}
+
+.metodo-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transicion-rapida);
+    color: var(--azul-profundo);
+}
+
+.btn-icon:hover {
+    background: var(--celeste-claro);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc3545;
+}
+
+.filtros {
+    display: flex;
+    gap: 15px;
+}
+
+.filtros select {
+    width: auto;
+    min-width: 150px;
+}
+
+.acciones {
+    display: flex;
+    gap: 5px;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 2px solid var(--beige-suave);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--azul-profundo);
+}
+
+.modal-body {
+    padding: 25px;
+}
+
+.modal-footer {
+    padding: 20px 25px;
+    border-top: 2px solid var(--beige-suave);
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+}
+
+@media (max-width: 768px) {
+    .balance-summary {
+        flex-direction: column;
+    }
+    
+    .pagos-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .vencimiento-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .vencimiento-monto {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .filtros {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .filtros select {
+        width: 100%;
+    }
+}
