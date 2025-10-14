@@ -146,3 +146,49 @@ body {
   box-shadow: 0 4px 16px rgba(230, 57, 70, 0.25);
   transform: translateY(-2px);
 }
+.cards {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  width: 100%;
+  max-width: 1000px;
+  padding: 0 20px;
+}
+
+.card {
+  background: linear-gradient(135deg, #ffffff, #f0f0f0);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+.card i {
+  font-size: 2rem;
+  color: #4a90e2;
+  margin-bottom: 10px;
+}
+
+.card h3 {
+  font-size: 1.2rem;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.card p {
+  font-size: 1.6rem;
+  color: #222;
+  font-weight: bold;
+}
