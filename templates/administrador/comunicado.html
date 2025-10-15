@@ -1,0 +1,33 @@
+{% extends 'administrador/base.html' %}
+{% block title %}Comunicados{% endblock %}
+{% block content %}
+<div class="header" style="display: flex; align-items: center; gap: 18px;">
+    <h1 style="margin:0;">Comunicados</h1>
+    <span style="margin-left:auto;"></span>
+    <a href="{{ url_for('admin.logout') }}" class="logout-btn">Cerrar sesión</a>
+</div>
+
+<p>Contenido de la sección Comunicados.</p>
+
+<!-- Ejemplo de tabla de comunicados -->
+<table>
+    <thead>
+        <tr>
+            <th>Título</th>
+            <th>Mensaje</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for comunicado in comunicados %}
+        <tr>
+            <td>{{ comunicado.titulo }}</td>
+            <td>{{ comunicado.mensaje }}</td>
+            <td>{{ comunicado.fecha_mantenimiento }}</td>
+            <td>{{ comunicado.hora_mantenimiento }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

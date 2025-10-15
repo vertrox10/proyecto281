@@ -387,6 +387,23 @@ def registrar_movimiento():
 
     return redirect(url_for("admin.dashboard_finanzas"))
 
+comunicados = []
+
+@admin_bp.route('/comunicado', methods=['GET', 'POST'])
+def comunicado():
+    if request.method == 'POST':
+        nuevo = {
+            'titulo': request.form['titulo'],
+            'mensaje': request.form['mensaje'],
+            'fecha': request.form['fecha_mantenimiento'],
+            'hora': request.form['hora_mantenimiento']
+        }
+        comunicados.append(nuevo)
+        return redirect('/comunicado')
+
+    return render_template('administrador/comunicado.html', comunicados=comunicados)
+
+
 
 
 @admin_bp.route("/logout")
