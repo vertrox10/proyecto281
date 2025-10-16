@@ -367,41 +367,199 @@ def generar_pdf(id):
     pdf = pdfkit.from_string(html, False, configuration=config)
     return send_file(BytesIO(pdf), download_name=f"factura_{id}.pdf", as_attachment=True)
 
-@admin_bp.route("/registrar_movimiento", methods=["POST"])
-@login_required
-def registrar_movimiento():
+
+
+
+def enviar_comunicado_emails(titulo, mensaje, destinatarios):
+    """Envía el comunicado usando Flask-Mail"""
     try:
-        nuevo = Movimiento(
-            tipo=request.form['tipo'],
-            monto=float(request.form['monto']),
-            categoria=request.form['categoria'],
-            descripcion=request.form.get('descripcion', ''),
-            fecha=datetime.strptime(request.form['fecha'], '%Y-%m-%d')
+        # 1. Obtener correos destino desde BD
+        correos_destino = obtener_correos_destinatarios(destinatarios)
+        
+        if not correos_destino:
+            return {'success': False, 'error': 'No se encontraron correos destino para los destinatarios seleccionados'}
+        
+        # 2. Crear mensaje con Flask-Mail
+        msg = Message(
+            subject=f"📢 Comunicado: {titulo}",
+            recipients=correos_destino,
+            html=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{ 
+                        font-family: 'Arial', sans-serif; 
+                        margin: 0; 
+                        padding: 0; 
+                        background: #f5f5f5;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        background: white;
+                    }}
+                    .header {{ 
+                        background: #2c3e50; 
+                        color: white; 
+                        padding: 30px 20px;
+                        text-align: center;
+                    }}
+                    .content {{ 
+                        padding: 30px 20px; 
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .message-box {{
+                        background: #f8f9fa;
+                        padding: 20px;
+                        border-left: 4px solid #4caf50;
+                        margin: 20px 0;
+                    }}
+                    .footer {{ 
+                        background: #34495e;
+                        color: #bdc3c7; 
+                        padding: 20px;
+                        text-align: center;
+                        font-size: 12px;
+                    }}
+                    .destinatarios {{
+                        background: #e3f2fd;
+                        padding: 10px 15px;
+                        border-radius: 5px;
+                        margin: 15px 0;
+                        font-size: 14px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>📢 Comunicado Residencial</h1>
+                        <p>Administración del Edificio</p>
+                    </div>
+                    
+                    <div class="content">
+                        <h2>{titulo}</h2>
+                        
+                        <div class="destinatarios">
+                            <strong>Para:</strong> {', '.join([d.capitalize() for d in destinatarios])}
+                        </div>
+                        
+                        <div class="message-box">
+                            {mensaje.replace(chr(10), '<br>')}
+                        </div>
+                        
+                        <p><em>Este es un mensaje automático, por favor no responda a este correo.</em></p>
+                    </div>
+                    
+                    <div class="footer">
+                        <p>Comunicado enviado el {datetime.now().strftime('%d/%m/%Y a las %H:%M')}</p>
+                        <p>© 2024 Administración del Edificio. Todos los derechos reservados.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
         )
-        db.session.add(nuevo)
-        db.session.commit()
-        flash("Movimiento registrado correctamente.", "success")
+        
+        # 3. Enviar email
+        mail.send(msg)
+        
+        print(f"✅ Email enviado a {len(correos_destino)} destinatarios")
+        
+        return {
+            'success': True, 
+            'enviados': len(correos_destino),
+            'correos': correos_destino
+        }
+        
     except Exception as e:
-        db.session.rollback()
-        flash(f"Error al registrar movimiento: {str(e)}", "danger")
+        print(f"❌ Error enviando email: {e}")
+        return {'success': False, 'error': str(e)}
+    
 
-    return redirect(url_for("admin.dashboard_finanzas"))
 
-comunicados = []
-
+def obtener_correos_destinatarios(destinatarios):
+    """Obtiene correos usando tu conexión PostgreSQL directa"""
+    correos = []
+    conn = None
+    
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return []
+        
+        cursor = conn.cursor()
+        
+        # Residentes
+        if 'residente' in destinatarios:
+            cursor.execute("""
+                SELECT u.correo 
+                FROM residente r 
+                JOIN usuarios u ON r.id_usuario = u.id_usuario 
+                WHERE r.activo = true AND u.correo IS NOT NULL
+            """)
+            residentes_emails = [row[0] for row in cursor.fetchall()]
+            correos.extend(residentes_emails)
+            print(f"👨‍👩‍👧‍👦 {len(residentes_emails)} residentes encontrados")
+        
+        # Empleados  
+        if 'empleado' in destinatarios:
+            cursor.execute("""
+                SELECT u.correo 
+                FROM empleado e 
+                JOIN usuarios u ON e.id_usuario = u.id_usuario 
+                WHERE e.activo = true AND u.correo IS NOT NULL
+            """)
+            empleados_emails = [row[0] for row in cursor.fetchall()]
+            correos.extend(empleados_emails)
+            print(f"👷 {len(empleados_emails)} empleados encontrados")
+        
+        # Eliminar duplicados y limpiar
+        correos = list(set([email.strip().lower() for email in correos if email]))
+        
+        print(f"📧 Total de correos únicos: {len(correos)}")
+        return correos
+        
+    except Exception as e:
+        print(f"❌ Error en obtener_correos_destinatarios: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+    
+    
 @admin_bp.route('/comunicado', methods=['GET', 'POST'])
 def comunicado():
     if request.method == 'POST':
-        nuevo = {
-            'titulo': request.form['titulo'],
-            'mensaje': request.form['mensaje'],
-            'fecha': request.form['fecha_mantenimiento'],
-            'hora': request.form['hora_mantenimiento']
-        }
-        comunicados.append(nuevo)
+        titulo = request.form['titulo']
+        mensaje = request.form['mensaje']
+        destinatarios = request.form.getlist('destinatarios')  # ['residentes', 'empleados']
+        
+        # Validar que se seleccionó al menos un destinatario
+        if not destinatarios:
+            flash('❌ Debes seleccionar al menos un destinatario', 'error')
+            return redirect('/comunicado')
+        
+        # Validar que hay título y mensaje
+        if not titulo.strip() or not mensaje.strip():
+            flash('❌ El título y mensaje son obligatorios', 'error')
+            return redirect('/comunicado')
+        
+        # Enviar emails
+        resultado = enviar_comunicado_emails(titulo, mensaje, destinatarios)
+        
+        if resultado['success']:
+            flash(f'✅ Comunicado enviado a {resultado["enviados"]} destinatarios', 'success')
+        else:
+            flash(f'❌ Error: {resultado["error"]}', 'error')
+        
         return redirect('/comunicado')
+    
+    return render_template('administrador/comunicado.html')
 
-    return render_template('administrador/comunicado.html', comunicados=comunicados)
 
 
 
