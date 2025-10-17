@@ -11,7 +11,6 @@ admin_bp = Blueprint("admin", __name__)
 @admin_bp.route("/panel_admin")
 @login_required
 def panel_admin():
-    # Verificar que el usuario sea administrador (id_rol = 1)
     if current_user.id_rol != 1:
         flash("Acceso no autorizado.", "danger")
         return redirect(url_for("auth.login"))
@@ -20,7 +19,7 @@ def panel_admin():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Consulta para sumar todos los consumos registrados desde enero 2024
+        # 🔥 CONSUMO TOTAL (esta funciona porque usas las mismas tablas)
         metricas_query = """
             SELECT SUM(cantidad_registrada) as consumo_total
             FROM (
@@ -34,14 +33,79 @@ def panel_admin():
         cursor.execute(metricas_query)
         consumo_total = cursor.fetchone()[0] or 0
 
+        # 🔥 CONSUMO POR TIPO PARA GRÁFICO DE PASTEL
+        consumo_por_tipo_query = """
+            -- Consumo de Agua
+            SELECT 'Agua' as tipo, COALESCE(SUM(cantidad_registrada), 0) as consumo 
+            FROM consumo_agua WHERE fecha_registro >= '2024-01-01'
+            
+            UNION ALL
+            
+            -- Consumo de Gas
+            SELECT 'Gas' as tipo, COALESCE(SUM(cantidad_registrada), 0) as consumo 
+            FROM consumo_gas WHERE fecha_registro >= '2024-01-01'
+            
+            UNION ALL
+            
+            -- Consumo de Luz
+            SELECT 'Luz' as tipo, COALESCE(SUM(cantidad_registrada), 0) as consumo 
+            FROM consumo_luz WHERE fecha_registro >= '2024-01-01'
+        """
+        
+        cursor.execute(consumo_por_tipo_query)
+        consumos_tipo = cursor.fetchall()
+
+        # Procesar datos para el gráfico
+        labels_consumo = []
+        data_consumo = []
+        colores_consumo = ['#4caf50', '#2196f3', '#ff9800']
+        
+        for tipo, consumo in consumos_tipo:
+            labels_consumo.append(tipo)
+            data_consumo.append(float(consumo))
+
+        # 🔥 DATOS SIMULADOS PARA LAS OTRAS MÉTRICAS (hasta que me digas qué tablas tienes)
+        ingresos_totales = 0  # Simulado hasta que tengas tabla de facturas
+        reservas_activas = 0  # Simulado hasta que tengas tabla de reservas
+        tickets_abiertos = 0  # Simulado hasta que tengas tabla de tickets
+        tickets_urgentes = 0  # Simulado
+        reservas_hoy = 0      # Simulado
+
         cursor.close()
         conn.close()
 
     except Exception as e:
         print("❌ ERROR EN /panel_admin:", str(e))
         consumo_total = 0
+        ingresos_totales = 0
+        reservas_activas = 0
+        tickets_abiertos = 0
+        tickets_urgentes = 0
+        reservas_hoy = 0
+        labels_consumo = ['Agua', 'Gas', 'Luz']
+        data_consumo = [0, 0, 0]
+        colores_consumo = ['#4caf50', '#2196f3', '#ff9800']
 
-    return render_template("administrador/dashboard_admin.html", consumo_total=consumo_total)
+    # 🔥 DEBUG: Ver qué datos se están obteniendo
+    print("📊 DATOS OBTENIDOS:")
+    print(f"Consumo total: {consumo_total}")
+    print(f"Labels consumo: {labels_consumo}")
+    print(f"Data consumo: {data_consumo}")
+
+    return render_template(
+        "administrador/dashboard_admin.html",
+        consumo_total=consumo_total,
+        ingresos_totales=ingresos_totales,
+        reservas_activas=reservas_activas,
+        tickets_abiertos=tickets_abiertos,
+        tickets_urgentes=tickets_urgentes,
+        reservas_hoy=reservas_hoy,
+        ahora=datetime.now(),
+        admin_nombre=current_user.nombre,
+        labels_consumo=labels_consumo,
+        data_consumo=data_consumo,
+        colores_consumo=colores_consumo
+    )
 ## Eliminada función duplicada finanzas()
 
 @admin_bp.route("/consumos")
@@ -342,14 +406,54 @@ def cambiar_rol():
 @admin_bp.route("/dashboard_finanzas ", endpoint="dashboard_finanzas")
 @login_required
 def dashboard_finanzas():
-    factura = {
-        "id": 101,
-        "fecha": datetime.now().strftime("%Y-%m-%d"),
-        "cliente": "Marcelo G.",
-        "servicio": "Consumo eléctrico",
-        "total": 1280.50
-    }
-    return render_template("administrador/finanzas.html", factura=factura)
+     if current_user.id_rol != 1:
+        flash("Acceso no autorizado.", "danger")
+        return redirect(url_for("auth.login"))
+     try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 🔥 Consulta total de salarios de empleados activos
+        cursor.execute("""
+            SELECT COALESCE(SUM(salario), 0) FROM empleados WHERE activo = TRUE
+        """)
+        total_salarios = cursor.fetchone()[0]
+
+        # 🔥 Consulta empleados individuales
+        cursor.execute("""
+            SELECT nombre, cargo, salario FROM empleados WHERE activo = TRUE
+        """)
+        empleados = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        # 🔹 Simulación de factura de salarios
+        factura_salarios = {
+            "id": 202,  # puedes generar dinámicamente si quieres
+            "fecha": datetime.now().strftime("%Y-%m-%d"),
+            "cliente": "Administración del Edificio",
+            "servicio": "Pago de salarios",
+            "total": round(total_salarios, 2),
+            "detalle": [
+                {"nombre": nombre, "cargo": cargo, "salario": round(salario, 2)}
+                for nombre, cargo, salario in empleados
+            ]
+        }
+
+     except Exception as e:
+        print("❌ ERROR EN /dashboard_finanzas:", str(e))
+        factura_salarios = {
+            "id": 202,
+            "fecha": datetime.now().strftime("%Y-%m-%d"),
+            "cliente": "Administración del Edificio",
+            "servicio": "Pago de salarios",
+            "total": 0,
+            "detalle": []
+        }
+
+
+     return render_template("administrador/finanzas.html", factura=factura_salarios)
 
 # Ruta para generar el PDF
 @admin_bp.route("/generar_pdf/<int:id>", methods=["POST"])

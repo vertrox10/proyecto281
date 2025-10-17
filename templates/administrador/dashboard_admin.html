@@ -2,104 +2,318 @@
 
 {% block title %}Dashboard Administrativo{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style_administrador.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="header" style="display: flex; align-items: center; gap: 18px; margin-bottom: 2rem;">
-    <img src="{{ url_for('static', filename='Logo P.png') }}" alt="Logo" class="logo-dashboard"
-        style="height:100px;width:auto;display:block;">
-    <h1 style="margin:0;">Dashboard Administrativo</h1>
-    <a href="{{ url_for('admin.logout') }}" class="logout-btn" style="margin-left:auto;">Cerrar sesión</a>
-</div>
-
-<div class="cards">
-    <div class="overview">
-        <div class="card">
-            <i class="fas fa-coins"></i>
-            <h3>Ingresos Totales</h3>
-            <p>$0.00</p>
+<!-- Header -->
+<div class="dashboard-header">
+    <div style="display: flex; align-items: center; gap: 1.5rem;">
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" 
+             style="height: 80px; width: auto; background: white; padding: 10px; border-radius: 10px;">
+        <div style="flex-grow: 1;">
+            <h1 style="margin: 0; font-size: 2.2rem; font-weight: 700;">Dashboard Administrativo</h1>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1.1rem;">
+                👋 Bienvenido, {{ admin_nombre or 'Administrador' }}
+            </p>
         </div>
-        <div class="card">
-            <i class="fas fa-bolt"></i>
-            <h3>Consumo Total</h3>
-            <p>{{ "%.2f"|format(consumo_total) }} kWh</p>
-
-        </div>
-        <div class="card">
-            <i class="fas fa-calendar-alt"></i>
-            <h3>Reservas</h3>
-            <p>0</p>
-        </div>
-        <div class="card">
-            <i class="fas fa-ticket-alt"></i>
-            <h3>Tickets</h3>
-            <p>0</p>
+        <div style="text-align: right;">
+            <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
+                {{ ahora.strftime('%d/%m/%Y') }}
+            </div>
+            <div style="font-size: 0.9rem; opacity: 0.8;">
+                {{ ahora.strftime('%H:%M') }}
+            </div>
+            <a href="{{ url_for('admin.logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar sesión
+            </a>
         </div>
     </div>
 </div>
 
-<div class="chart">
-    <h2>Gráfico de Actividad</h2>
-    <canvas id="lineChart"></canvas>
+<!-- Navegación Rápida -->
+<div class="quick-nav">
+    <a href="{{ url_for('admin.comunicado') }}" class="nav-card">
+        <div class="nav-comunicados">
+            <i class="fas fa-bullhorn" style="font-size: 2rem; color: #4caf50; margin-bottom: 1rem;"></i>
+            <h3 style="margin: 0; color: #2c3e50; font-size: 1.1rem;">Comunicados</h3>
+            <p style="margin: 0.5rem 0 0 0; color: #7f8c8d; font-size: 0.9rem;">Enviar notificaciones</p>
+        </div>
+    </a>
+    <a href="{{ url_for('admin.dashboard_finanzas') }}" class="nav-card">
+        <div class="nav-finanzas">
+            <i class="fas fa-chart-line" style="font-size: 2rem; color: #2196f3; margin-bottom: 1rem;"></i>
+            <h3 style="margin: 0; color: #2c3e50; font-size: 1.1rem;">Finanzas</h3>
+            <p style="margin: 0.5rem 0 0 0; color: #7f8c8d; font-size: 0.9rem;">Ver reportes</p>
+        </div>
+    </a>
+    <a href="{{ url_for('admin.reservas') }}" class="nav-card">
+        <div class="nav-residentes">
+            <i class="fas fa-users" style="font-size: 2rem; color: #ff9800; margin-bottom: 1rem;"></i>
+            <h3 style="margin: 0; color: #2c3e50; font-size: 1.1rem;">Residentes</h3>
+            <p style="margin: 0.5rem 0 0 0; color: #7f8c8d; font-size: 0.9rem;">Gestionar usuarios</p>
+        </div>
+    </a>
+    <a href="{{ url_for('admin.usuarios') }}" class="nav-card">
+        <div class="nav-empleados">
+            <i class="fas fa-user-tie" style="font-size: 2rem; color: #9c27b0; margin-bottom: 1rem;"></i>
+            <h3 style="margin: 0; color: #2c3e50; font-size: 1.1rem;">Empleados</h3>
+            <p style="margin: 0.5rem 0 0 0; color: #7f8c8d; font-size: 0.9rem;">Gestión de staff</p>
+        </div>
+    </a>
 </div>
 
-<div class="invitaciones">
-    <h2>Generar nuevo código de invitación</h2>
-    <form action="{{ url_for('admin.generar_invitacion') }}" method="POST">
-        <label for="rol_destino">Rol destino:</label>
-        <select name="rol_destino" id="rol_destino" required>
-            <option value="empleado">Empleado</option>
-            <option value="admin">Administrador</option>
-        </select>
-        <button type="submit">Generar código</button>
-    </form>
-</div>
-
-<div class="correo-invitacion-container">
-    <h2>Enviar invitación por correo (solo empleados)</h2>
-    <div id="progress-bar" style="display:none;position:fixed;top:0;left:0;width:100vw;height:4px;z-index:9999;">
-        <div id="progress-bar-inner" style="height:100%;width:0;background:#1976d2;transition:width 0.4s;"></div>
+<!-- Métricas Principales -->
+<div class="metrics-grid">
+    <!-- Ingresos Totales -->
+    <div class="metric-card metric-ingresos">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="metric-icon icon-ingresos">
+                <i class="fas fa-coins" style="font-size: 1.8rem;"></i>
+            </div>
+            <div style="flex-grow: 1;">
+                <h3 class="metric-title">INGRESOS TOTALES 2024</h3>
+                <p class="metric-value">${{ "{:,.2f}".format(ingresos_totales) }}</p>
+                <div class="metric-subtitle">Facturas pagadas este año</div>
+            </div>
+        </div>
     </div>
-    <form id="correo-form" class="correo-invitacion-form" action="{{ url_for('admin.enviar_invitacion') }}"
-        method="POST">
-        <label for="correo">Correo del empleado:</label>
-        <input type="email" name="correo" required>
-        <button type="submit">Enviar invitación</button>
-    </form>
+
+    <!-- Consumo Total -->
+    <div class="metric-card metric-consumo">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="metric-icon icon-consumo">
+                <i class="fas fa-bolt" style="font-size: 1.8rem;"></i>
+            </div>
+            <div style="flex-grow: 1;">
+                <h3 class="metric-title">CONSUMO TOTAL 2024</h3>
+                <p class="metric-value">{{ "%.1f"|format(consumo_total) }} kWh</p>
+                <div class="metric-subtitle">Agua, gas y luz combinados</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reservas Activas -->
+    <div class="metric-card metric-reservas">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="metric-icon icon-reservas">
+                <i class="fas fa-calendar-alt" style="font-size: 1.8rem;"></i>
+            </div>
+            <div style="flex-grow: 1;">
+                <h3 class="metric-title">RESERVAS ACTIVAS</h3>
+                <p class="metric-value">{{ reservas_activas }}</p>
+                <div class="metric-subtitle">{{ reservas_hoy }} reservas hoy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tickets Abiertos -->
+    <div class="metric-card metric-tickets">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="metric-icon icon-tickets">
+                <i class="fas fa-ticket-alt" style="font-size: 1.8rem;"></i>
+            </div>
+            <div style="flex-grow: 1;">
+                <h3 class="metric-title">TICKETS ABIERTOS</h3>
+                <p class="metric-value">{{ tickets_abiertos }}</p>
+                <div style="color: #e74c3c; font-size: 0.8rem; font-weight: 600; margin-top: 0.5rem;">
+                    {{ tickets_urgentes }} tickets urgentes
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráfico de Pastel y Actividad -->
+<div class="grid-2-columns">
+    <!-- Gráfico de Pastel -->
+    <div class="chart-container">
+        <h2 class="chart-title">
+            <i class="fas fa-chart-pie" style="margin-right: 0.5rem;"></i>
+            Distribución de Consumos 2024
+        </h2>
+        <div class="chart-wrapper">
+            <canvas id="pieChart"></canvas>
+        </div>
+        <div class="legend-container">
+            {% for i in range(labels_consumo|length) %}
+            <div class="legend-item">
+                <div class="color-indicator" style="background: {{ colores_consumo[i] | default('#cccccc') }};"></div>
+                <span class="legend-text">
+                    {{ labels_consumo[i] }}: {{ "%.1f"|format(data_consumo[i]) }} kWh
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Actividad Reciente -->
+    <div class="activity-feed">
+        <h3 class="activity-title">
+            <i class="fas fa-bell" style="margin-right: 0.5rem;"></i>
+            Resumen de Consumos
+        </h3>
+        <div class="activity-list">
+            <div class="activity-item activity-agua">
+                <div class="activity-icon icon-agua">
+                    <i class="fas fa-tint"></i>
+                </div>
+                <div class="activity-content">
+                    <p class="activity-main-text">Consumo de Agua</p>
+                    <p class="activity-sub-text">
+                        {% if data_consumo[0] is defined %}
+                            {{ "%.1f"|format(data_consumo[0]) }} kWh
+                        {% else %}
+                            0 kWh
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="activity-item activity-gas">
+                <div class="activity-icon icon-gas">
+                    <i class="fas fa-fire"></i>
+                </div>
+                <div class="activity-content">
+                    <p class="activity-main-text">Consumo de Gas</p>
+                    <p class="activity-sub-text">
+                        {% if data_consumo[1] is defined %}
+                            {{ "%.1f"|format(data_consumo[1]) }} kWh
+                        {% else %}
+                            0 kWh
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="activity-item activity-luz">
+                <div class="activity-icon icon-luz">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <div class="activity-content">
+                    <p class="activity-main-text">Consumo de Luz</p>
+                    <p class="activity-sub-text">
+                        {% if data_consumo[2] is defined %}
+                            {{ "%.1f"|format(data_consumo[2]) }} kWh
+                        {% else %}
+                            0 kWh
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            
+            <div class="activity-item activity-total">
+                <div class="activity-icon icon-total">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <div class="activity-content">
+                    <p class="activity-total-text">CONSUMO TOTAL</p>
+                    <p style="margin: 0; color: #2c3e50; font-size: 1rem; font-weight: 600;">
+                        {{ "%.1f"|format(consumo_total) }} kWh
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gestión de Invitaciones -->
+<div class="grid-2-columns">
+    <!-- Generar Código -->
+    <div class="invitation-card">
+        <h2 class="form-title">
+            <i class="fas fa-qrcode" style="margin-right: 0.5rem;"></i>
+            Generar Código de Invitación
+        </h2>
+        <form action="{{ url_for('admin.generar_invitacion') }}" method="POST" class="invitation-form">
+            <div class="form-group">
+                <label for="rol_destino" class="form-label">Rol destino:</label>
+                <select name="rol_destino" id="rol_destino" required class="form-select">
+                    <option value="empleado">👷 Empleado</option>
+                    <option value="admin">👨‍💼 Administrador</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-key" style="margin-right: 0.5rem;"></i>
+                Generar Código de Acceso
+            </button>
+        </form>
+    </div>
+
+    <!-- Invitación por Correo -->
+    <div class="email-invitation-card">
+        <h2 class="form-title">
+            <i class="fas fa-paper-plane" style="margin-right: 0.5rem;"></i>
+            Invitación por Correo
+        </h2>
+        <div id="progress-bar" class="progress-bar">
+            <div id="progress-bar-inner" class="progress-bar-inner"></div>
+        </div>
+        <form id="correo-form" action="{{ url_for('admin.enviar_invitacion') }}" method="POST" class="invitation-form">
+            <div class="form-group">
+                <label for="correo" class="form-label">Correo del empleado:</label>
+                <input type="email" name="correo" id="correo" required class="form-input" placeholder="ejemplo@empresa.com">
+            </div>
+            <button type="submit" class="btn-success">
+                <i class="fas fa-envelope" style="margin-right: 0.5rem;"></i>
+                Enviar Invitación por Email
+            </button>
+        </form>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('lineChart').getContext('2d');
-    const lineChart = new Chart(ctx, {
-        type: 'line',
+    // Gráfico de Pastel para Distribución de Consumos
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    const pieChart = new Chart(pieCtx, {
+        type: 'pie',
         data: {
-            labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-            datasets: [
-                {
-                    label: 'Ingresos',
-                    data: [1200, 1500, 1100, 1800, 1700, 2000],
-                    borderColor: 'orange',
-                    fill: false
-                },
-                {
-                    label: 'Consumo',
-                    data: [300, 280, 350, 400, 370, 390],
-                    borderColor: 'blue',
-                    fill: false
-                }
-            ]
+            labels: {{ labels_consumo | tojson }},
+            datasets: [{
+                data: {{ data_consumo | tojson }},
+                backgroundColor: {{ colores_consumo | tojson }},
+                borderColor: '#ffffff',
+                borderWidth: 2,
+                hoverOffset: 15
+            }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                legend: { position: 'top' }
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true,
+                        font: { size: 12 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${label}: ${value} kWh (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true
             }
         }
     });
-</script>
-<script>
-    // Barra de progreso tipo Gmail al enviar invitación
+
+    // Barra de progreso para invitaciones
     const form = document.getElementById('correo-form');
     const bar = document.getElementById('progress-bar');
     const barInner = document.getElementById('progress-bar-inner');
@@ -108,7 +322,10 @@
         form.addEventListener('submit', function () {
             bar.style.display = 'block';
             barInner.style.width = '0';
-            setTimeout(() => { barInner.style.width = '80%'; }, 100);
+            
+            setTimeout(() => { barInner.style.width = '40%'; }, 100);
+            setTimeout(() => { barInner.style.width = '70%'; }, 300);
+            setTimeout(() => { barInner.style.width = '90%'; }, 600);
         });
 
         window.addEventListener('pageshow', function () {
