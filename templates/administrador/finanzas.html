@@ -1,39 +1,488 @@
 {% extends 'administrador/base.html' %}
-{% block title %}Finanzas{% endblock %}
-
+{% block title %}Gestión de Pagos{% endblock %}
 {% block content %}
-<div class="header" style="display: flex; align-items: center; gap: 18px;">
-    <h1 style="margin:0;">Finanzas</h1>
-    <span style="margin-left:auto;"></span>
-    <a href="{{ url_for('admin.logout') }}" class="logout-btn">Cerrar sesión</a>
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" 
+                     style="height: 60px; width: auto; background: white; padding: 8px; border-radius: 8px;">
+                <div>
+                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">Gestión de Pagos</h1>
+                    <p style="margin: 0.25rem 0 0 0; opacity: 0.9;">Sistema integral de pagos y cobranzas</p>
+                </div>
+            </div>
+            <a href="{{ url_for('admin.logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar sesión
+            </a>
+        </div>
+    </div>
+
+    <div class="main-grid" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <!-- Formulario de Pago a Empleados -->
+        <div class="form-section">
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-money-check-dollar"></i>
+                        Pago a Empleados
+                    </h2>
+                    <div class="section-badge">Nómina</div>
+                </div>
+                
+                <form method="POST" action="{{ url_for('admin.pagar_empleado') }}" class="modern-form">
+                    <div class="form-group">
+                        <label for="id_usuario" class="form-label">
+                            <i class="fas fa-user-tie"></i>
+                            Empleado
+                        </label>
+                        <select name="id_usuario" class="form-select" required>
+                            {% for empleado in empleados %}
+                                <option value="{{ empleado.id_usuario }}">
+                                    {{ empleado.nombre }} {{ empleado.ap_paterno }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="monto" class="form-label">
+                            <i class="fas fa-coins"></i>
+                            Monto (Bs)
+                        </label>
+                        <input type="number" name="monto" step="0.01" min="0" value="1800.00" 
+                               class="form-input" placeholder="0.00">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="metodo" class="form-label">
+                            <i class="fas fa-credit-card"></i>
+                            Método de Pago
+                        </label>
+                        <select name="metodo" class="form-select" required>
+                            <option value="transferencia">💰 Transferencia</option>
+                            <option value="efectivo">💵 Efectivo</option>
+                            <option value="QR">📱 QR</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nro_trans" class="form-label">
+                            <i class="fas fa-receipt"></i>
+                            Número de Transacción
+                        </label>
+                        <input type="text" name="nro_trans" maxlength="100" 
+                               class="form-input" placeholder="Ingrese referencia...">
+                    </div>
+
+                    <button type="submit" class="btn-primary btn-large">
+                        <i class="fas fa-paper-plane"></i>
+                        Registrar Pago
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Formulario de Cobros a Residentes -->
+        <div class="form-section">
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-building"></i>
+                        Cobros por Uso del Hotel
+                    </h2>
+                    <div class="section-badge">Servicios</div>
+                </div>
+
+                <form method="POST" action="{{ url_for('admin.registrar_cobros') }}" id="form-cobros" class="modern-form">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-user"></i>
+                            Residente
+                        </label>
+                        <select name="id_usuario" class="form-select" required>
+                            {% for r in residentes %}
+                                <option value="{{ r[0] }}">{{ r[1] }} {{ r[2] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-list"></i>
+                            Conceptos de Cobro
+                        </label>
+                        <div id="conceptos-container" class="conceptos-grid">
+                            <div class="concepto-item">
+                                <input type="text" name="concepto[]" placeholder="Ej. Salón de eventos" 
+                                       class="form-input concepto-input" required>
+                                <input type="number" step="0.01" name="monto[]" placeholder="0.00" 
+                                       class="form-input monto-input" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" onclick="agregarConcepto()" class="btn-secondary btn-small">
+                            <i class="fas fa-plus"></i>
+                            Agregar Concepto
+                        </button>
+                        <button type="button" onclick="eliminarUltimoConcepto()" class="btn-outline btn-small">
+                            <i class="fas fa-trash"></i>
+                            Eliminar Último
+                        </button>
+                    </div>
+
+                    <div class="mensaje-section">
+                        <h3 class="mensaje-title">
+                            <i class="fas fa-envelope"></i>
+                            Mensaje para el Residente
+                        </h3>
+                        <textarea id="mensaje-residente" rows="6" class="mensaje-textarea" readonly></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-success btn-large">
+                            <i class="fas fa-save"></i>
+                            Registrar Cobros
+                        </button>
+                        
+                        <button type="button" onclick="prepararEnvio()" class="btn-info btn-large">
+                            <i class="fas fa-paper-plane"></i>
+                            Enviar Mensaje
+                        </button>
+                    </div>
+                </form>
+
+                <form method="POST" action="{{ url_for('admin.enviar_mensaje_residente') }}" id="form-mensaje" style="display: none;">
+                    <input type="hidden" name="id_usuario" value="{{ request.form.get('id_usuario') }}">
+                    <input type="hidden" id="mensaje_oculto" name="mensaje">
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- Sección de factura -->
-<h2>Factura de Salarios</h2>
-<p><strong>ID:</strong> {{ factura.id }}</p>
-<p><strong>Fecha:</strong> {{ factura.fecha }}</p>
-<p><strong>Cliente:</strong> {{ factura.cliente }}</p>
-<p><strong>Servicio:</strong> {{ factura.servicio }}</p>
-<p><strong>Total:</strong> ${{ "%.2f"|format(factura.total) }}</p>
+<style>
+.dashboard-container {
+    padding: 2rem;
+    background: #f8f9fa;
+    min-height: 100vh;
+}
 
-<h3>Detalle de empleados</h3>
-<table>
-    <thead>
-        <tr>
-            <th>Nombre</th>
-            <th>Cargo</th>
-            <th>Salario</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for emp in factura.detalle %}
-        <tr>
-            <td>{{ emp.nombre }}</td>
-            <td>{{ emp.cargo }}</td>
-            <td>${{ "%.2f"|format(emp.salario) }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+.dashboard-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
 
+.main-grid {
+    display: grid;
+    gap: 2rem;
+}
+
+.form-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.section-card {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    height: fit-content;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.section-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-badge {
+    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.modern-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-input, .form-select {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.form-input:focus, .form-select:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.conceptos-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.concepto-item {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.concepto-input, .monto-input {
+    width: 100%;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.btn-primary, .btn-success, .btn-info, .btn-secondary, .btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    justify-content: center;
+}
+
+.btn-large {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+    color: white;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    color: white;
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 2px solid #6c757d;
+    color: #6c757d;
+}
+
+.btn-primary:hover, .btn-success:hover, .btn-info:hover, .btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-outline:hover {
+    background: #6c757d;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.mensaje-section {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 10px;
+    border-left: 4px solid #2196f3;
+}
+
+.mensaje-title {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.mensaje-textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    resize: vertical;
+    background: white;
+}
+
+.logout-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logout-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+@media (max-width: 1024px) {
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .concepto-item {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .section-card {
+        padding: 1.5rem;
+    }
+}
+</style>
+
+<script>
+function agregarConcepto() {
+    const container = document.getElementById("conceptos-container");
+    const nuevo = document.createElement("div");
+    nuevo.className = "concepto-item";
+    nuevo.innerHTML = `
+        <input type="text" name="concepto[]" placeholder="Ej. Servicio adicional" 
+               class="form-input concepto-input" required>
+        <input type="number" step="0.01" name="monto[]" placeholder="0.00" 
+               class="form-input monto-input" required>
+    `;
+    container.appendChild(nuevo);
+}
+
+function eliminarUltimoConcepto() {
+    const container = document.getElementById("conceptos-container");
+    const items = container.getElementsByClassName("concepto-item");
+    if (items.length > 1) {
+        container.removeChild(items[items.length - 1]);
+        actualizarMensaje();
+    } else {
+        alert("Debe haber al menos un concepto de cobro registrado.");
+    }
+}
+
+function actualizarMensaje() {
+    const nombreResidente = document.querySelector("select[name='id_usuario'] option:checked").textContent;
+    const conceptos = document.querySelectorAll("input[name='concepto[]']");
+    const montos = document.querySelectorAll("input[name='monto[]']");
+    let total = 0;
+    let mensaje = `Estimado/a ${nombreResidente},\n\nSe han registrado los siguientes cobros por uso del edificio:\n\n`;
+
+    for (let i = 0; i < conceptos.length; i++) {
+        const concepto = conceptos[i].value.trim();
+        const monto = parseFloat(montos[i].value);
+        if (concepto && !isNaN(monto)) {
+            mensaje += `• ${concepto}: Bs ${monto.toFixed(2)}\n`;
+            total += monto;
+        }
+    }
+
+    mensaje += `\n💰 Total a pagar: Bs ${total.toFixed(2)}\n\nGracias por su colaboración.\n\nAtentamente,\nAdministración`;
+    document.getElementById("mensaje-residente").value = mensaje;
+}
+
+function prepararEnvio() {
+    const mensaje = document.getElementById("mensaje-residente").value;
+    const idUsuario = document.querySelector("select[name='id_usuario']").value;
+    
+    if (mensaje.trim() === "") {
+        alert("Por favor, genere primero el mensaje agregando conceptos de cobro.");
+        return;
+    }
+    
+    document.getElementById("mensaje_oculto").value = mensaje;
+    document.querySelector("#form-mensaje input[name='id_usuario']").value = idUsuario;
+    document.getElementById("form-mensaje").submit();
+}
+
+// Event listeners para actualización automática
+document.addEventListener("input", actualizarMensaje);
+document.addEventListener("change", actualizarMensaje);
+
+// Inicializar mensaje al cargar
+document.addEventListener("DOMContentLoaded", actualizarMensaje);
+</script>
 {% endblock %}

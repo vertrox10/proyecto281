@@ -8,16 +8,7 @@
 </div>
 
 <!-- Mensajes Flash -->
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div style="background: {% if category == 'error' %}#f44336{% else %}#4caf50{% endif %}; 
-                        color: white; padding: 15px; border-radius: 5px; margin: 15px 0;">
-                {{ message }}
-            </div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
+
 
 <!-- Formulario de Comunicado -->
 <div style="max-width: 800px; margin: 20px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
