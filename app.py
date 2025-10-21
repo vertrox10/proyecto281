@@ -1,9 +1,10 @@
 from flask import Flask
-from flask_mail import Mail
+from flask_mail import Mail, Message
 from flask_login import LoginManager
 from config import Config
 from db import get_db_connection
 from models import Usuario
+from threading import Thread
 
 # Inicializar app
 app = Flask(__name__)
@@ -14,19 +15,55 @@ mail = Mail(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "auth.login"
 
+# Función para enviar emails
+def enviar_email_async(app, msg):
+    """Envía email en un hilo separado para no bloquear la aplicación"""
+    with app.app_context():
+        try:
+            mail.send(msg)  # Ahora mail está definido en este contexto
+            print("✅ Email enviado exitosamente")
+        except Exception as e:
+            print(f"❌ Error enviando email: {str(e)}")
+
+def enviar_email(destinatario, asunto, cuerpo, html=None):
+    """
+    Envía un email usando Flask-Mail
+    """
+    try:
+        # Crear el mensaje
+        msg = Message(
+            subject=asunto,
+            recipients=[destinatario],
+            body=cuerpo,
+            html=html,
+            sender=app.config.get('MAIL_DEFAULT_SENDER', 'noreply@example.com')
+        )
+        
+        # Enviar en un hilo separado
+        Thread(target=enviar_email_async, args=(app, msg)).start()
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error preparando email: {str(e)}")
+        return False
+
+# Hacerla disponible globalmente
+app.enviar_email = enviar_email
+
 # Importar blueprints
 from routes.auth import auth_bp
 from routes.admin import admin_bp
 from routes.password import password_bp
 from routes.empleados import empleados_bp
-from routes.residentes import residentes_bp  # ← AÑADIR ESTA IMPORTACIÓN
+from routes.residentes import residentes_bp
 
 # Registrar blueprints
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(password_bp)
 app.register_blueprint(empleados_bp, url_prefix="/empleados")
-app.register_blueprint(residentes_bp, url_prefix="/residentes")  # ← AÑADIR ESTE REGISTRO
+app.register_blueprint(residentes_bp, url_prefix="/residentes")
 
 # Flask-Login con manejo de errores
 @login_manager.user_loader

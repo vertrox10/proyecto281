@@ -27,92 +27,176 @@ def panel_admin():
 @admin_bp.route("/consumos")
 @login_required
 def consumos():
-    # Verificación de rol
     if current_user.id_rol != 1:
         flash("Acceso no autorizado.", "danger")
         return redirect(url_for("auth.login"))
 
+    conn = None
+    cursor = None
+    current_date = datetime.now().strftime('%Y-%m-%d')
+    current_month = datetime.now().strftime('%B %Y')
+    
     try:
-        # Obtener fecha actual
-        current_date = datetime.now().strftime('%Y-%m-%d')
-        current_month = datetime.now().strftime('%B %Y')
+        conn = get_db_connection()
+        if conn is None:
+            flash("❌ Error de conexión a la base de datos", "danger")
+            return render_template("administrador/consumos.html",
+                agua={"costo": 0, "variacion": 0, "consumo_total": 0, "departamentos_activos": 0},
+                gas={"costo": 0, "variacion": 0, "consumo_total": 0, "departamentos_activos": 0},
+                luz={"costo": 0, "variacion": 0, "consumo_total": 0, "departamentos_activos": 0},
+                sensores=[],
+                metricas=None,
+                current_date=current_date,
+                current_month=current_month
+            )
         
-        # CONSULTA CORREGIDA - BUSCAR DATOS DE 2024
-        consumo_query = """
+        cursor = conn.cursor()
+
+        # CONSUMO DE AGUA
+        cursor.execute("""
             SELECT 
-                id_consumo,
-                id_sensor,
-                id_departamento,
+                'agua' as tipo,
+                id_consumo_agua as id_consumo,
+                fecha_registro,
                 cantidad_registrada,
                 lectura_inicial,
                 lectura_final,
-                fecha_registro,
-                id_usuario,
                 ROUND(lectura_final - lectura_inicial, 2) as consumo_calculado
-            FROM consumos 
-            WHERE fecha_registro >= '2024-01-01'  -- ¡BUSCAR DESDE ENERO 2024!
-            ORDER BY fecha_registro DESC, id_departamento
-            LIMIT 100
-        """
-        
-        # Ejecutar consulta
-        sensores_data = cursor.fetchall()
+            FROM consumo_agua 
+            WHERE fecha_registro >= '2024-01-01'
+            ORDER BY fecha_registro DESC 
+            LIMIT 30
+        """)
+        agua_data = cursor.fetchall()
 
-        
-        # Calcular métricas agregadas para el dashboard (también corregir fecha)
-        metricas_query = """
+        # CONSUMO DE LUZ
+        cursor.execute("""
             SELECT 
-                COUNT(DISTINCT id_departamento) as total_departamentos,
-                COUNT(DISTINCT id_sensor) as total_sensores,
-                ROUND(AVG(cantidad_registrada), 2) as consumo_promedio,
-                SUM(cantidad_registrada) as consumo_total_mes
-            FROM consumos 
-            WHERE fecha_registro >= '2024-01-01'  -- ¡CORREGIDO!
-        """
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(consumo_query)
-        sensores_data = cursor.fetchall()
-        cursor.close()
-        conn.close()
+                'luz' as tipo,
+                id_consumo_luz as id_consumo,
+                fecha_registro,
+                cantidad_registrada,
+                lectura_inicial,
+                lectura_final,
+                ROUND(lectura_final - lectura_inicial, 2) as consumo_calculado
+            FROM consumo_luz 
+            WHERE fecha_registro >= '2024-01-01'
+            ORDER BY fecha_registro DESC 
+            LIMIT 30
+        """)
+        luz_data = cursor.fetchall()
 
-        
-        # Datos para servicios
-        agua = {
-            "costo": 320, 
-            "variacion": -15,
-            "consumo_total": metricas.consumo_total_mes if metricas else 0,
-            "departamentos_activos": metricas.total_departamentos if metricas else 0
-        }
-        
-        gas = {
-            "costo": 180, 
-            "variacion": -5,
-            "consumo_total": 0,
-            "departamentos_activos": 0
-        }
-        
-        luz = {
-            "costo": 240, 
-            "variacion": -8,
-            "consumo_total": 0,
-            "departamentos_activos": 0
-        }
+        # CONSUMO DE GAS
+        cursor.execute("""
+            SELECT 
+                'gas' as tipo,
+                id_consumo_gas as id_consumo,
+                fecha_registro,
+                cantidad_registrada,
+                lectura_inicial,
+                lectura_final,
+                ROUND(lectura_final - lectura_inicial, 2) as consumo_calculado
+            FROM consumo_gas 
+            WHERE fecha_registro >= '2024-01-01'
+            ORDER BY fecha_registro DESC 
+            LIMIT 30
+        """)
+        gas_data = cursor.fetchall()
 
-        # DEBUG: Ver cuántos registros encontramos
-        print(f"📊 Registros encontrados: {len(sensores_data)}")
+        # Combinar todos los datos
+        sensores_data = agua_data + luz_data + gas_data
+
+        # CALCULAR MÉTRICAS PARA AGUA (este mes)
+        cursor.execute("""
+            SELECT 
+                COUNT(DISTINCT id_consumo_agua) as total_registros,
+                COALESCE(SUM(cantidad_registrada), 0) as consumo_total,
+                COALESCE(AVG(cantidad_registrada), 0) as consumo_promedio,
+                COUNT(DISTINCT fecha_registro) as dias_con_registro
+            FROM consumo_agua 
+            WHERE fecha_registro >= DATE_TRUNC('month', CURRENT_DATE)
+        """)
+        metricas_agua = cursor.fetchone()
+
+        # CALCULAR MÉTRICAS PARA LUZ (este mes)
+        cursor.execute("""
+            SELECT 
+                COUNT(DISTINCT id_consumo_luz) as total_registros,
+                COALESCE(SUM(cantidad_registrada), 0) as consumo_total,
+                COALESCE(AVG(cantidad_registrada), 0) as consumo_promedio,
+                COUNT(DISTINCT fecha_registro) as dias_con_registro
+            FROM consumo_luz 
+            WHERE fecha_registro >= DATE_TRUNC('month', CURRENT_DATE)
+        """)
+        metricas_luz = cursor.fetchone()
+
+        # CALCULAR MÉTRICAS PARA GAS (este mes)
+        cursor.execute("""
+            SELECT 
+                COUNT(DISTINCT id_consumo_gas) as total_registros,
+                COALESCE(SUM(cantidad_registrada), 0) as consumo_total,
+                COALESCE(AVG(cantidad_registrada), 0) as consumo_promedio,
+                COUNT(DISTINCT fecha_registro) as dias_con_registro
+            FROM consumo_gas 
+            WHERE fecha_registro >= DATE_TRUNC('month', CURRENT_DATE)
+        """)
+        metricas_gas = cursor.fetchone()
+
+        # Obtener total de departamentos
+        cursor.execute("SELECT COUNT(*) FROM departamento")
+        total_departamentos = cursor.fetchone()[0]
+
+        # Crear objeto metricas
+        metricas = type('Metricas', (), {
+            'total_departamentos': total_departamentos,
+            'total_registros': len(sensores_data),
+            'agua_total': metricas_agua[1] if metricas_agua else 0,
+            'luz_total': metricas_luz[1] if metricas_luz else 0,
+            'gas_total': metricas_gas[1] if metricas_gas else 0,
+            'agua_promedio': metricas_agua[2] if metricas_agua else 0,
+            'luz_promedio': metricas_luz[2] if metricas_luz else 0,
+            'gas_promedio': metricas_gas[2] if metricas_gas else 0
+        })()
+
+        print(f"📊 Registros encontrados - Agua: {len(agua_data)}, Luz: {len(luz_data)}, Gas: {len(gas_data)}")
 
     except Exception as e:
+        print(f"❌ Error al cargar datos de consumo: {e}")
         flash(f"Error al cargar datos de consumo: {str(e)}", "danger")
-        # Datos por defecto en caso de error
-        agua = {"costo": 0, "variacion": 0, "consumo_total": 0, "departamentos_activos": 0}
-        gas = {"costo": 0, "variacion": 0, "consumo_total": 0, "departamentos_activos": 0}
-        luz = {"costo": 0, "variacion": 0, "consumo_total": 0, "departamentos_activos": 0}
         sensores_data = []
         metricas = None
 
-    # Renderizar template
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+    # Preparar datos para template con métricas reales
+    agua = {
+        "costo": 320, 
+        "variacion": -15,
+        "consumo_total": metricas.agua_total if metricas else 0,
+        "consumo_promedio": metricas.agua_promedio if metricas else 0,
+        "departamentos_activos": metricas.total_departamentos if metricas else 0
+    }
+    
+    gas = {
+        "costo": 180, 
+        "variacion": -5,
+        "consumo_total": metricas.gas_total if metricas else 0,
+        "consumo_promedio": metricas.gas_promedio if metricas else 0,
+        "departamentos_activos": metricas.total_departamentos if metricas else 0
+    }
+    
+    luz = {
+        "costo": 240, 
+        "variacion": -8,
+        "consumo_total": metricas.luz_total if metricas else 0,
+        "consumo_promedio": metricas.luz_promedio if metricas else 0,
+        "departamentos_activos": metricas.total_departamentos if metricas else 0
+    }
+
     return render_template("administrador/consumos.html",
         agua=agua,
         gas=gas,
@@ -123,7 +207,6 @@ def consumos():
         current_month=current_month
     )
 
-
 @admin_bp.route("/dashboard_finanzas")
 @login_required
 def dashboard_finanzas():
@@ -131,32 +214,21 @@ def dashboard_finanzas():
         flash("Acceso no autorizado.", "danger")
         return redirect(url_for("auth.login"))
 
-    empleados = []
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+    # Consulta de empleados
+    cursor.execute("SELECT id_usuario, nombre, ap_paterno FROM usuario WHERE id_rol = 2")
+    empleados = [dict(id_usuario=row[0], nombre=row[1], ap_paterno=row[2]) for row in cursor.fetchall()]
 
-        cursor.execute("""
-            SELECT id_usuario, nombre, ap_paterno
-            FROM usuario
-            WHERE id_rol = 2
-        """)
-        empleados_raw = cursor.fetchall()
+    # Consulta de residentes
+    cursor.execute("SELECT id_usuario, nombre, ap_paterno FROM usuario WHERE id_rol = 3")
+    residentes = [dict(id_usuario=row[0], nombre=row[1], ap_paterno=row[2]) for row in cursor.fetchall()]
 
-        empleados = [
-            {'id_usuario': emp[0], 'nombre': emp[1], 'ap_paterno': emp[2]}
-            for emp in empleados_raw
-        ]
+    cursor.close()
+    conn.close()
 
-        cursor.close()
-        conn.close()
-
-    except Exception as e:
-        flash(f"Error al cargar empleados: {str(e)}", "danger")
-        # No intentes usar cursor aquí, ya que puede no existir
-
-    return render_template("administrador/finanzas.html", empleados=empleados)
+    return render_template("administrador/finanzas.html", empleados=empleados, residentes=residentes)
 
 @admin_bp.route("/dashboard-finanzas")
 @login_required
@@ -221,18 +293,51 @@ def enviar_mensaje_residente():
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT email FROM usuario WHERE id_usuario = %s", (id_usuario,))
-        email = cursor.fetchone()[0]
+        cursor.execute("SELECT correo FROM usuario WHERE id_usuario = %s", (id_usuario,))
+        result = cursor.fetchone()
+
+        if result is None:
+            flash("⚠️ Usuario no encontrado.", "warning")
+            cursor.close()
+            conn.close()
+            return redirect(url_for("admin.dashboard_finanzas"))
+
+        email = result[0]
         cursor.close()
         conn.close()
 
-        # Aquí puedes usar Flask-Mail o tu sistema de envío
-        enviar_email(destinatario=email, asunto="Cobros registrados", cuerpo=mensaje)
+        # Crear versión HTML del mensaje para mejor presentación
+        mensaje_html = f"""
+        <html>
+            <body>
+                <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+                    {mensaje.replace('\n', '<br>')}
+                </div>
+            </body>
+        </html>
+        """
 
-        flash("📨 Mensaje enviado al residente", "success")
+        # Usar la función de envío de email
+        from flask import current_app
+        if hasattr(current_app, 'enviar_email'):
+            exito = current_app.enviar_email(
+                destinatario=email,
+                asunto="Cobros registrados - Administración",
+                cuerpo=mensaje,
+                html=mensaje_html
+            )
+            
+            if exito:
+                flash("📨 Mensaje enviado al residente correctamente", "success")
+            else:
+                flash("❌ Error al enviar el mensaje", "danger")
+        else:
+            flash("❌ Servicio de email no disponible", "danger")
+
         return redirect(url_for("admin.dashboard_finanzas"))
 
     except Exception as e:
+        print("Error al enviar mensaje:", str(e))
         flash(f"❌ Error al enviar mensaje: {str(e)}", "danger")
         return redirect(url_for("admin.dashboard_finanzas"))
 
@@ -282,10 +387,93 @@ def ver_comprobante(id_pago):
 
 
 @admin_bp.route("/reportes")
-def reportes_mensuales():  # Mostrar totales por mes, método, etc.
-    return render_template("administrador/reporte.html")
+@login_required
+def reportes_mensuales():
+    if current_user.id_rol != 1:
+        flash("Acceso no autorizado.", "danger")
+        return redirect(url_for("auth.login"))
+    
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        if conn is None:
+            flash("❌ Error de conexión a la base de datos", "danger")
+            return render_template("administrador/reporte.html",
+                                 reportes_mensuales=[],
+                                 deudas_info=(0, 0, 0, 0))
 
+        cursor = conn.cursor()
 
+        # Reportes financieros mensuales - usando tabla PAGO
+        cursor.execute("""
+            SELECT 
+                TO_CHAR(fecha_pago, 'YYYY-MM') as mes,
+                COUNT(*) as total_pagos,
+                SUM(monto) as total_monto,
+                metodo,
+                COUNT(DISTINCT id_usuario) as usuarios_unicos
+            FROM pago 
+            WHERE estado = 'completado'
+            GROUP BY TO_CHAR(fecha_pago, 'YYYY-MM'), metodo
+            ORDER BY mes DESC, total_monto DESC
+        """)
+        reportes_mensuales = cursor.fetchall()
+
+        # Deudas pendientes - usando tabla DEUDA
+        cursor.execute("""
+            SELECT 
+                COUNT(DISTINCT d.id_usuario) as total_deudores,
+                COALESCE(SUM(d.monto), 0) as deuda_total,
+                COALESCE(AVG(d.monto), 0) as deuda_promedio,
+                COUNT(d.id_deuda) as total_deudas_pendientes
+            FROM deuda d
+            WHERE d.estado = 'pendiente'
+        """)
+        deudas_row = cursor.fetchone()
+
+        # Normalizar a diccionario con valores por defecto
+        if deudas_row is None:
+            deudas_dict = {
+                'total_deudores': 0,
+                'deuda_total': 0.0,
+                'deuda_promedio': 0.0,
+                'total_deudas_pendientes': 0,
+            }
+        else:
+            # deudas_row expected: (total_deudores, deuda_total, deuda_promedio, total_deudas_pendientes)
+            deuda_total_val = float(deudas_row[1]) if deudas_row[1] is not None else 0.0
+            deuda_promedio_val = float(deudas_row[2]) if deudas_row[2] is not None else 0.0
+            deudas_dict = {
+                'total_deudores': int(deudas_row[0]) if deudas_row[0] is not None else 0,
+                'deuda_total': deuda_total_val,
+                'deuda_promedio': deuda_promedio_val,
+                'total_deudas_pendientes': int(deudas_row[3]) if deudas_row[3] is not None else 0,
+            }
+
+        # Renderizar con los datos obtenidos (deudas_info ahora es un dict)
+        return render_template("administrador/reporte.html",
+                             reportes_mensuales=reportes_mensuales,
+                             deudas_info=deudas_dict)
+    except Exception as e:
+        print(f"❌ Error al cargar reportes: {e}")
+        flash(f"❌ Error al cargar reportes: {str(e)}", "danger")
+        # IMPORTANTE: Renderizar la plantilla incluso con error
+        empty_deudas = {
+            'total_deudores': 0,
+            'deuda_total': 0.0,
+            'deuda_promedio': 0.0,
+            'total_deudas_pendientes': 0,
+        }
+        return render_template("administrador/reporte.html",
+                             reportes_mensuales=[],
+                             deudas_info=empty_deudas)
+    finally:
+        # Asegurar que se cierren las conexiones
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @admin_bp.route("/deudas")
 @login_required
@@ -298,24 +486,22 @@ def gestionar_deudas():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Obtener deudas pendientes de usuarios
+        # Obtener deudas pendientes de usuarios - usando tabla DEUDA
         cursor.execute("""
             SELECT 
                 u.id_usuario,
                 u.nombre,
                 u.ap_paterno,
                 u.ap_materno,
-                u.email,
-                COALESCE(SUM(r.monto_pendiente), 0) as deuda_total,
-                COUNT(r.id_reserva) as reservas_pendientes,
-                MAX(r.fecha_vencimiento) as fecha_vencimiento_max
+                u.correo,
+                COALESCE(SUM(d.monto), 0) as deuda_total,
+                COUNT(d.id_deuda) as deudas_pendientes,
+                MAX(d.fecha_creacion) as fecha_creacion_max
             FROM usuario u
-            LEFT JOIN reserva r ON u.id_usuario = r.id_usuario 
-                AND r.estado_pago = 'pendiente'
-                AND r.monto_pendiente > 0
-            WHERE u.id_rol IN (2, 3)  # Residentes y empleados
-            GROUP BY u.id_usuario, u.nombre, u.ap_paterno, u.ap_materno, u.email
-            HAVING COALESCE(SUM(r.monto_pendiente), 0) > 0
+            JOIN deuda d ON u.id_usuario = d.id_usuario 
+            WHERE d.estado = 'pendiente'
+            GROUP BY u.id_usuario, u.nombre, u.ap_paterno, u.ap_materno, u.correo
+            HAVING COALESCE(SUM(d.monto), 0) > 0
             ORDER BY deuda_total DESC
         """)
         deudas = cursor.fetchall()
@@ -323,26 +509,23 @@ def gestionar_deudas():
         # Estadísticas generales de deudas
         cursor.execute("""
             SELECT 
-                COUNT(DISTINCT u.id_usuario) as total_deudores,
-                COALESCE(SUM(r.monto_pendiente), 0) as deuda_general_total,
-                AVG(r.monto_pendiente) as deuda_promedio,
-                COUNT(r.id_reserva) as total_reservas_pendientes
-            FROM usuario u
-            LEFT JOIN reserva r ON u.id_usuario = r.id_usuario 
-                AND r.estado_pago = 'pendiente'
-                AND r.monto_pendiente > 0
-            WHERE u.id_rol IN (2, 3)
+                COUNT(DISTINCT d.id_usuario) as total_deudores,
+                COALESCE(SUM(d.monto), 0) as deuda_general_total,
+                AVG(d.monto) as deuda_promedio,
+                COUNT(d.id_deuda) as total_deudas_pendientes
+            FROM deuda d
+            WHERE d.estado = 'pendiente'
         """)
         estadisticas = cursor.fetchone()
         
         cursor.close()
         conn.close()
 
-        return render_template("administrador/reportes.html", 
-                             deudas=deudas,
-                             estadisticas_deudas=estadisticas)
-                             
+        return render_template("administrador/reporte.html", 
+                     deudas=deudas,
+                     estadisticas_deudas=estadisticas)
     except Exception as e:
+        print(f"❌ Error al cargar las deudas: {e}")
         flash(f"❌ Error al cargar las deudas: {str(e)}", "danger")
         return redirect(url_for("admin.dashboard_finanzas"))
 
@@ -356,24 +539,32 @@ def registrar_cobros():
 
     try:
         id_usuario = int(request.form.get("id_usuario"))
-        conceptos = []
-        for i in range(1, 4):
-            concepto = request.form.get(f"concepto_{i}")
-            monto = request.form.get(f"monto_{i}")
-            if concepto and monto:
+        conceptos = request.form.getlist("concepto[]")
+        montos = request.form.getlist("monto[]")
+        
+        conceptos_lista = []
+        for i in range(len(conceptos)):
+            if conceptos[i] and montos[i]:
                 try:
-                    monto = float(monto)
-                    conceptos.append((concepto, monto))
+                    monto = float(montos[i])
+                    # Generar identificador único para evitar el constraint
+                    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+                    identificador_unico = f"{conceptos[i]}_{timestamp}_{i}"
+                    conceptos_lista.append((conceptos[i], monto, identificador_unico))
                 except ValueError:
                     continue
+
+        if not conceptos_lista:
+            flash("❌ No se proporcionaron conceptos válidos", "warning")
+            return redirect(url_for("admin.dashboard_finanzas"))
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        for identificador, monto in conceptos:
+        for concepto, monto, identificador in conceptos_lista:
             cursor.execute("""
-                INSERT INTO deuda (id_usuario, identificador, monto, estado)
-                VALUES (%s, %s, %s, 'pendiente')
+                INSERT INTO deuda (id_usuario, identificador, monto, estado, fecha_creacion)
+                VALUES (%s, %s, %s, 'pendiente', CURRENT_DATE)
             """, (id_usuario, identificador, monto))
 
         conn.commit()
@@ -384,6 +575,7 @@ def registrar_cobros():
         return redirect(url_for("admin.dashboard_finanzas"))
 
     except Exception as e:
+        print(f"❌ Error al registrar cobros: {e}")
         flash(f"❌ Error al registrar cobros: {str(e)}", "danger")
         return redirect(url_for("admin.dashboard_finanzas"))
 
@@ -399,15 +591,13 @@ def marcar_deuda_pagada(id_usuario):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Marcar todas las reservas pendientes del usuario como pagadas
+        # Marcar todas las deudas pendientes del usuario como pagadas
         cursor.execute("""
-            UPDATE reserva 
-            SET estado_pago = 'pagado', 
-                monto_pendiente = 0,
+            UPDATE deuda 
+            SET estado = 'pagado', 
                 fecha_pago = CURRENT_DATE
             WHERE id_usuario = %s 
-                AND estado_pago = 'pendiente'
-                AND monto_pendiente > 0
+                AND estado = 'pendiente'
         """, (id_usuario,))
         
         conn.commit()
@@ -418,6 +608,7 @@ def marcar_deuda_pagada(id_usuario):
         return redirect(url_for("admin.gestionar_deudas"))
         
     except Exception as e:
+        print(f"❌ Error al marcar como pagado: {e}")
         flash(f"❌ Error al marcar como pagado: {str(e)}", "danger")
         return redirect(url_for("admin.gestionar_deudas"))
 
@@ -433,19 +624,19 @@ def generar_reporte_deudas_pdf():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 🔍 Consulta de deudas agrupadas por usuario
+        # Consulta de deudas agrupadas por usuario
         cursor.execute("""
             SELECT 
                 u.nombre,
                 u.ap_paterno,
                 u.ap_materno,
-                u.email,
+                u.correo,
                 COUNT(d.id_deuda) AS cantidad_deudas,
                 SUM(d.monto) AS deuda_total
             FROM usuario u
             JOIN deuda d ON u.id_usuario = d.id_usuario
             WHERE d.estado = 'pendiente'
-            GROUP BY u.id_usuario, u.nombre, u.ap_paterno, u.ap_materno, u.email
+            GROUP BY u.id_usuario, u.nombre, u.ap_paterno, u.ap_materno, u.correo
             HAVING SUM(d.monto) > 0
             ORDER BY deuda_total DESC
         """)
@@ -454,7 +645,7 @@ def generar_reporte_deudas_pdf():
         cursor.close()
         conn.close()
 
-        # 🔐 Renderizar plantilla para PDF
+        # Renderizar plantilla para PDF
         return render_template("administrador/reporte_deudas_pdf.html",
                                deudas=deudas,
                                fecha_reporte=datetime.now().strftime("%d/%m/%Y"))
@@ -462,6 +653,34 @@ def generar_reporte_deudas_pdf():
     except Exception as e:
         flash(f"❌ Error al generar reporte PDF: {str(e)}", "danger")
         return redirect(url_for("admin.dashboard_finanzas"))
+    
+@admin_bp.route("/debug-deuda")
+@login_required
+def debug_deuda():
+    """Ver la estructura de la tabla deuda"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT column_name, data_type, is_nullable, column_default
+            FROM information_schema.columns 
+            WHERE table_name = 'deuda'
+            ORDER BY ordinal_position
+        """)
+        estructura = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        resultado = "<h1>Estructura de tabla DEUDA:</h1><ul>"
+        for col in estructura:
+            resultado += f"<li>{col[0]} - {col[1]} - {col[2]} - {col[3]}</li>"
+        resultado += "</ul>"
+        
+        return resultado
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 
@@ -480,11 +699,6 @@ def tickets():
         flash("Acceso no autorizado.", "danger")
         return redirect(url_for("auth.login"))
     return render_template("administrador/tickets.html")
-
-
-
-
-
 
 
 @admin_bp.route("/usuarios")

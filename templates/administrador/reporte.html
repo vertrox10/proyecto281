@@ -1,197 +1,121 @@
+<!-- templates/administrador/reporte.html -->
 {% extends 'administrador/base.html' %}
 
-{% block title %}Reportes y Deudas{% endblock %}
-
-{% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='administrador/style_reporte.css') }}">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-{% endblock %}
+{% block title %}Reportes y Estadísticas{% endblock %}
 
 {% block content %}
-{% set deudas_json = deudas_info|default({})|tojson %}
-{% set reportes_json = reportes_mensuales|default([])|tojson %}
-<div class="reportes-container">
+<div class="dashboard-container">
     <!-- Header -->
-    <div class="reportes-header">
-        <div class="header-content">
-            <div class="header-title">
-                <h1><i class="fas fa-chart-bar"></i> Reportes y Deudas</h1>
-                <p>Gestión de reportes financieros y deudas pendientes</p>
+    <div class="dashboard-header">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" 
+                     style="height: 60px; width: auto; background: white; padding: 8px; border-radius: 8px;">
+                <div>
+                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">Reportes y Estadísticas</h1>
+                    <p style="margin: 0.25rem 0 0 0; opacity: 0.9;">Análisis de pagos y deudas</p>
+                </div>
             </div>
-            <div class="header-actions">
-                <a href="{{ url_for('admin.dashboard_finanzas') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Volver a Finanzas
-                </a>
-                <a href="{{ url_for('admin.generar_reporte_deudas_pdf') }}" class="btn btn-primary">
-                    <i class="fas fa-file-pdf"></i> Exportar PDF
-                </a>
-            </div>
+            <a href="{{ url_for('admin.dashboard_finanzas') }}" class="logout-btn">
+                <i class="fas fa-arrow-left"></i>
+                Volver a Finanzas
+            </a>
         </div>
     </div>
+
+    <!-- Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
     <!-- Estadísticas Rápidas -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-icon total-ingresos">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Total Deudores</h3>
+                <div class="stat-value">{{ deudas_info.total_deudores }}</div>
+                <div class="stat-period">Usuarios con deuda</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #ff9f43 0%, #f39c12 100%);">
                 <i class="fas fa-money-bill-wave"></i>
             </div>
             <div class="stat-info">
-                <h3>Total Ingresos</h3>
-                <div class="stat-value">Bs {{ "{:,.2f}".format(total_ingresos or 0) }}</div>
-                <div class="stat-period">Este mes</div>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon total-deudas">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="stat-info">
                 <h3>Deuda Total</h3>
-                <div class="stat-value">Bs {{ "{:,.2f}".format(deudas_info.deuda_total if deudas_info else 0) }}</div>
-                <div class="stat-period">{{ deudas_info.total_deudores if deudas_info else 0 }} deudores</div>
+                <div class="stat-value">Bs {{ "%.2f"|format(deudas_info.deuda_total) }}</div>
+                <div class="stat-period">Monto pendiente</div>
             </div>
         </div>
 
         <div class="stat-card">
-            <div class="stat-icon pagos-pendientes">
-                <i class="fas fa-clock"></i>
-            </div>
-            <div class="stat-info">
-                <h3>Pagos Pendientes</h3>
-                <div class="stat-value">{{ deudas_info.total_reservas_pendientes if deudas_info else 0 }}</div>
-                <div class="stat-period">Reservas por pagar</div>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon deuda-promedio">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #54a0ff 0%, #2e86de 100%);">
                 <i class="fas fa-chart-line"></i>
             </div>
             <div class="stat-info">
                 <h3>Deuda Promedio</h3>
-                <div class="stat-value">Bs {{ "{:,.2f}".format(deudas_info.deuda_promedio if deudas_info and deudas_info.deuda_promedio else 0) }}</div>
+                <div class="stat-value">Bs {{ "%.2f"|format(deudas_info.deuda_promedio) }}</div>
                 <div class="stat-period">Por usuario</div>
             </div>
         </div>
-    </div>
 
-    <!-- Sección de Deudas -->
-    <div class="deudas-section">
-        <div class="section-header">
-            <h2><i class="fas fa-exclamation-circle"></i> Deudas Pendientes</h2>
-            <div class="section-actions">
-                <button class="btn btn-refresh" onclick="location.reload()">
-                    <i class="fas fa-sync-alt"></i> Actualizar
-                </button>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #5f27cd 0%, #341f97 100%);">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Deudas Pendientes</h3>
+                <div class="stat-value">{{ deudas_info.total_deudas_pendientes }}</div>
+                <div class="stat-period">Registros activos</div>
             </div>
         </div>
-
-        {% if deudas %}
-        <div class="table-container">
-            <table class="deudas-table">
-                <thead>
-                    <tr>
-                        <th>Usuario</th>
-                        <th>Email</th>
-                        <th>Deuda Total</th>
-                        <th>Reservas Pendientes</th>
-                        <th>Fecha Vencimiento</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for deuda in deudas %}
-                    <tr>
-                        <td class="user-info">
-                            <strong>{{ deuda.nombre }} {{ deuda.ap_paterno }} {{ deuda.ap_materno or '' }}</strong>
-                        </td>
-                        <td>{{ deuda.email }}</td>
-                        <td class="deuda-amount">
-                            <span class="amount-badge">Bs {{ "{:,.2f}".format(deuda.deuda_total) }}</span>
-                        </td>
-                        <td>
-                            <span class="reservas-badge">{{ deuda.reservas_pendientes }}</span>
-                        </td>
-                        <td>
-                            {% if deuda.fecha_vencimiento_max %}
-                            <span class="fecha {% if deuda.fecha_vencimiento_max < today %}vencido{% endif %}">
-                                {{ deuda.fecha_vencimiento_max.strftime('%d/%m/%Y') }}
-                            </span>
-                            {% else %}
-                            <span class="fecha">-</span>
-                            {% endif %}
-                        </td>
-                        <td class="actions">
-                            <form action="{{ url_for('admin.marcar_deuda_pagada', id_usuario=deuda.id_usuario) }}" method="POST" style="display: inline;">
-                                <button type="submit" class="btn btn-success btn-sm" 
-                                        onclick="return confirm('¿Estás seguro de marcar esta deuda como pagada?')">
-                                    <i class="fas fa-check"></i> Marcar Pagado
-                                </button>
-                            </form>
-                            <a href="{{ url_for('admin.ver_detalle_deuda', id_usuario=deuda.id_usuario) }}" class="btn btn-info btn-sm">
-                                <i class="fas fa-eye"></i> Detalles
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <div class="no-data">
-            <i class="fas fa-check-circle"></i>
-            <h3>No hay deudas pendientes</h3>
-            <p>Todos los pagos están al día</p>
-        </div>
-        {% endif %}
     </div>
 
     <!-- Reportes Mensuales -->
-    <div class="reportes-section">
+    <div class="section-card">
         <div class="section-header">
-            <h2><i class="fas fa-chart-line"></i> Reportes Mensuales</h2>
-            <select class="time-filter" onchange="filtrarReportes(this.value)">
-                <option value="6">Últimos 6 meses</option>
-                <option value="12">Último año</option>
-                <option value="all">Todos</option>
-            </select>
+            <h2 class="section-title">
+                <i class="fas fa-chart-bar"></i>
+                Reportes Mensuales de Pagos
+            </h2>
         </div>
 
-        {% if reportes_mensuales %}
+        {% if reportes_mensuales and reportes_mensuales|length > 0 %}
         <div class="table-container">
-            <table class="reportes-table">
+            <table class="data-table">
                 <thead>
                     <tr>
                         <th>Mes</th>
-                        <th>Método de Pago</th>
                         <th>Total Pagos</th>
                         <th>Monto Total</th>
+                        <th>Método</th>
                         <th>Usuarios Únicos</th>
-                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for reporte in reportes_mensuales %}
                     <tr>
-                        <td class="mes-info">
-                            <strong>{{ reporte.mes[-2:] }}/{{ reporte.mes[:4] }}</strong>
-                        </td>
+                        <td><strong>{{ reporte[0] }}</strong></td>
+                        <td>{{ reporte[1] }}</td>
+                        <td>Bs {{ "%.2f"|format(reporte[2]) }}</td>
                         <td>
-                            <span class="metodo-badge {{ reporte.metodo|lower }}">
-                                <i class="fas fa-{% if reporte.metodo == 'transferencia' %}university{% else %}money-bill-wave{% endif %}"></i>
-                                {{ reporte.metodo|title }}
+                            <span class="badge {% if reporte[3] == 'transferencia' %}badge-primary{% elif reporte[3] == 'efectivo' %}badge-success{% else %}badge-info{% endif %}">
+                                {{ reporte[3]|title }}
                             </span>
                         </td>
-                        <td>{{ reporte.total_pagos }}</td>
-                        <td class="monto-total">Bs {{ "{:,.2f}".format(reporte.total_monto) }}</td>
-                        <td>{{ reporte.usuarios_unicos }}</td>
-                        <td class="actions">
-                            <a href="{{ url_for('admin.detalle_reporte_mensual', mes=reporte.mes, metodo=reporte.metodo) }}" 
-                               class="btn btn-outline btn-sm">
-                                <i class="fas fa-search"></i> Ver Detalle
-                            </a>
-                        </td>
+                        <td>{{ reporte[4] }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -199,128 +123,48 @@
         </div>
         {% else %}
         <div class="no-data">
-            <i class="fas fa-chart-bar"></i>
-            <h3>No hay reportes disponibles</h3>
-            <p>No se encontraron datos para mostrar</p>
+            <i class="fas fa-chart-bar" style="font-size: 3rem; opacity: 0.5;"></i>
+            <h3>No hay datos de reportes</h3>
+            <p>No se encontraron registros de pagos para mostrar.</p>
         </div>
         {% endif %}
     </div>
-
-    <!-- Resumen Gráfico -->
-    <div class="charts-section">
-        <div class="chart-row">
-            <div class="chart-card">
-                <h3><i class="fas fa-chart-pie"></i> Distribución de Deudas</h3>
-                <div class="chart-placeholder">
-                    <canvas id="deudasChart"></canvas>
-                </div>
-            </div>
-            <div class="chart-card">
-                <h3><i class="fas fa-chart-line"></i> Evolución Mensual</h3>
-                <div class="chart-placeholder">
-                    <canvas id="evolucionChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
-{% endblock %}
-{%block extra_head %}
+
 <style>
-.reportes-container {
+.dashboard-container {
     padding: 2rem;
     background: #f8f9fa;
     min-height: 100vh;
 }
 
-/* Header */
-.reportes-header {
+.dashboard-header {
     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     color: white;
-    padding: 2rem;
+    padding: 1.5rem 2rem;
     border-radius: 15px;
     margin-bottom: 2rem;
 }
 
-.header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.header-title h1 {
-    margin: 0;
-    font-size: 2.2rem;
-    font-weight: 700;
-}
-
-.header-title p {
-    margin: 0.5rem 0 0 0;
-    opacity: 0.9;
-}
-
-.header-actions {
-    display: flex;
-    gap: 1rem;
-}
-
-/* Botones */
-.btn {
+.logout-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     text-decoration: none;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
+    font-weight: 500;
     transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-    color: white;
-}
-
-.btn-secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-success {
-    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-    color: white;
-}
-
-.btn-info {
-    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-    color: white;
-}
-
-.btn-outline {
-    background: transparent;
-    border: 2px solid #2196f3;
-    color: #2196f3;
-}
-
-.btn-sm {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-}
-
-.btn:hover {
+.logout-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-.btn-refresh {
-    background: #f8f9fa;
-    color: #2c3e50;
-    border: 1px solid #dee2e6;
-}
-
-/* Estadísticas */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -336,11 +180,6 @@
     display: flex;
     align-items: center;
     gap: 1rem;
-    transition: transform 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
 }
 
 .stat-icon {
@@ -353,11 +192,6 @@
     color: white;
     font-size: 1.5rem;
 }
-
-.total-ingresos { background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); }
-.total-deudas { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%); }
-.pagos-pendientes { background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); }
-.deuda-promedio { background: linear-gradient(135deg, #9c27b0 0%, #8e24aa 100%); }
 
 .stat-info h3 {
     margin: 0;
@@ -378,13 +212,12 @@
     color: #6c757d;
 }
 
-/* Secciones */
-.deudas-section, .reportes-section {
+.section-card {
     background: white;
     border-radius: 15px;
     padding: 2rem;
-    margin-bottom: 2rem;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
 }
 
 .section-header {
@@ -396,7 +229,7 @@
     border-bottom: 2px solid #f8f9fa;
 }
 
-.section-header h2 {
+.section-title {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 600;
@@ -406,26 +239,12 @@
     gap: 0.5rem;
 }
 
-.time-filter {
-    padding: 0.5rem 1rem;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: white;
-    color: #2c3e50;
-}
-
-/* Tablas */
-.table-container {
-    overflow-x: auto;
-}
-
-.deudas-table, .reportes-table {
+.data-table {
     width: 100%;
     border-collapse: collapse;
-    background: white;
 }
 
-.deudas-table th, .reportes-table th {
+.data-table th {
     background: #f8f9fa;
     padding: 1rem;
     text-align: left;
@@ -434,144 +253,59 @@
     border-bottom: 2px solid #dee2e6;
 }
 
-.deudas-table td, .reportes-table td {
+.data-table td {
     padding: 1rem;
     border-bottom: 1px solid #dee2e6;
 }
 
-/* Badges */
-.amount-badge {
-    background: #fff5f5;
-    color: #e53e3e;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-weight: 600;
-    border: 1px solid #fed7d7;
-}
-
-.reservas-badge {
-    background: #f0fff4;
-    color: #38a169;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-weight: 600;
-    border: 1px solid #c6f6d5;
-}
-
-.metodo-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
+.badge {
     padding: 0.25rem 0.75rem;
     border-radius: 20px;
     font-size: 0.875rem;
     font-weight: 500;
 }
 
-.metodo-badge.transferencia {
+.badge-primary {
     background: #e3f2fd;
     color: #1976d2;
-    border: 1px solid #bbdefb;
 }
 
-.metodo-badge.efectivo {
-    background: #f3e5f5;
-    color: #7b1fa2;
-    border: 1px solid #e1bee7;
+.badge-success {
+    background: #e8f5e8;
+    color: #4caf50;
 }
 
-/* Estados */
-.fecha.vencido {
-    color: #e53e3e;
-    font-weight: 600;
+.badge-info {
+    background: #e3f2fd;
+    color: #2196f3;
 }
 
-/* Sin datos */
 .no-data {
     text-align: center;
     padding: 3rem;
     color: #6c757d;
 }
 
-.no-data i {
-    font-size: 4rem;
+.alert {
+    padding: 1rem;
+    border-radius: 8px;
     margin-bottom: 1rem;
-    opacity: 0.5;
 }
 
-.no-data h3 {
-    margin: 0 0 0.5rem 0;
-    color: #6c757d;
+.alert-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
 }
 
-/* Gráficos */
-.charts-section {
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.flash-messages {
     margin-bottom: 2rem;
-}
-
-.chart-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-}
-
-.chart-card {
-    background: white;
-    padding: 2rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.chart-card h3 {
-    margin: 0 0 1.5rem 0;
-    font-size: 1.3rem;
-    color: #2c3e50;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.chart-placeholder {
-    height: 300px;
-    position: relative;
-}
-
-/* Acciones en tablas */
-.actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-    .chart-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .header-content {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-}
-
-@media (max-width: 768px) {
-    .reportes-container {
-        padding: 1rem;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .deudas-section, .reportes-section {
-        padding: 1rem;
-    }
-    
-    .actions {
-        flex-direction: column;
-    }
 }
 </style>
 {% endblock %}
