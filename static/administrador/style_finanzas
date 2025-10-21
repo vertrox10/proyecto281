@@ -1,0 +1,617 @@
+// style_finanza.js
+// Módulo JavaScript para la gestión de finanzas
+
+
+// Variables globales
+let conceptosState = [];
+
+function agregarConcepto() {
+    const container = document.getElementById("conceptos-container");
+    const nuevo = document.createElement("div");
+    nuevo.className = "concepto-item";
+    nuevo.innerHTML = `
+        <input type="text" name="concepto[]" placeholder="Ej. Servicio adicional" 
+               class="form-input concepto-input" required
+               oninput="actualizarMensaje()">
+        <input type="number" step="0.01" name="monto[]" placeholder="0.00" 
+               class="form-input monto-input" required
+               oninput="actualizarMensaje()">
+        <button type="button" class="btn-eliminar-concepto" onclick="eliminarConcepto(this)" title="Eliminar concepto">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    container.appendChild(nuevo);
+    actualizarMensaje();
+}
+
+function eliminarConcepto(element) {
+    const conceptoItem = element.closest('.concepto-item');
+    const container = document.getElementById("conceptos-container");
+    const items = container.getElementsByClassName('concepto-item');
+    
+    if (items.length > 1) {
+        container.removeChild(conceptoItem);
+        actualizarMensaje();
+    } else {
+        mostrarNotificacion('Debe haber al menos un concepto de cobro registrado.', 'warning');
+    }
+}
+
+function eliminarUltimoConcepto() {
+    const container = document.getElementById("conceptos-container");
+    const items = container.getElementsByClassName('concepto-item');
+    
+    if (items.length > 1) {
+        eliminarConcepto(items[items.length - 1].querySelector('.btn-eliminar-concepto'));
+    } else {
+        mostrarNotificacion('Debe haber al menos un concepto de cobro registrado.', 'warning');
+    }
+}
+
+function actualizarMensaje() {
+    const selectResidente = document.getElementById("select-residente");
+    const nombreResidente = selectResidente.options[selectResidente.selectedIndex].text;
+    const conceptos = document.querySelectorAll("input[name='concepto[]']");
+    const montos = document.querySelectorAll("input[name='monto[]']");
+    
+    let total = 0;
+    let conceptosValidos = [];
+    
+    // Procesar conceptos y montos
+    for (let i = 0; i < conceptos.length; i++) {
+        const concepto = conceptos[i].value.trim();
+        const monto = parseFloat(montos[i].value);
+        
+        if (concepto && !isNaN(monto) && monto > 0) {
+            conceptosValidos.push({ concepto, monto });
+            total += monto;
+        }
+    }
+    
+    // Generar mensaje
+    let mensaje = `Estimado/a ${nombreResidente},\n\n`;
+    mensaje += `Se han registrado los siguientes cobros por uso del edificio:\n\n`;
+    
+    if (conceptosValidos.length > 0) {
+        conceptosValidos.forEach(item => {
+            mensaje += `• ${item.concepto}: Bs ${item.monto.toFixed(2)}\n`;
+        });
+        
+        mensaje += `\n💰 Total a pagar: Bs ${total.toFixed(2)}\n\n`;
+        mensaje += `Fecha límite de pago: ${obtenerFechaLimite()}\n\n`;
+        mensaje += `Métodos de pago disponibles:\n`;
+        mensaje += `• Transferencia bancaria\n`;
+        mensaje += `• Efectivo en administración\n`;
+        mensaje += `• QR de pago\n\n`;
+    } else {
+        mensaje += `No se han registrado conceptos de cobro válidos.\n\n`;
+    }
+    
+    mensaje += `Agradecemos su puntualidad en el pago.\n\n`;
+    mensaje += `Atentamente,\n`;
+    mensaje += `Administración del Edificio`;
+    
+    document.getElementById("mensaje-residente").value = mensaje;
+}
+
+function obtenerFechaLimite() {
+    const hoy = new Date();
+    const fechaLimite = new Date(hoy);
+    fechaLimite.setDate(hoy.getDate() + 7);
+    
+    return fechaLimite.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+// NUEVA FUNCIÓN: Registrar cobros y enviar mensaje
+function registrarYEnviar() {
+    const formCobros = document.getElementById('form-cobros');
+    const selectResidente = document.getElementById("select-residente");
+    const idUsuario = selectResidente.value;
+    const mensaje = document.getElementById("mensaje-residente").value.trim();
+    
+    // Validaciones
+    if (!mensaje) {
+        mostrarNotificacion('El mensaje está vacío. Por favor, agregue conceptos de cobro primero.', 'error');
+        return false;
+    }
+    
+    const conceptos = document.querySelectorAll("input[name='concepto[]']");
+    let conceptosValidos = false;
+    
+    for (let i = 0; i < conceptos.length; i++) {
+        const concepto = conceptos[i].value.trim();
+        const monto = parseFloat(document.querySelectorAll("input[name='monto[]']")[i].value);
+        
+        if (concepto && !isNaN(monto) && monto > 0) {
+            conceptosValidos = true;
+            break;
+        }
+    }
+    
+    if (!conceptosValidos) {
+        mostrarNotificacion('Debe agregar al menos un concepto de cobro válido antes de enviar.', 'warning');
+        return false;
+    }
+    
+    // Primero registrar los cobros
+    mostrarNotificacion('Registrando cobros...', 'info');
+    
+    // Crear un formulario temporal para enviar el mensaje
+    const formData = new FormData();
+    formData.append('id_usuario', idUsuario);
+    formData.append('mensaje', mensaje);
+    
+    // Enviar primero el formulario de cobros
+    fetch(formCobros.action, {
+        method: 'POST',
+        body: new FormData(formCobros)
+    })
+    .then(response => {
+        if (response.ok) {
+            // Si los cobros se registran bien, enviar el mensaje
+            return fetch("{{ url_for('admin.enviar_mensaje_residente') }}", {
+                method: 'POST',
+                body: formData
+            });
+        } else {
+            throw new Error('Error al registrar cobros');
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            mostrarNotificacion('✅ Cobros registrados y mensaje enviado correctamente', 'success');
+            // Recargar después de 2 segundos
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            throw new Error('Error al enviar mensaje');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('❌ Error en el proceso: ' + error.message, 'error');
+    });
+}
+
+// Función para mostrar notificaciones
+function mostrarNotificacion(mensaje, tipo = 'info') {
+    // Buscar si ya existe una notificación
+    const notificacionesExistentes = document.querySelectorAll('.toast-notification');
+    notificacionesExistentes.forEach(notif => notif.remove());
+    
+    // Crear notificación
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${tipo}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <i class="fas ${obtenerIconoTipo(tipo)}"></i>
+            <span>${mensaje}</span>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto-eliminar después de 5 segundos
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
+}
+
+function obtenerIconoTipo(tipo) {
+    const iconos = {
+        'success': 'fa-check-circle',
+        'error': 'fa-exclamation-circle',
+        'warning': 'fa-exclamation-triangle',
+        'info': 'fa-info-circle'
+    };
+    return iconos[tipo] || 'fa-info-circle';
+}
+
+// Inicialización
+document.addEventListener("DOMContentLoaded", function() {
+    actualizarMensaje();
+    
+    const selectResidente = document.getElementById("select-residente");
+    if (selectResidente) {
+        selectResidente.addEventListener('change', actualizarMensaje);
+    }
+});
+
+// Validación del formulario de cobros
+document.addEventListener('DOMContentLoaded', function() {
+    const formCobros = document.getElementById('form-cobros');
+    if (formCobros) {
+        formCobros.addEventListener('submit', function(e) {
+            const conceptos = document.querySelectorAll("input[name='concepto[]']");
+            let conceptosValidos = false;
+            
+            for (let i = 0; i < conceptos.length; i++) {
+                const concepto = conceptos[i].value.trim();
+                const monto = parseFloat(document.querySelectorAll("input[name='monto[]']")[i].value);
+                
+                if (concepto && !isNaN(monto) && monto > 0) {
+                    conceptosValidos = true;
+                    break;
+                }
+            }
+            
+            if (!conceptosValidos) {
+                e.preventDefault();
+                mostrarNotificacion('Debe agregar al menos un concepto de cobro válido antes de registrar.', 'warning');
+            } else {
+                mostrarNotificacion('Registrando cobros...', 'info');
+            }
+        });
+    }
+});
+
+
+class FinanzasManager {
+    constructor() {
+        this.empleadosData = {};
+        this.conceptosState = [];
+        this.init();
+    }
+
+    init() {
+        // Inicializar cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.setupEventListeners());
+        } else {
+            this.setupEventListeners();
+        }
+    }
+
+    setupEventListeners() {
+        // Empleados
+        const selectEmpleado = document.getElementById('select-empleado');
+        const metodoPago = document.getElementById('metodo-pago');
+        const selectResidente = document.getElementById('select-residente');
+        const formCobros = document.getElementById('form-cobros');
+
+        if (selectEmpleado) {
+            selectEmpleado.addEventListener('change', () => this.actualizarInfoEmpleado());
+        }
+
+        if (metodoPago) {
+            metodoPago.addEventListener('change', () => this.mostrarCampoTransferencia());
+        }
+
+        if (selectResidente) {
+            selectResidente.addEventListener('change', () => this.actualizarMensaje());
+        }
+
+        if (formCobros) {
+            formCobros.addEventListener('submit', (e) => this.validarFormCobros(e));
+        }
+
+        // Inicializar estados
+        this.actualizarInfoEmpleado();
+        this.mostrarCampoTransferencia();
+        this.actualizarMensaje();
+    }
+
+    // ========== EMPLEADOS ==========
+
+    setEmpleadosData(data) {
+        this.empleadosData = data;
+        this.actualizarInfoEmpleado();
+    }
+
+    actualizarInfoEmpleado() {
+        const select = document.getElementById('select-empleado');
+        const infoDiv = document.getElementById('info-empleado');
+        const montoInput = document.getElementById('input-monto');
+        
+        if (!select || !infoDiv) return;
+
+        const empleadoId = select.value;
+        
+        if (this.empleadosData[empleadoId]) {
+            const empleado = this.empleadosData[empleadoId];
+            
+            // Actualizar información
+            const salarioBase = document.getElementById('salario-base');
+            const bancoEmpleado = document.getElementById('banco-empleado');
+            const cuentaEmpleado = document.getElementById('cuenta-empleado');
+            
+            if (salarioBase) salarioBase.textContent = `Bs ${empleado.salario.toFixed(2)}`;
+            if (bancoEmpleado) bancoEmpleado.textContent = empleado.banco;
+            if (cuentaEmpleado) cuentaEmpleado.textContent = empleado.cuenta;
+            
+            // Mostrar información
+            infoDiv.style.display = 'block';
+            
+            // Si el monto está vacío, sugerir el salario base
+            if (montoInput && !montoInput.value) {
+                montoInput.placeholder = `Sugerido: ${empleado.salario.toFixed(2)}`;
+            }
+        } else {
+            infoDiv.style.display = 'none';
+        }
+    }
+
+    mostrarCampoTransferencia() {
+        const metodo = document.getElementById('metodo-pago');
+        const campoTrans = document.getElementById('campo-nro-trans');
+        
+        if (!metodo || !campoTrans) return;
+
+        if (metodo.value === 'transferencia') {
+            campoTrans.style.display = 'block';
+            
+            // Mostrar advertencia si no hay datos bancarios
+            const empleadoId = document.getElementById('select-empleado').value;
+            if (this.empleadosData[empleadoId] && this.empleadosData[empleadoId].cuenta === 'No registrada') {
+                this.mostrarNotificacion('⚠️ Este empleado no tiene número de cuenta registrado', 'warning');
+            }
+        } else {
+            campoTrans.style.display = 'none';
+        }
+    }
+
+    // ========== RESIDENTES ==========
+
+    agregarConcepto() {
+        const container = document.getElementById("conceptos-container");
+        if (!container) return;
+
+        const nuevo = document.createElement("div");
+        nuevo.className = "concepto-item";
+        nuevo.innerHTML = `
+            <input type="text" name="concepto[]" placeholder="Ej. Servicio adicional" 
+                   class="form-input concepto-input" required
+                   oninput="finanzasManager.actualizarMensaje()">
+            <input type="number" step="0.01" name="monto[]" placeholder="0.00" 
+                   class="form-input monto-input" required
+                   oninput="finanzasManager.actualizarMensaje()">
+            <button type="button" class="btn-eliminar-concepto" onclick="finanzasManager.eliminarConcepto(this)" title="Eliminar concepto">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        container.appendChild(nuevo);
+        this.actualizarMensaje();
+    }
+
+    eliminarConcepto(element) {
+        const conceptoItem = element.closest('.concepto-item');
+        const container = document.getElementById("conceptos-container");
+        const items = container.getElementsByClassName('concepto-item');
+        
+        if (items.length > 1) {
+            container.removeChild(conceptoItem);
+            this.actualizarMensaje();
+        } else {
+            this.mostrarNotificacion('Debe haber al menos un concepto de cobro registrado.', 'warning');
+        }
+    }
+
+    eliminarUltimoConcepto() {
+        const container = document.getElementById("conceptos-container");
+        const items = container.getElementsByClassName('concepto-item');
+        
+        if (items.length > 1) {
+            this.eliminarConcepto(items[items.length - 1].querySelector('.btn-eliminar-concepto'));
+        } else {
+            this.mostrarNotificacion('Debe haber al menos un concepto de cobro registrado.', 'warning');
+        }
+    }
+
+    actualizarMensaje() {
+        const selectResidente = document.getElementById("select-residente");
+        const mensajeTextarea = document.getElementById("mensaje-residente");
+        
+        if (!selectResidente || !mensajeTextarea) return;
+
+        const nombreResidente = selectResidente.options[selectResidente.selectedIndex].text;
+        const conceptos = document.querySelectorAll("input[name='concepto[]']");
+        const montos = document.querySelectorAll("input[name='monto[]']");
+        
+        let total = 0;
+        let conceptosValidos = [];
+        
+        // Procesar conceptos y montos
+        for (let i = 0; i < conceptos.length; i++) {
+            const concepto = conceptos[i].value.trim();
+            const monto = parseFloat(montos[i].value);
+            
+            if (concepto && !isNaN(monto) && monto > 0) {
+                conceptosValidos.push({ concepto, monto });
+                total += monto;
+            }
+        }
+        
+        // Generar mensaje
+        let mensaje = `Estimado/a ${nombreResidente},\n\n`;
+        mensaje += `Se han registrado los siguientes cobros por uso del edificio:\n\n`;
+        
+        if (conceptosValidos.length > 0) {
+            conceptosValidos.forEach(item => {
+                mensaje += `• ${item.concepto}: Bs ${item.monto.toFixed(2)}\n`;
+            });
+            
+            mensaje += `\n💰 Total a pagar: Bs ${total.toFixed(2)}\n\n`;
+            mensaje += `Fecha límite de pago: ${this.obtenerFechaLimite()}\n\n`;
+            mensaje += `Métodos de pago disponibles:\n`;
+            mensaje += `• Transferencia bancaria\n`;
+            mensaje += `• Efectivo en administración\n`;
+            mensaje += `• QR de pago\n\n`;
+        } else {
+            mensaje += `No se han registrado conceptos de cobro válidos.\n\n`;
+        }
+        
+        mensaje += `Agradecemos su puntualidad en el pago.\n\n`;
+        mensaje += `Atentamente,\n`;
+        mensaje += `Administración del Edificio`;
+        
+        mensajeTextarea.value = mensaje;
+    }
+
+    obtenerFechaLimite() {
+        const hoy = new Date();
+        const fechaLimite = new Date(hoy);
+        fechaLimite.setDate(hoy.getDate() + 7);
+        
+        return fechaLimite.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    }
+
+    // ========== FORMULARIOS ==========
+
+    registrarYEnviar() {
+        const formCobros = document.getElementById('form-cobros');
+        const selectResidente = document.getElementById("select-residente");
+        const mensajeTextarea = document.getElementById("mensaje-residente");
+        
+        if (!formCobros || !selectResidente || !mensajeTextarea) return false;
+
+        const idUsuario = selectResidente.value;
+        const mensaje = mensajeTextarea.value.trim();
+        
+        // Validaciones
+        if (!mensaje) {
+            this.mostrarNotificacion('El mensaje está vacío. Por favor, agregue conceptos de cobro primero.', 'error');
+            return false;
+        }
+        
+        const conceptos = document.querySelectorAll("input[name='concepto[]']");
+        let conceptosValidos = false;
+        
+        for (let i = 0; i < conceptos.length; i++) {
+            const concepto = conceptos[i].value.trim();
+            const monto = parseFloat(document.querySelectorAll("input[name='monto[]']")[i].value);
+            
+            if (concepto && !isNaN(monto) && monto > 0) {
+                conceptosValidos = true;
+                break;
+            }
+        }
+        
+        if (!conceptosValidos) {
+            this.mostrarNotificacion('Debe agregar al menos un concepto de cobro válido antes de enviar.', 'warning');
+            return false;
+        }
+        
+        // Primero registrar los cobros
+        this.mostrarNotificacion('Registrando cobros...', 'info');
+        
+        // Crear un formulario temporal para enviar el mensaje
+        const formData = new FormData();
+        formData.append('id_usuario', idUsuario);
+        formData.append('mensaje', mensaje);
+        
+        // Enviar primero el formulario de cobros
+        fetch(formCobros.action, {
+            method: 'POST',
+            body: new FormData(formCobros)
+        })
+        .then(response => {
+            if (response.ok) {
+                // Si los cobros se registran bien, enviar el mensaje
+                return fetch(formCobros.dataset.mensajeUrl || "{{ url_for('admin.enviar_mensaje_residente') }}", {
+                    method: 'POST',
+                    body: formData
+                });
+            } else {
+                throw new Error('Error al registrar cobros');
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                this.mostrarNotificacion('✅ Cobros registrados y mensaje enviado correctamente', 'success');
+                // Recargar después de 2 segundos
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                throw new Error('Error al enviar mensaje');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            this.mostrarNotificacion('❌ Error en el proceso: ' + error.message, 'error');
+        });
+        
+        return false;
+    }
+
+    validarFormCobros(e) {
+        const conceptos = document.querySelectorAll("input[name='concepto[]']");
+        let conceptosValidos = false;
+        
+        for (let i = 0; i < conceptos.length; i++) {
+            const concepto = conceptos[i].value.trim();
+            const monto = parseFloat(document.querySelectorAll("input[name='monto[]']")[i].value);
+            
+            if (concepto && !isNaN(monto) && monto > 0) {
+                conceptosValidos = true;
+                break;
+            }
+        }
+        
+        if (!conceptosValidos) {
+            e.preventDefault();
+            this.mostrarNotificacion('Debe agregar al menos un concepto de cobro válido antes de registrar.', 'warning');
+        } else {
+            this.mostrarNotificacion('Registrando cobros...', 'info');
+        }
+    }
+
+    // ========== NOTIFICACIONES ==========
+
+    mostrarNotificacion(mensaje, tipo = 'info') {
+        // Buscar si ya existe una notificación
+        const notificacionesExistentes = document.querySelectorAll('.toast-notification');
+        notificacionesExistentes.forEach(notif => notif.remove());
+        
+        // Crear notificación
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${tipo}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas ${this.obtenerIconoTipo(tipo)}"></i>
+                <span>${mensaje}</span>
+            </div>
+            <button class="toast-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-eliminar después de 5 segundos
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+
+    obtenerIconoTipo(tipo) {
+        const iconos = {
+            'success': 'fa-check-circle',
+            'error': 'fa-exclamation-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-info-circle'
+        };
+        return iconos[tipo] || 'fa-info-circle';
+    }
+}
+
+
+
+// Instancia global
+const finanzasManager = new FinanzasManager();

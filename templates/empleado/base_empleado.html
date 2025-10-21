@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Panel Empleado{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='empleado/base_empleado.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="{{ url_for('static', filename='LogoP.png') }}" alt="Logo Edificio"
+                onerror="this.style.display='none'">
+            <h2>Mantenimiento</h2>
+        </div>
+        <ul class="menu">
+            <li><a href="{{ url_for('empleados.dashboard') }}"
+                    class="{% if request.endpoint == 'empleados.dashboard' %}active{% endif %}">
+                    <i class="fas fa-home"></i> Dashboard
+                </a></li>
+            <li><a href="{{ url_for('empleados.tickets') }}"
+                    class="{% if request.endpoint == 'empleados.tickets' %}active{% endif %}">
+                    <i class="fas fa-ticket-alt"></i> Tickets
+                </a></li>
+            <li><a href="{{ url_for('empleados.mantenimientos') }}"
+                    class="{% if request.endpoint == 'empleados.mantenimientos' %}active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i> Mantenimientos
+                </a></li>
+            <li><a href="{{ url_for('empleados.reportes') }}"
+                    class="{% if request.endpoint == 'empleados.reportes' %}active{% endif %}">
+                    <i class="fas fa-chart-bar"></i> Reportes
+                </a></li>
+            <li><a href="{{ url_for('empleados.historial_pagos') }}"
+                    class="{% if request.endpoint == 'empleados.historial_pagos' %}active{% endif %}">
+                    <i class="fas fa-money-bill-wave"></i> Mis Pagos
+                </a></li>
+            <li><a href="{{ url_for('empleados.perfil') }}"
+                    class="{% if request.endpoint == 'empleados.perfil' %}active{% endif %}">
+                    <i class="fas fa-user"></i> Mi Perfil
+                </a></li>
+
+        </ul>
+        <a href="{{ url_for('auth.logout') }}" class="logout">
+            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+        </a>
+    </div>
+
+    <div class="main-content">
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="{{ url_for('static', filename='empleado/empleado.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

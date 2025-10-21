@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Factura #{{ factura.id }}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin-bottom: 30px;
+    }
+    .header h1 {
+      margin: 0;
+    }
+    .logout-btn {
+      margin-left: auto;
+      text-decoration: none;
+      color: #fff;
+      background-color: #d9534f;
+      padding: 8px 12px;
+      border-radius: 4px;
+    }
+    .factura-box {
+      margin-top: 30px;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .btn-pdf {
+      margin-top: 20px;
+      padding: 10px 16px;
+      background-color: #0275d8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Finanzas</h1>
+    <a href="#" class="logout-btn">Cerrar sesión</a>
+  </div>
+
+  <div class="factura-box">
+    <h2>Factura #{{ factura.id }}</h2>
+    <p><strong>Fecha:</strong> {{ factura.fecha }}</p>
+    <p><strong>Cliente:</strong> {{ factura.cliente }}</p>
+    <p><strong>Servicio:</strong> {{ factura.servicio }}</p>
+    <p><strong>Total:</strong> Bs {{ "%.2f"|format(factura.total) }}</p>
+  </div>
+
+</body>
+</html>

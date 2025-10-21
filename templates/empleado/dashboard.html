@@ -1,0 +1,116 @@
+{% extends "empleado/base_empleado.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='empleado/dashboard.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1><i class="fas fa-tachometer-alt"></i> Panel Principal 2024</h1>
+    <p>Bienvenido de vuelta, {{ empleado.nombre }}. Consumos del año 2024.</p>
+</div>
+
+<!-- Métricas Principales -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-icon agua">
+            <i class="fas fa-tint"></i>
+        </div>
+        <div class="metric-info">
+            <h3>Consumo de Agua</h3>
+            <span class="metric-value" id="consumo-agua">0 m³</span>
+            <div class="consumo-trend">
+                <span>2024</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon luz">
+            <i class="fas fa-bolt"></i>
+        </div>
+        <div class="metric-info">
+            <h3>Consumo de Luz</h3>
+            <span class="metric-value" id="consumo-luz">0 kWh</span>
+            <div class="consumo-trend">
+                <span>2024</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon gas">
+            <i class="fas fa-fire"></i>
+        </div>
+        <div class="metric-info">
+            <h3>Consumo de Gas</h3>
+            <span class="metric-value" id="consumo-gas">0 m³</span>
+            <div class="consumo-trend">
+                <span>2024</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sección de Gráficos -->
+<div class="charts-section">
+    <div class="chart-row">
+        <div class="chart-container large">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-line"></i> Consumos Mensuales 2024</h3>
+                <div class="chart-controls">
+                    <select id="chart-period">
+                        <option value="6">Últimos 6 meses</option>
+                        <option value="12">Todo 2024</option>
+                    </select>
+                    <button class="btn-refresh" id="btn-refresh">
+                        <i class="fas fa-sync-alt"></i> Actualizar
+                    </button>
+                </div>
+            </div>
+            <canvas id="consumosChart" height="300"></canvas>
+            <!-- DESCRIPCIÓN DEL GRÁFICO -->
+            <div class="chart-description">
+                <p><strong>📈 Evolución temporal:</strong> Muestra la tendencia de consumo mes a mes.
+                    Permite identificar patrones estacionales y comparar el desempeño entre diferentes períodos.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="chart-row">
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3><i class="fas fa-chart-pie"></i> Distribución 2024</h3>
+            </div>
+            <canvas id="distribucionChart" height="250"></canvas>
+            <!-- DESCRIPCIÓN DEL GRÁFICO -->
+            <div class="chart-description">
+                <p><strong>🥧 Proporciones:</strong> Representa el porcentaje que cada tipo de consumo
+                    representa del total. Ayuda a visualizar qué recursos tienen mayor impacto.</p>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3><i class="fas fa-balance-scale"></i> Comparación 2024</h3>
+            </div>
+            <canvas id="comparacionChart" height="250"></canvas>
+            <!-- DESCRIPCIÓN DEL GRÁFICO -->
+            <div class="chart-description">
+                <p><strong>⚖️ Análisis comparativo:</strong> Permite comparar directamente los valores
+                    de cada tipo de consumo. Ideal para identificar cuáles requieren mayor atención.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Elemento oculto para pasar datos iniciales -->
+<div id="initial-data" data-agua="{{ consumo_agua }}" data-luz="{{ consumo_luz }}" data-gas="{{ consumo_gas }}"
+    style="display: none;">
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='empleado/empleado.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,526 @@
+{% extends "residente/base_residente.html" %}
+
+{% block title %}Mis Solicitudes{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='residente/solicitudes.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="solicitudes-header">
+    <h1><i class="fas fa-ticket-alt"></i> Mis Solicitudes</h1>
+    <p>Gestiona tus solicitudes de mantenimiento</p>
+    <button class="btn btn-primary" id="nuevaSolicitudBtn">
+        <i class="fas fa-plus"></i> Nueva Solicitud
+    </button>
+</div>
+
+<div class="solicitudes-content">
+    <!-- Estadísticas Rápidas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">{{ estadisticas.pendientes }}</div>
+                <div class="stat-label">Pendientes</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon en-proceso">
+                <i class="fas fa-tools"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">{{ estadisticas.en_proceso }}</div>
+                <div class="stat-label">En Proceso</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon completado">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">{{ estadisticas.completados }}</div>
+                <div class="stat-label">Completados</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon urgente">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">{{ estadisticas.urgentes }}</div>
+                <div class="stat-label">Urgentes</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtros-section">
+        <div class="filtros-grid">
+            <div class="form-group">
+                <label class="form-label">Estado</label>
+                <select id="filtroEstado" class="form-control">
+                    <option value="">Todos los estados</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_proceso">En Proceso</option>
+                    <option value="completado">Completado</option>
+                    <option value="cancelado">Cancelado</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Prioridad</label>
+                <select id="filtroPrioridad" class="form-control">
+                    <option value="">Todas las prioridades</option>
+                    <option value="baja">Baja</option>
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Fecha Desde</label>
+                <input type="date" id="filtroFechaDesde" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Fecha Hasta</label>
+                <input type="date" id="filtroFechaHasta" class="form-control">
+            </div>
+        </div>
+        <div class="filtros-actions">
+            <button class="btn btn-secondary" id="limpiarFiltrosBtn">
+                <i class="fas fa-eraser"></i> Limpiar
+            </button>
+            <button class="btn btn-primary" id="aplicarFiltrosBtn">
+                <i class="fas fa-filter"></i> Aplicar Filtros
+            </button>
+        </div>
+    </div>
+
+    <!-- Lista de Solicitudes -->
+    <div class="solicitudes-list">
+        {% if solicitudes %}
+        {% for solicitud in solicitudes %}
+        <div class="solicitud-card {{ solicitud.prioridad }} {{ solicitud.estado }}"
+            data-ticket-id="{{ solicitud.id_ticket }}">
+            <div class="solicitud-header">
+                <div class="solicitud-info">
+                    <h3>{{ solicitud.titulo }}</h3>
+                    <div class="solicitud-meta">
+                        <span class="solicitud-nro">#{{ solicitud.id_ticket }}</span>
+                        <span class="solicitud-fecha">Creada: {{ solicitud.fecha_emision }}</span>
+                        <span class="solicitud-area">Área: {{ solicitud.area }}</span>
+                    </div>
+                </div>
+                <div class="solicitud-estados">
+                    <span class="prioridad prioridad-{{ solicitud.prioridad }}">
+                        {{ solicitud.prioridad }}
+                    </span>
+                    <span class="estado estado-{{ solicitud.estado }}">
+                        {{ solicitud.estado }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="solicitud-detalles">
+                <p>{{ solicitud.descripcion }}</p>
+
+                {% if solicitud.empleado_asignado %}
+                <div class="empleado-asignado">
+                    <i class="fas fa-user-hard-hat"></i>
+                    <strong>Empleado asignado:</strong> {{ solicitud.empleado_asignado }}
+                </div>
+                {% endif %}
+
+                {% if solicitud.fecha_programada %}
+                <div class="fecha-programada">
+                    <i class="fas fa-calendar-alt"></i>
+                    <strong>Programada para:</strong> {{ solicitud.fecha_programada }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="solicitud-actions">
+                {% if solicitud.estado in ['pendiente', 'en_proceso'] %}
+                <button class="btn btn-outline actualizar-solicitud-btn" data-id="{{ solicitud.id_ticket }}">
+                    <i class="fas fa-edit"></i> Actualizar
+                </button>
+                {% endif %}
+
+                <button class="btn btn-outline ver-detalles-btn" data-id="{{ solicitud.id_ticket }}">
+                    <i class="fas fa-eye"></i> Ver Detalles
+                </button>
+
+                {% if solicitud.estado == 'pendiente' %}
+                <button class="btn btn-danger cancelar-solicitud-btn" data-id="{{ solicitud.id_ticket }}">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                {% endif %}
+            </div>
+
+            {% if solicitud.comentarios %}
+            <div class="solicitud-comentarios">
+                <h4>Comentarios Recientes</h4>
+                {% for comentario in solicitud.comentarios %}
+                <div class="comentario">
+                    <div class="comentario-header">
+                        <strong>{{ comentario.autor }}</strong>
+                        <span class="comentario-fecha">{{ comentario.fecha }}</span>
+                    </div>
+                    <p>{{ comentario.mensaje }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-ticket-alt"></i>
+            <h3>No hay solicitudes</h3>
+            <p>No has creado ninguna solicitud de mantenimiento.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Nueva Solicitud -->
+<div id="modalNuevaSolicitud" class="modal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3>Nueva Solicitud de Mantenimiento</h3>
+            <button class="btn-icon" id="cerrarNuevaSolicitudBtn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="formNuevaSolicitud">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Título *</label>
+                        <input type="text" name="titulo" class="form-control" required
+                            placeholder="Ej: Fuga de agua en el baño">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Área *</label>
+                        <select name="id_area" class="form-control" required>
+                            <option value="">Seleccionar área</option>
+                            {% for area in areas %}
+                            <option value="{{ area.id_area }}">{{ area.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Prioridad *</label>
+                        <select name="prioridad" class="form-control" required>
+                            <option value="baja">Baja</option>
+                            <option value="media" selected>Media</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label">Descripción Detallada *</label>
+                        <textarea name="descripcion" class="form-control" rows="5" required
+                            placeholder="Describa el problema en detalle..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label">Adjuntar Imágenes (Opcional)</label>
+                        <div class="file-upload">
+                            <input type="file" name="imagenes" multiple accept="image/*" class="file-input"
+                                id="fileInput">
+                            <div class="file-upload-area" id="fileUploadArea">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Arrastra imágenes aquí o haz clic para seleccionar</p>
+                                <span>Máximo 5 imágenes</span>
+                            </div>
+                        </div>
+                        <div class="file-preview" id="filePreview"></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelarSolicitudBtn">Cancelar</button>
+            <button class="btn btn-primary" id="enviarSolicitudBtn">
+                <i class="fas fa-paper-plane"></i> Enviar Solicitud
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Event listeners principales
+        document.getElementById('nuevaSolicitudBtn').addEventListener('click', mostrarModalNuevaSolicitud);
+        document.getElementById('cerrarNuevaSolicitudBtn').addEventListener('click', cerrarModalNuevaSolicitud);
+        document.getElementById('cancelarSolicitudBtn').addEventListener('click', cerrarModalNuevaSolicitud);
+        document.getElementById('enviarSolicitudBtn').addEventListener('click', crearSolicitud);
+
+        // Event listeners para filtros
+        document.getElementById('limpiarFiltrosBtn').addEventListener('click', limpiarFiltros);
+        document.getElementById('aplicarFiltrosBtn').addEventListener('click', aplicarFiltros);
+
+        // Event listeners para acciones de solicitudes
+        document.querySelectorAll('.actualizar-solicitud-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                actualizarSolicitud(id);
+            });
+        });
+
+        document.querySelectorAll('.ver-detalles-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                verDetalles(id);
+            });
+        });
+
+        document.querySelectorAll('.cancelar-solicitud-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                cancelarSolicitud(id);
+            });
+        });
+
+        // Event listeners para upload de archivos
+        const fileInput = document.getElementById('fileInput');
+        const fileUploadArea = document.getElementById('fileUploadArea');
+
+        if (fileInput && fileUploadArea) {
+            fileUploadArea.addEventListener('click', function () {
+                fileInput.click();
+            });
+
+            fileUploadArea.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                this.style.borderColor = '#264653';
+                this.style.background = 'rgba(163, 200, 214, 0.1)';
+            });
+
+            fileUploadArea.addEventListener('dragleave', function () {
+                this.style.borderColor = '#A3C8D6';
+                this.style.background = '';
+            });
+
+            fileUploadArea.addEventListener('drop', function (e) {
+                e.preventDefault();
+                this.style.borderColor = '#A3C8D6';
+                this.style.background = '';
+
+                if (e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
+                    mostrarPrevisualizacionArchivos(e.dataTransfer.files);
+                }
+            });
+
+            fileInput.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    mostrarPrevisualizacionArchivos(this.files);
+                }
+            });
+        }
+
+        // Cerrar modales al hacer clic fuera
+        document.getElementById('modalNuevaSolicitud').addEventListener('click', function (event) {
+            if (event.target === this) {
+                cerrarModalNuevaSolicitud();
+            }
+        });
+    });
+
+    function mostrarModalNuevaSolicitud() {
+        document.getElementById('modalNuevaSolicitud').style.display = 'flex';
+    }
+
+    function cerrarModalNuevaSolicitud() {
+        document.getElementById('modalNuevaSolicitud').style.display = 'none';
+        document.getElementById('formNuevaSolicitud').reset();
+        document.getElementById('filePreview').innerHTML = '';
+    }
+
+    function crearSolicitud() {
+        const formData = new FormData(document.getElementById('formNuevaSolicitud'));
+        const data = Object.fromEntries(formData);
+
+        // Validaciones básicas
+        if (!data.titulo || !data.id_area || !data.descripcion) {
+            alert('Por favor complete todos los campos obligatorios');
+            return;
+        }
+
+        if (confirm('¿Está seguro de enviar esta solicitud?')) {
+            fetch('/residentes/api/crear_solicitud', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Solicitud creada exitosamente');
+                        cerrarModalNuevaSolicitud();
+                        location.reload();
+                    } else {
+                        alert('Error al crear la solicitud: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al crear la solicitud');
+                });
+        }
+    }
+
+    function mostrarPrevisualizacionArchivos(files) {
+        const preview = document.getElementById('filePreview');
+        preview.innerHTML = '';
+
+        Array.from(files).slice(0, 5).forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'file-preview-item';
+                    previewItem.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <button class="remove" type="button">&times;</button>
+                    `;
+
+                    previewItem.querySelector('.remove').addEventListener('click', function () {
+                        previewItem.remove();
+                    });
+
+                    preview.appendChild(previewItem);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    function actualizarSolicitud(id) {
+        if (!id) {
+            alert('Error: ID de solicitud no válido');
+            return;
+        }
+
+        const nuevaDescripcion = prompt('Ingrese la actualización de la solicitud:');
+        if (nuevaDescripcion) {
+            fetch('/residentes/api/actualizar_solicitud/' + id, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    descripcion: nuevaDescripcion
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Solicitud actualizada exitosamente');
+                        location.reload();
+                    } else {
+                        alert('Error al actualizar la solicitud: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al actualizar la solicitud');
+                });
+        }
+    }
+
+    function verDetalles(id) {
+        if (!id) {
+            alert('Error: ID de solicitud no válido');
+            return;
+        }
+
+        alert('Mostrando detalles de la solicitud ' + id);
+        // En implementación real, redirigir a página de detalles
+        // window.location.href = '/residentes/solicitudes/' + id;
+    }
+
+    function cancelarSolicitud(id) {
+        if (!id) {
+            alert('Error: ID de solicitud no válido');
+            return;
+        }
+
+        if (confirm('¿Está seguro de cancelar esta solicitud?')) {
+            fetch('/residentes/api/cancelar_solicitud/' + id, {
+                method: 'DELETE'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Solicitud cancelada exitosamente');
+                        location.reload();
+                    } else {
+                        alert('Error al cancelar la solicitud: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cancelar la solicitud');
+                });
+        }
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtroEstado').value = '';
+        document.getElementById('filtroPrioridad').value = '';
+        document.getElementById('filtroFechaDesde').value = '';
+        document.getElementById('filtroFechaHasta').value = '';
+        aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+        const estado = document.getElementById('filtroEstado').value;
+        const prioridad = document.getElementById('filtroPrioridad').value;
+        const fechaDesde = document.getElementById('filtroFechaDesde').value;
+        const fechaHasta = document.getElementById('filtroFechaHasta').value;
+
+        console.log('Aplicando filtros:', { estado, prioridad, fechaDesde, fechaHasta });
+
+        const solicitudes = document.querySelectorAll('.solicitud-card');
+        let solicitudesVisibles = 0;
+
+        solicitudes.forEach(solicitud => {
+            let mostrar = true;
+
+            if (estado && !solicitud.classList.contains(estado)) {
+                mostrar = false;
+            }
+
+            if (prioridad && !solicitud.classList.contains(prioridad)) {
+                mostrar = false;
+            }
+
+            if (mostrar) {
+                solicitud.style.display = 'block';
+                solicitudesVisibles++;
+            } else {
+                solicitud.style.display = 'none';
+            }
+        });
+
+        if (solicitudesVisibles === 0) {
+            alert('No hay solicitudes que coincidan con los filtros aplicados');
+        }
+    }
+</script>
+{% endblock %}

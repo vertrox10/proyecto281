@@ -1,0 +1,186 @@
+{% extends "empleado/base_empleado.html" %}
+
+{% block title %}Reportes de Tickets{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='empleado/reportes.css') }}?v=1.1">
+{% endblock %}
+
+{% block content %}
+<div class="reporte-container">
+    <!-- Header del Reporte -->
+    <div class="reporte-header">
+        <h2><i class="fas fa-chart-bar"></i> Reporte de Tickets</h2>
+        <p>Genera reportes detallados de los tickets asignados a tu usuario</p>
+    </div>
+
+    <!-- Sección de Filtros -->
+    <div class="filtros-section">
+        <h3><i class="fas fa-filter"></i> Filtros del Reporte</h3>
+        <div class="filtros-grid">
+            <div class="filtro-group">
+                <label for="filtro-estado">Estado del Ticket:</label>
+                <select id="filtro-estado" class="form-select">
+                    <option value="todos">Todos los estados</option>
+                    <option value="abierto">🟡 Abierto</option>
+                    <option value="en_progreso">🔵 En Progreso</option>
+                    <option value="cerrado">✅ Cerrado</option>
+                    <option value="cancelado">❌ Cancelado</option>
+                </select>
+            </div>
+
+            <div class="filtro-group">
+                <label for="filtro-prioridad">Prioridad:</label>
+                <select id="filtro-prioridad" class="form-select">
+                    <option value="todos">Todas las prioridades</option>
+                    <option value="urgente">🚨 Urgente</option>
+                    <option value="alta">⚠️ Alta</option>
+                    <option value="media">📋 Media</option>
+                    <option value="baja">💤 Baja</option>
+                </select>
+            </div>
+
+            <div class="filtro-group">
+                <label for="filtro-fecha">Rango de Fechas:</label>
+                <select id="filtro-fecha" class="form-select">
+                    <option value="todos">Todas las fechas</option>
+                    <option value="hoy">Hoy</option>
+                    <option value="semana">Esta semana</option>
+                    <option value="mes">Este mes</option>
+                    <option value="personalizado">Personalizado</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Fechas personalizadas (oculto inicialmente) -->
+        <div id="fechas-personalizadas" class="fechas-personalizadas" style="display: none;">
+            <div class="filtros-grid">
+                <div class="filtro-group">
+                    <label for="fecha-desde">Desde:</label>
+                    <input type="date" id="fecha-desde" class="form-select">
+                </div>
+                <div class="filtro-group">
+                    <label for="fecha-hasta">Hasta:</label>
+                    <input type="date" id="fecha-hasta" class="form-select">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Acciones -->
+    <div class="acciones-section">
+        <h3><i class="fas fa-cogs"></i> Acciones</h3>
+        <div class="acciones-grid">
+            <button id="btn-generar-reporte" class="btn btn-primary">
+                <i class="fas fa-sync-alt"></i> Generar Reporte
+            </button>
+            <button id="btn-descargar-pdf" class="btn btn-success" disabled>
+                <i class="fas fa-file-pdf"></i> Descargar PDF
+            </button>
+            <button id="btn-exportar-excel" class="btn btn-info" disabled>
+                <i class="fas fa-file-excel"></i> Exportar Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- Estadísticas Rápidas -->
+    <div class="estadisticas-section">
+        <h3><i class="fas fa-chart-pie"></i> Estadísticas Rápidas</h3>
+        <div class="estadisticas-grid" id="estadisticas-container">
+            <!-- Las estadísticas se cargarán aquí -->
+            <div class="estadistica-card">
+                <div class="estadistica-icon">
+                    <i class="fas fa-ticket-alt"></i>
+                </div>
+                <div class="estadistica-info">
+                    <span class="estadistica-valor">0</span>
+                    <span class="estadistica-label">Total Tickets</span>
+                </div>
+            </div>
+            <div class="estadistica-card">
+                <div class="estadistica-icon abierto">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="estadistica-info">
+                    <span class="estadistica-valor">0</span>
+                    <span class="estadistica-label">Abiertos</span>
+                </div>
+            </div>
+            <div class="estadistica-card">
+                <div class="estadistica-icon en-progreso">
+                    <i class="fas fa-sync-alt"></i>
+                </div>
+                <div class="estadistica-info">
+                    <span class="estadistica-valor">0</span>
+                    <span class="estadistica-label">En Progreso</span>
+                </div>
+            </div>
+            <div class="estadistica-card">
+                <div class="estadistica-icon cerrado">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="estadistica-info">
+                    <span class="estadistica-valor">0</span>
+                    <span class="estadistica-label">Cerrados</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resultados del Reporte -->
+    <div class="resultados-section">
+        <div class="resultados-header">
+            <h3><i class="fas fa-list"></i> Resultados del Reporte</h3>
+            <div class="resultados-info">
+                <span id="contador-resultados">Mostrando 0 tickets</span>
+            </div>
+        </div>
+
+        <div class="tabla-container">
+            <table class="tabla-reporte" id="tabla-reporte">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Descripción</th>
+                        <th>Prioridad</th>
+                        <th>Estado</th>
+                        <th>Área</th>
+                        <th>Ubicación</th>
+                        <th>Fecha Emisión</th>
+                        <th>Fecha Finalización</th>
+                        <th>Duración</th>
+                    </tr>
+                </thead>
+                <tbody id="cuerpo-tabla">
+                    <!-- Los datos se cargarán aquí -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="estado-vacio" class="estado-vacio">
+            <i class="fas fa-chart-bar"></i>
+            <h4>No hay datos para mostrar</h4>
+            <p>Utiliza los filtros y genera un reporte para ver los resultados</p>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <p>Generando reporte...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Librerías para PDF y Excel -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- Script propio -->
+<script src="{{ url_for('static', filename='empleado/reportes.js') }}?v=1.1"></script>
+{% endblock %}

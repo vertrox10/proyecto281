@@ -1,0 +1,248 @@
+
+
+
+{% extends 'administrador/base.html' %}
+
+{% block title %}Dashboard Administrativo{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='administrador/style_dashboard_administrador.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+            <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" 
+                 style="height: 80px; width: auto; background: white; padding: 10px; border-radius: 10px;">
+            <div style="flex-grow: 1;">
+                <h1 style="margin: 0; font-size: 2.2rem; font-weight: 700;">Dashboard Administrativo</h1>
+                <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1.1rem;">
+                    👋 Bienvenido, {{ admin_nombre or 'Administrador' }}
+                </p>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
+                    {{ ahora.strftime('%d/%m/%Y') }}
+                </div>
+                <div style="font-size: 0.9rem; opacity: 0.8;">
+                    {{ ahora.strftime('%H:%M') }}
+                </div>
+                <a href="{{ url_for('admin.logout') }}" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Cerrar sesión
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Resumen -->
+    <div class="stats-summary">
+        <div class="stat-card income">
+            <div class="cards">
+                <div class="overview">
+                    <a class="card-link" href="{{ url_for('admin.dashboard_finanzas') }}">
+                        <div class="card">
+                            <i class="fas fa-coins"></i>
+                            <h3>Finanzas</h3>
+                            <p>Ver KPIs financieros</p>
+                        </div>
+                    </a>
+
+                    <a class="card-link" href="{{ url_for('admin.consumos') }}">
+                        <div class="card">
+                            <i class="fas fa-bolt"></i>
+                            <h3>Consumos</h3>
+                            <p>Revisar consumos</p>
+                        </div>
+                    </a>
+
+                    <a class="card-link" href="{{ url_for('admin.reservas') }}">
+                        <div class="card">
+                            <i class="fas fa-calendar-alt"></i>
+                            <h3>Reservas</h3>
+                            <p>Administrar reservas</p>
+                        </div>
+                    </a>
+
+                    <a class="card-link" href="{{ url_for('admin.tickets') }}">
+                        <div class="card">
+                            <i class="fas fa-ticket-alt"></i>
+                            <h3>Tickets</h3>
+                            <p>Ver y responder tickets</p>
+                        </div>
+                    </a>
+
+                    <a class="card-link" href="{{ url_for('admin.usuarios') }}">
+                        <div class="card">
+                            <i class="fas fa-users"></i>
+                            <h3>Usuarios</h3>
+                            <p>Gestionar usuarios</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            </div>
+            <div class="stat-value">{{ reservas_activas }}</div>
+            <div class="stat-label">Reservas Activas</div>
+            <div class="stat-trend trend-positive">
+                {{ reservas_hoy }} hoy
+            </div>
+        </div>
+
+        <div class="stat-card tickets">
+            <div class="stat-icon">
+                <i class="fas fa-ticket-alt"></i>
+            </div>
+            <div class="stat-value">{{ tickets_abiertos }}</div>
+            <div class="stat-label">Tickets Abiertos</div>
+            <div class="stat-trend trend-negative">
+                {{ tickets_urgentes }} urgentes
+            </div>
+        </div>
+    </div>
+
+    <!-- Grid Principal -->
+    <div class="main-grid">
+        <!-- Gráfico y Consumos -->
+        <div class="chart-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-chart-pie" style="margin-right: 0.5rem;"></i>
+                    Distribución de Consumos
+                </h2>
+                <select class="time-filter">
+                    <option>Últimos 6 meses</option>
+                    <option>2024 Completo</option>
+                    <option>Personalizado</option>
+                </select>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="pieChart"></canvas>
+            </div>
+            <div class="consumption-breakdown">
+                {% for i in range(labels_consumo|length) %}
+               <div class="consumption-item" >
+                    <div class="consumption-value">{{ "%.0f"|format(data_consumo[i]) }}</div>
+                    <div class="consumption-label">{{ labels_consumo[i] }}</div>
+                    <div style="color: #7f8c8d; font-size: 0.7rem;">kWh</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Actividad Reciente -->
+        <div class="activity-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-bell" style="margin-right: 0.5rem;"></i>
+                    Actividad Reciente
+                </h2>
+            </div>
+            <div class="activity-list">
+                <div class="activity-item" style="border-left-color: #4caf50;">
+                    <div class="activity-icon" style="background: #4caf50;">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p class="activity-title">Consumo Actualizado</p>
+                        <p class="activity-subtitle">Total: {{ "%.1f"|format(consumo_total) }} kWh</p>
+                    </div>
+                </div>
+
+                <div class="activity-item" style="border-left-color: #2196f3;">
+                    <div class="activity-icon" style="background: #2196f3;">
+                        <i class="fas fa-ticket-alt"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p class="activity-title">{{ tickets_abiertos }} Tickets Activos</p>
+                        <p class="activity-subtitle">{{ tickets_urgentes }} requieren atención</p>
+                    </div>
+                </div>
+
+                <div class="activity-item" style="border-left-color: #ff9800;">
+                    <div class="activity-icon" style="background: #ff9800;">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p class="activity-title">{{ reservas_activas }} Reservas</p>
+                        <p class="activity-subtitle">{{ reservas_hoy }} para hoy</p>
+                    </div>
+                </div>
+
+                <div class="activity-item" style="border-left-color: #9c27b0;">
+                    <div class="activity-icon" style="background: #9c27b0;">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="activity-content">
+                        <p class="activity-title">Ingresos del Mes</p>
+                        <p class="activity-subtitle">${{ "{:,.0f}".format(ingresos_totales) }} acumulados</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="quick-actions">
+        <div class="action-card">
+            <div class="action-header">
+                <div class="action-icon" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <h3 class="action-title">Comunicados</h3>
+            </div>
+            <p class="action-description">
+                Envía notificaciones importantes a residentes y empleados mediante correo electrónico.
+            </p>
+            <a href="{{ url_for('admin.comunicado') }}" class="btn-action btn-primary">
+                <i class="fas fa-paper-plane"></i>
+                Gestionar Comunicados
+            </a>
+        </div>
+
+        <div class="action-card">
+            <div class="action-header">
+                <div class="action-icon" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3 class="action-title">Reportes Financieros</h3>
+            </div>
+            <p class="action-description">
+                Accede a reportes detallados de ingresos, gastos y estado financiero general.
+            </p>
+            <a href="{{ url_for('admin.dashboard_finanzas') }}" class="btn-action btn-primary">
+                <i class="fas fa-chart-bar"></i>
+                Ver Finanzas
+            </a>
+        </div>
+
+        <div class="action-card">
+            <div class="action-header">
+                <div class="action-icon" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3 class="action-title">Gestión de Usuarios</h3>
+            </div>
+            <p class="action-description">
+                Administra residentes, empleados y configura permisos del sistema.
+            </p>
+            <a href="{{ url_for('admin.usuarios') }}" class="btn-action btn-success">
+                <i class="fas fa-user-cog"></i>
+                Gestionar Usuarios
+            </a>
+        </div>
+    </div>
+
+    <!-- Invitaciones (sección existente) -->
+    <div class="grid-2-columns">
+        <!-- ... contenido existente de invitaciones ... -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+
+{% endblock %}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Verificar código de invitación</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="login-container">
+        <h1>Verificar código de invitación para {{ rol|capitalize }}</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flashes">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Sección para solicitar código -->
+        <form method="POST" action="{{ url_for('auth.verificar_codigo', rol=rol) }}">
+            <div class="input-group icon-user">
+                <label for="correo">Correo electrónico</label>
+                <input type="email" id="correo" name="correo" required>
+            </div>
+            <button type="submit" name="accion" value="solicitar">Solicitar código</button>
+        </form>
+
+        <!-- Sección para validar código -->
+        <form method="POST" action="{{ url_for('auth.verificar_codigo', rol=rol) }}">
+            <div class="input-group icon-user">
+                <label for="codigo">Código de invitación</label>
+                <input type="text" id="codigo" name="codigo" required>
+            </div>
+            <input type="hidden" name="correo_validado" value="{{ request.form.get('correo', '') }}">
+            <button type="submit" name="accion" value="validar">Validar código</button>
+        </form>
+
+        <div class="back-link">
+            <p><a href="{{ url_for('auth.seleccionar_registro') }}">⬅ Volver a seleccionar rol</a></p>
+        </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,423 @@
+<!-- templates/administrador/reporte.html -->
+{% extends 'administrador/base.html' %}
+
+{% block title %}Reportes y Estadísticas{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" 
+                     style="height: 60px; width: auto; background: white; padding: 8px; border-radius: 8px;">
+                <div>
+                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">Reportes y Estadísticas</h1>
+                    <p style="margin: 0.25rem 0 0 0; opacity: 0.9;">Análisis de pagos y deudas</p>
+                </div>
+            </div>
+            <a href="{{ url_for('admin.dashboard_finanzas') }}" class="logout-btn">
+                <i class="fas fa-arrow-left"></i>
+                Volver a Finanzas
+            </a>
+        </div>
+    </div>
+
+    <!-- Mensajes Flash -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Estadísticas Rápidas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Total Deudores</h3>
+                <div class="stat-value">{{ deudas_info.total_deudores }}</div>
+                <div class="stat-period">Usuarios con deuda</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #ff9f43 0%, #f39c12 100%);">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Deuda Total</h3>
+                <div class="stat-value">Bs {{ "%.2f"|format(deudas_info.deuda_total) }}</div>
+                <div class="stat-period">Monto pendiente</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #54a0ff 0%, #2e86de 100%);">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Deuda Promedio</h3>
+                <div class="stat-value">Bs {{ "%.2f"|format(deudas_info.deuda_promedio) }}</div>
+                <div class="stat-period">Por usuario</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #5f27cd 0%, #341f97 100%);">
+                <i class="fas fa-file-invoice"></i>
+            </div>
+            <div class="stat-info">
+                <h3>Deudas Pendientes</h3>
+                <div class="stat-value">{{ deudas_info.total_deudas_pendientes }}</div>
+                <div class="stat-period">Registros activos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Residentes Deudores -->
+    <div class="section-card">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                Residentes con Deudas Pendientes
+            </h2>
+            <span class="section-badge">{{ residentes_deudores|length }} residentes</span>
+        </div>
+
+        {% if residentes_deudores and residentes_deudores|length > 0 %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Residente</th>
+                        <th>Email</th>
+                        <th>Cantidad de Deudas</th>
+                        <th>Total Adeudado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for deudor in residentes_deudores %}
+                    <tr>
+                        <td>
+                            <strong>{{ deudor[1] }} {{ deudor[2] }} {{ deudor[3] or '' }}</strong>
+                        </td>
+                        <td>{{ deudor[4] }}</td>
+                        <td>
+                            <span class="badge badge-warning">{{ deudor[5] }}</span>
+                        </td>
+                        <td>
+                            <span class="deuda-amount">Bs {{ "%.2f"|format(deudor[6]) }}</span>
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin.marcar_deuda_pagada', id_usuario=deudor[0]) }}" style="display: inline;">
+                                <button type="submit" class="btn-success btn-small" 
+                                        onclick="return confirm('¿Estás seguro de marcar todas las deudas de {{ deudor[1] }} como pagadas?')">
+                                    <i class="fas fa-check"></i> Marcar Pagado
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="no-data">
+            <i class="fas fa-check-circle" style="font-size: 3rem; opacity: 0.5;"></i>
+            <h3>No hay residentes con deudas</h3>
+            <p>Todos los pagos están al día.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Reportes Mensuales -->
+    <div class="section-card">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-chart-bar"></i>
+                Reportes Mensuales de Pagos
+            </h2>
+        </div>
+
+        {% if reportes_mensuales and reportes_mensuales|length > 0 %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Mes</th>
+                        <th>Total Pagos</th>
+                        <th>Monto Total</th>
+                        <th>Método</th>
+                        <th>Usuarios Únicos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reporte in reportes_mensuales %}
+                    <tr>
+                        <td><strong>{{ reporte[0] }}</strong></td>
+                        <td>{{ reporte[1] }}</td>
+                        <td>Bs {{ "%.2f"|format(reporte[2]) }}</td>
+                        <td>
+                            <span class="badge {% if reporte[3] == 'transferencia' %}badge-primary{% elif reporte[3] == 'efectivo' %}badge-success{% else %}badge-info{% endif %}">
+                                {{ reporte[3]|title }}
+                            </span>
+                        </td>
+                        <td>{{ reporte[4] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="no-data">
+            <i class="fas fa-chart-bar" style="font-size: 3rem; opacity: 0.5;"></i>
+            <h3>No hay datos de reportes</h3>
+            <p>No se encontraron registros de pagos para mostrar.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.dashboard-container {
+    padding: 2rem;
+    background: #f8f9fa;
+    min-height: 100vh;
+}
+
+.dashboard-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+}
+
+.logout-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logout-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-info h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0.25rem 0;
+}
+
+.stat-period {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.section-card {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f8f9fa;
+}
+
+.section-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-badge {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: #f8f9fa;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.data-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.badge-primary {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.badge-success {
+    background: #e8f5e8;
+    color: #4caf50;
+}
+
+.badge-info {
+    background: #e3f2fd;
+    color: #2196f3;
+}
+
+.badge-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.deuda-amount {
+    font-weight: 600;
+    color: #e74c3c;
+}
+
+.btn-success {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #4caf50;
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    background: #45a049;
+}
+
+.btn-small {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+}
+
+.no-data {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.flash-messages {
+    margin-bottom: 2rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='administrador/style_reporte.js') }}"></script>
+<script>
+// Scripts adicionales si los necesitas
+</script>
+{% endblock %}

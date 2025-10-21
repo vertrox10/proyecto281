@@ -1,0 +1,414 @@
+{% extends "residente/base_residente.html" %}
+
+{% block title %}Facturación{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='residente/facturacion.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="facturacion-header">
+    <h1><i class="fas fa-file-invoice-dollar"></i> Facturación</h1>
+    <p>Gestiona tus facturas y estados de cuenta</p>
+    <div class="header-actions">
+        <button class="btn btn-primary" id="descargarTodasBtn">
+            <i class="fas fa-download"></i> Descargar Todas
+        </button>
+    </div>
+</div>
+
+<div class="facturacion-content">
+    <!-- Resumen Facturación -->
+    <div class="resumen-grid">
+        <div class="resumen-card">
+            <div class="resumen-icon">
+                <i class="fas fa-file-invoice-dollar"></i>
+            </div>
+            <div class="resumen-info">
+                <h3>Total Facturado</h3>
+                <div class="resumen-valor">${{ resumen.total_facturado }}</div>
+                <span>Este año</span>
+            </div>
+        </div>
+
+        <div class="resumen-card">
+            <div class="resumen-icon pendiente">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="resumen-info">
+                <h3>Pendiente</h3>
+                <div class="resumen-valor">${{ resumen.pendiente }}</div>
+                <span>Por pagar</span>
+            </div>
+        </div>
+
+        <div class="resumen-card">
+            <div class="resumen-icon pagado">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="resumen-info">
+                <h3>Pagado</h3>
+                <div class="resumen-valor">${{ resumen.pagado }}</div>
+                <span>Este mes</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtros-section">
+        <div class="filtros-grid">
+            <div class="form-group">
+                <label class="form-label">Año</label>
+                <select id="filtroAnio" class="form-control">
+                    {% for anio in anos %}
+                    <option value="{{ anio }}" {% if anio==ano_actual %}selected{% endif %}>{{ anio }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Mes</label>
+                <select id="filtroMes" class="form-control">
+                    <option value="">Todos los meses</option>
+                    {% for mes in meses %}
+                    <option value="{{ mes.numero }}">{{ mes.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Estado</label>
+                <select id="filtroEstado" class="form-control">
+                    <option value="">Todos los estados</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="vencido">Vencido</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tipo</label>
+                <select id="filtroTipo" class="form-control">
+                    <option value="">Todos los tipos</option>
+                    <option value="alquiler">Alquiler</option>
+                    <option value="servicios">Servicios</option>
+                    <option value="mantenimiento">Mantenimiento</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Facturas -->
+    <div class="facturas-list">
+        {% if facturas %}
+        {% for factura in facturas %}
+        <div class="factura-card {{ factura.estado_factura }}" data-factura-id="{{ factura.id_factura }}">
+            <div class="factura-header">
+                <div class="factura-info">
+                    <h3>{{ factura.concepto }}</h3>
+                    <div class="factura-meta">
+                        <span class="factura-nro">#{{ factura.id_factura }}</span>
+                        <span class="factura-fecha">Emitida: {{ factura.fecha_emision }}</span>
+                        <span class="factura-vencimiento">Vence: {{ factura.fecha_vencimiento }}</span>
+                    </div>
+                </div>
+                <div class="factura-monto">
+                    <div class="monto">${{ factura.monto_total }}</div>
+                    <span class="estado estado-{{ factura.estado_factura }}">{{ factura.estado_factura }}</span>
+                </div>
+            </div>
+
+            <div class="factura-detalles">
+                <div class="detalles-grid">
+                    <div class="detalle-item">
+                        <label>Periodo:</label>
+                        <span>{{ factura.periodo }}</span>
+                    </div>
+                    <div class="detalle-item">
+                        <label>Consumo Luz:</label>
+                        <span>{{ factura.consumo_luz }} kWh</span>
+                    </div>
+                    <div class="detalle-item">
+                        <label>Consumo Agua:</label>
+                        <span>{{ factura.consumo_agua }} m³</span>
+                    </div>
+                    <div class="detalle-item">
+                        <label>Consumo Gas:</label>
+                        <span>{{ factura.consumo_gas }} m³</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="factura-actions">
+                {% if factura.estado_factura == 'pendiente' %}
+                <button class="btn btn-primary pagar-factura-btn" data-id="{{ factura.id_factura }}">
+                    <i class="fas fa-money-bill-wave"></i> Pagar Ahora
+                </button>
+                {% endif %}
+
+                <button class="btn btn-secondary descargar-factura-btn" data-id="{{ factura.id_factura }}">
+                    <i class="fas fa-download"></i> Descargar PDF
+                </button>
+
+                <button class="btn btn-outline ver-qr-btn" data-id="{{ factura.id_factura }}">
+                    <i class="fas fa-qrcode"></i> Ver QR
+                </button>
+
+                {% if factura.comprobante %}
+                <button class="btn btn-outline descargar-comprobante-btn" data-id="{{ factura.id_factura }}">
+                    <i class="fas fa-receipt"></i> Comprobante
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-file-invoice"></i>
+            <h3>No hay facturas</h3>
+            <p>No se han generado facturas para tu cuenta.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal QR -->
+<div id="modalQR" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Código QR de Factura</h3>
+            <button class="btn-icon" id="cerrarQRBtn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="qr-container">
+                <canvas id="qrCanvas"></canvas>
+            </div>
+            <div class="qr-info">
+                <p><strong>Factura:</strong> <span id="qrFacturaNumero"></span></p>
+                <p><strong>Monto:</strong> $<span id="qrFacturaMonto"></span></p>
+                <p><strong>Vence:</strong> <span id="qrFacturaVencimiento"></span></p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelarQRBtn">Cerrar</button>
+            <button class="btn btn-primary" id="descargarQRBtn">
+                <i class="fas fa-download"></i> Descargar QR
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Event listeners para botones
+        document.getElementById('descargarTodasBtn').addEventListener('click', descargarTodasFacturas);
+        document.getElementById('cerrarQRBtn').addEventListener('click', cerrarModalQR);
+        document.getElementById('cancelarQRBtn').addEventListener('click', cerrarModalQR);
+        document.getElementById('descargarQRBtn').addEventListener('click', descargarQR);
+
+        // Event listeners para facturas
+        document.querySelectorAll('.pagar-factura-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const idFactura = this.getAttribute('data-id');
+                realizarPago(idFactura);
+            });
+        });
+
+        document.querySelectorAll('.descargar-factura-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const idFactura = this.getAttribute('data-id');
+                descargarFactura(idFactura);
+            });
+        });
+
+        document.querySelectorAll('.ver-qr-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const idFactura = this.getAttribute('data-id');
+                verQR(idFactura);
+            });
+        });
+
+        document.querySelectorAll('.descargar-comprobante-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const idFactura = this.getAttribute('data-id');
+                descargarComprobanteFactura(idFactura);
+            });
+        });
+
+        // Filtros
+        document.getElementById('filtroAnio').addEventListener('change', aplicarFiltrosFacturas);
+        document.getElementById('filtroMes').addEventListener('change', aplicarFiltrosFacturas);
+        document.getElementById('filtroEstado').addEventListener('change', aplicarFiltrosFacturas);
+        document.getElementById('filtroTipo').addEventListener('change', aplicarFiltrosFacturas);
+
+        // Cerrar modales al hacer clic fuera
+        document.getElementById('modalQR').addEventListener('click', function (event) {
+            if (event.target === this) {
+                cerrarModalQR();
+            }
+        });
+    });
+
+    function realizarPago(idFactura) {
+        if (!idFactura) {
+            alert('Error: ID de factura no válido');
+            return;
+        }
+
+        if (confirm('¿Desea proceder con el pago de esta factura?')) {
+            const metodoPago = prompt('Seleccione método de pago:\n1. Tigo Money\n2. Billetera Virtual\n3. Criptomoneda');
+
+            if (metodoPago) {
+                fetch('/residentes/api/realizar_pago', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id_factura: idFactura,
+                        metodo: metodoPago
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Pago realizado exitosamente');
+                            location.reload();
+                        } else {
+                            alert('Error al procesar el pago: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Error al procesar el pago');
+                    });
+            }
+        }
+    }
+
+    function descargarFactura(idFactura) {
+        if (!idFactura) {
+            alert('Error: ID de factura no válido');
+            return;
+        }
+
+        alert('Descargando factura ' + idFactura);
+        window.open('/residentes/descargar_factura/' + idFactura, '_blank');
+    }
+
+    function verQR(idFactura) {
+        if (!idFactura) {
+            alert('Error: ID de factura no válido');
+            return;
+        }
+
+        const factura = document.querySelector('[data-factura-id="' + idFactura + '"]');
+        if (!factura) {
+            alert('No se encontró la factura');
+            return;
+        }
+
+        const numero = factura.querySelector('.factura-nro').textContent;
+        const monto = factura.querySelector('.monto').textContent;
+        const vencimiento = factura.querySelector('.factura-vencimiento').textContent.replace('Vence: ', '');
+
+        document.getElementById('qrFacturaNumero').textContent = numero;
+        document.getElementById('qrFacturaMonto').textContent = monto.replace('$', '');
+        document.getElementById('qrFacturaVencimiento').textContent = vencimiento;
+
+        generarQR(idFactura, numero, monto);
+        document.getElementById('modalQR').style.display = 'flex';
+    }
+
+    function generarQR(idFactura, numero, monto) {
+        const canvas = document.getElementById('qrCanvas');
+        const contexto = canvas.getContext('2d');
+
+        contexto.clearRect(0, 0, canvas.width, canvas.height);
+        contexto.fillStyle = '#264653';
+        contexto.font = '16px Arial';
+        contexto.textAlign = 'center';
+        contexto.fillText('CÓDIGO QR', canvas.width / 2, 30);
+
+        contexto.font = '12px Arial';
+        contexto.fillText(`Factura: ${numero}`, canvas.width / 2, 60);
+        contexto.fillText(`Monto: ${monto}`, canvas.width / 2, 80);
+        contexto.fillText('(Simulación QR)', canvas.width / 2, 120);
+
+        contexto.strokeStyle = '#264653';
+        contexto.lineWidth = 2;
+        contexto.strokeRect(50, 100, 100, 100);
+
+        contexto.fillStyle = '#264653';
+        for (let i = 0; i < 7; i++) {
+            for (let j = 0; j < 7; j++) {
+                if (Math.random() > 0.5) {
+                    contexto.fillRect(60 + i * 12, 110 + j * 12, 8, 8);
+                }
+            }
+        }
+    }
+
+    function descargarQR() {
+        const canvas = document.getElementById('qrCanvas');
+        const enlace = document.createElement('a');
+
+        enlace.href = canvas.toDataURL('image/png');
+        enlace.download = 'qr_factura.png';
+        enlace.click();
+
+        alert('QR descargado exitosamente');
+    }
+
+    function cerrarModalQR() {
+        document.getElementById('modalQR').style.display = 'none';
+    }
+
+    function descargarComprobanteFactura(idFactura) {
+        if (!idFactura) {
+            alert('Error: ID de factura no válido');
+            return;
+        }
+
+        alert('Descargando comprobante de factura ' + idFactura);
+        window.open('/residentes/descargar_comprobante_factura/' + idFactura, '_blank');
+    }
+
+    function descargarTodasFacturas() {
+        alert('Descargando todas las facturas');
+        window.open('/residentes/descargar_todas_facturas', '_blank');
+    }
+
+    function aplicarFiltrosFacturas() {
+        const anio = document.getElementById('filtroAnio').value;
+        const mes = document.getElementById('filtroMes').value;
+        const estado = document.getElementById('filtroEstado').value;
+        const tipo = document.getElementById('filtroTipo').value;
+
+        console.log('Aplicando filtros:', { anio, mes, estado, tipo });
+
+        const facturas = document.querySelectorAll('.factura-card');
+        let facturasVisibles = 0;
+
+        facturas.forEach(factura => {
+            let mostrar = true;
+
+            if (estado && !factura.classList.contains(estado)) {
+                mostrar = false;
+            }
+
+            if (mostrar) {
+                factura.style.display = 'block';
+                facturasVisibles++;
+            } else {
+                factura.style.display = 'none';
+            }
+        });
+
+        if (facturasVisibles === 0) {
+            alert('No hay facturas que coincidan con los filtros aplicados');
+        }
+    }
+</script>
+{% endblock %}

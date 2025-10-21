@@ -1,0 +1,229 @@
+/* empleado/base_empleado.css */
+:root {
+    --beige-suave: #EDE6E0;
+    --azul-profundo: #264653;
+    --gris-claro: #F5F5F5;
+    --marron-oscuro: #2F241F;
+    --durazno-suave: #E3A78C;
+    --celeste-claro: #A3C8D6;
+    --verde-oliva: #7A8C6E;
+}
+
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    background: var(--gris-claro);
+    color: var(--marron-oscuro);
+}
+
+.sidebar {
+    width: 240px;
+    background: var(--azul-profundo);
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px 0;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+}
+
+.logo {
+    text-align: center;
+    padding: 0 20px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.logo img {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+.logo h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: white;
+}
+
+.menu {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+    flex-grow: 1;
+}
+
+.menu li {
+    margin: 8px 15px;
+}
+
+.menu li a {
+    color: var(--beige-suave);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+.menu li a:hover, .menu li a.active {
+    background: var(--verde-oliva);
+    color: white;
+    border-left: 4px solid var(--durazno-suave);
+}
+
+.menu li a i {
+    width: 20px;
+    text-align: center;
+}
+
+.logout {
+    color: var(--beige-suave);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 20px;
+    padding: 12px;
+    border: 1px solid var(--celeste-claro);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    justify-content: center;
+}
+
+.logout:hover {
+    background: var(--durazno-suave);
+    color: var(--marron-oscuro);
+    border-color: var(--durazno-suave);
+}
+
+.main-content {
+    flex: 1;
+    padding: 30px;
+    background: var(--gris-claro);
+    overflow-y: auto;
+}
+
+/* Estilos para las tarjetas/metricas */
+.metric-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border-left: 4px solid var(--verde-oliva);
+    border-top: 1px solid var(--beige-suave);
+}
+
+.card h3 {
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+    color: var(--marron-oscuro);
+    font-weight: 600;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--azul-profundo);
+}
+
+.metric-detail {
+    font-size: 0.8rem;
+    color: var(--verde-oliva);
+}
+
+/* Botones */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: var(--verde-oliva);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--azul-profundo);
+}
+
+.btn-secondary {
+    background: var(--celeste-claro);
+    color: var(--azul-profundo);
+}
+
+.btn-secondary:hover {
+    background: var(--durazno-suave);
+}
+
+/* Alertas */
+.alert {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.alert-success {
+    background: var(--celeste-claro);
+    color: var(--azul-profundo);
+    border-left: 4px solid var(--verde-oliva);
+}
+
+/* Lista de tickets */
+.tickets-list {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border: 1px solid var(--beige-suave);
+}
+
+.ticket-item {
+    padding: 20px;
+    border-bottom: 1px solid var(--beige-suave);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ticket-item:last-child {
+    border-bottom: none;
+}
+
+.ticket-priority {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.priority-high { 
+    background: #fed7d7; 
+    color: #c53030; 
+}
+.priority-medium { 
+    background: #feebc8; 
+    color: #dd6b20; 
+}
+.priority-low { 
+    background: #c6f6d5; 
+    color: #276749; 
+}

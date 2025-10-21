@@ -1,0 +1,10 @@
+{% extends 'administrador/base.html' %}
+{% block title %}Tickets{% endblock %}
+{% block content %}
+<div class="header" style="display: flex; align-items: center; gap: 18px;">
+    <h1 style="margin:0;">Tickets</h1>
+    <span style="margin-left:auto;"></span>
+    <a href="{{ url_for('admin.logout') }}" class="logout-btn">Cerrar sesión</a>
+</div>
+<p>Contenido de la sección Tickets.</p>
+{% endblock %}
