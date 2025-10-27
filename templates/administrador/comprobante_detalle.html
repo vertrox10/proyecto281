@@ -1,20 +1,167 @@
 {% extends 'administrador/base.html' %}
-{% block title %}Comprobante{% endblock %}
 {% block content %}
 <div class="header" style="display:flex;align-items:center;gap:18px;">
   <h1 style="margin:0;">Comprobante de Pago</h1>
   <span style="margin-left:auto;"></span>
   <a href="{{ url_for('admin.ver_comprobantes') }}" class="logout-btn">Volver a lista</a>
+  <button id="btnDescargarPDF" class="btn-primary" style="display:inline-flex;align-items:center;gap:8px;">
+    <i class="fas fa-file-pdf"></i>
+    Descargar PDF
+  </button>
 </div>
 
-<div style="margin-top:20px;background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
-  <h2>Pago #{{ pago[0] }}</h2>
-  <p><strong>Empleado:</strong> {{ pago[1] }} {{ pago[2] }}</p>
-  <p><strong>Monto:</strong> Bs {{ pago[4] }}</p>
-  <p><strong>Método:</strong> {{ pago[5] }}</p>
-  <p><strong>Número transacción:</strong> {{ pago[6] }}</p>
-  <p><strong>Fecha pago:</strong> {{ pago[7] }}</p>
-  <p><strong>Estado:</strong> {{ pago[8] }}</p>
+<div id="comprobante" style="margin-top:20px;background:#fff;padding:30px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.06);max-width:600px;">
+  <!-- Encabezado del comprobante -->
+  <div style="text-align:center;border-bottom:2px solid #e0e0e0;padding-bottom:20px;margin-bottom:20px;">
+    <h2 style="margin:0;color:#2c3e50;">COMPROBANTE DE PAGO</h2>
+    <p style="margin:5px 0;color:#7f8c8d;">Sistema de Gestión Hotelera</p>
+    <p style="margin:0;color:#7f8c8d;">N° #{{ pago[0] }}</p>
+  </div>
+  
+  <!-- Información del pago -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px;">
+    <div>
+      <p><strong>Empleado:</strong><br>{{ pago[1] }} {{ pago[2] }}</p>
+      <p><strong>Método de Pago:</strong><br>{{ pago[4] }}</p>
+      <p><strong>Estado:</strong><br>{{ pago[7] }}</p>
+    </div>
+    <div>
+      <p><strong>Monto:</strong><br>Bs {{ "%.2f"|format(pago[3]) }}</p>
+      <p><strong>N° Transacción:</strong><br>{{ pago[5] if pago[5] else 'No disponible' }}</p>
+      <p><strong>Fecha de Pago:</strong><br>{{ pago[6].strftime('%d/%m/%Y') if pago[6] else 'No especificada' }}</p>
+    </div>
+  </div>
+  
+  <!-- Mes de pago -->
+  <div style="background:#f8f9fa;padding:15px;border-radius:5px;margin-bottom:20px;text-align:center;">
+    <p style="margin:0;">
+      <strong>Mes de Pago:</strong> 
+      {% if pago[6] %}
+        {{ pago[6].strftime('%d') }} de 
+        {% set month = pago[6].month %}
+        {% if month == 1 %}Enero
+        {% elif month == 2 %}Febrero
+        {% elif month == 3 %}Marzo
+        {% elif month == 4 %}Abril
+        {% elif month == 5 %}Mayo
+        {% elif month == 6 %}Junio
+        {% elif month == 7 %}Julio
+        {% elif month == 8 %}Agosto
+        {% elif month == 9 %}Septiembre
+        {% elif month == 10 %}Octubre
+        {% elif month == 11 %}Noviembre
+        {% elif month == 12 %}Diciembre
+        {% endif %}
+        de {{ pago[6].strftime('%Y') }}
+      {% else %}
+        No especificado
+      {% endif %}
+    </p>
+  </div>
+  
+  <!-- Información del administrador -->
+  <div style="background:#f8f9fa;padding:15px;border-radius:5px;margin-bottom:20px;">
+    <p style="margin:0;text-align:center;">
+      <strong>Registrado por:</strong> {{ pago[8] }} {{ pago[9] }}
+    </p>
+  </div>
+  
+  <!-- Información adicional si es reserva -->
+  {% if info_extra %}
+  <div style="background:#e8f5e9;padding:15px;border-radius:5px;margin-bottom:20px;border-left:4px solid #28a745;">
+    <h4 style="margin:0 0 10px 0;color:#155724;">Información de Reserva</h4>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      {% if info_extra.area_nombre %}
+      <p style="margin:0;"><strong>Área:</strong> {{ info_extra.area_nombre }}</p>
+      {% endif %}
+      {% if info_extra.fecha_reserva %}
+      <p style="margin:0;"><strong>Fecha Reserva:</strong> {{ info_extra.fecha_reserva.strftime('%d/%m/%Y') }}</p>
+      {% endif %}
+      {% if info_extra.horas %}
+      <p style="margin:0;"><strong>Horas:</strong> {{ info_extra.horas }}</p>
+      {% endif %}
+      {% if info_extra.solicitante_info %}
+      <p style="margin:0;"><strong>Solicitante:</strong> {{ info_extra.solicitante_info }}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  
+  <!-- Pie del comprobante -->
+  <div style="border-top:1px solid #e0e0e0;padding-top:20px;text-align:center;">
+    <p style="margin:0;color:#7f8c8d;font-size:14px;">
+      Comprobante generado el {{ fecha_actual }}<br>
+      Este documento es un comprobante de pago oficial
+    </p>
+  </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+// Esperar a que la página cargue completamente
+document.addEventListener('DOMContentLoaded', function() {
+    // Agregar evento al botón
+    document.getElementById('btnDescargarPDF').addEventListener('click', function() {
+        generarPDF(this);
+    });
+});
+
+function generarPDF(btn) {
+    const element = document.getElementById('comprobante');
+    const nombreArchivo = `Comprobante_Pago_{{ pago[0] }}.pdf`;
+    
+    console.log('Iniciando generación de PDF...');
+    
+    const options = {
+        margin: 10,
+        filename: nombreArchivo,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+    btn.disabled = true;
+    
+    html2pdf()
+        .set(options)
+        .from(element)
+        .save()
+        .then(() => {
+            console.log('PDF generado exitosamente');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error al generar PDF:', error);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            alert('Error al generar PDF. Use Ctrl+P para imprimir.');
+        });
+}
+</script>
+
+<style>
+.btn-primary {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.btn-primary:hover {
+    background: #2980b9;
+}
+
+.btn-primary:disabled {
+    background: #7f8c8d;
+    cursor: not-allowed;
+}
+</style>
 {% endblock %}

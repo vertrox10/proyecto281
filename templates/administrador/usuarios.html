@@ -4,7 +4,6 @@
 
 {% block extra_head %}
 <style>
-    /* Estilos mejorados */
     .dashboard-container {
         padding: 20px;
         max-width: 100%;
@@ -107,8 +106,6 @@
         font-weight: 600;
         color: #2c3e50;
         border-bottom: 2px solid #dee2e6;
-        position: sticky;
-        top: 0;
     }
 
     .data-table td {
@@ -119,33 +116,6 @@
 
     .data-table tr:hover {
         background-color: #f8f9fa;
-    }
-
-    .rol-options {
-        display: flex;
-        gap: 5px;
-        flex-wrap: wrap;
-    }
-
-    .rol-option {
-        padding: 6px 12px;
-        border: 2px solid #e9ecef;
-        border-radius: 20px;
-        cursor: pointer;
-        font-size: 0.8em;
-        transition: all 0.3s ease;
-        background: white;
-    }
-
-    .rol-option.selected {
-        background: #007bff;
-        color: white;
-        border-color: #007bff;
-    }
-
-    .rol-option:hover:not(.selected) {
-        background: #e9ecef;
-        border-color: #007bff;
     }
 
     .badge {
@@ -182,6 +152,8 @@
         cursor: pointer;
         font-size: 0.9em;
         transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
     }
 
     .btn-primary {
@@ -202,13 +174,89 @@
         background: #1e7e34;
     }
 
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+
+    .btn-warning:hover {
+        background: #e0a800;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    .btn-info {
+        background: #17a2b8;
+        color: white;
+    }
+
+    .btn-info:hover {
+        background: #138496;
+    }
+
     .empty-state {
         text-align: center;
         padding: 40px;
         color: #6c757d;
     }
 
-    /* Responsive */
+    .rol-select {
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background: white;
+        font-size: 0.9em;
+        min-width: 120px;
+    }
+
+    .form-invitacion {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 0.9em;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 0.8em;
+    }
+
+    .table-container {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .current-user {
+        background-color: #fff3cd !important;
+        border-left: 4px solid #ffc107;
+    }
+
     @media (max-width: 768px) {
         .table-header {
             flex-direction: column;
@@ -224,36 +272,9 @@
             grid-template-columns: 1fr;
         }
 
-        .data-table {
-            font-size: 0.8em;
-        }
-
-        .rol-options {
+        .action-buttons {
             flex-direction: column;
         }
-    }
-
-    /* Scroll personalizado */
-    .table-container {
-        max-height: 600px;
-        overflow-y: auto;
-    }
-
-    .table-container::-webkit-scrollbar {
-        width: 8px;
-    }
-
-    .table-container::-webkit-scrollbar-track {
-        background: #f1f1f1;
-    }
-
-    .table-container::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 4px;
-    }
-
-    .table-container::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
     }
 </style>
 {% endblock %}
@@ -266,21 +287,52 @@
             <h1 style="margin: 0; color: #2c3e50;">👥 Gestión de Usuarios</h1>
             <p style="margin: 5px 0 0 0; color: #6c757d;">Administra los usuarios del sistema</p>
         </div>
-        <a href="{{ url_for('admin.logout') }}" class="btn btn-primary">Cerrar sesión</a>
+        <div>
+            <a href="{{ url_for('admin.panel_admin') }}" class="btn btn-warning">← Volver al Panel</a>
+            <a href="{{ url_for('admin.logout') }}" class="btn btn-primary">Cerrar sesión</a>
+        </div>
+    </div>
+
+    <!-- Sección de Invitaciones -->
+    <div class="form-invitacion">
+        <h3 style="margin-top: 0;">📧 Generar Invitaciones</h3>
+        <form method="POST" action="{{ url_for('admin.generar_invitacion') }}" style="display: flex; gap: 10px; align-items: end;">
+            <div class="form-group" style="flex: 1;">
+                <label><strong>Generar código de invitación:</strong></label>
+                <select name="rol_destino" class="form-control" required>
+                    <option value="">Seleccionar rol...</option>
+                    <option value="2">Empleado</option>
+                    <option value="3">Residente</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-success">Generar Código</button>
+        </form>
+        
+        <form method="POST" action="{{ url_for('admin.enviar_invitacion') }}" style="display: flex; gap: 10px; align-items: end; margin-top: 15px;">
+            <div class="form-group" style="flex: 2;">
+                <label><strong>Enviar invitación por correo:</strong></label>
+                <input type="email" name="correo" class="form-control" placeholder="correo@ejemplo.com" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Enviar Invitación</button>
+        </form>
     </div>
 
     <!-- Estadísticas -->
     <div class="stats-cards">
+        {% set admin_count = usuarios|selectattr('id_rol', 'equalto', 1)|list|length %}
+        {% set empleado_count = usuarios|selectattr('id_rol', 'equalto', 2)|list|length %}
+        {% set residente_count = usuarios|selectattr('id_rol', 'equalto', 3)|list|length %}
+        
         <div class="stat-card admin">
-            <span class="stat-number">{{ usuarios|selectattr('id_rol', 'equalto', 1)|list|length }}</span>
+            <span class="stat-number">{{ admin_count }}</span>
             <span class="stat-label">Administradores</span>
         </div>
         <div class="stat-card empleado">
-            <span class="stat-number">{{ usuarios|selectattr('id_rol', 'equalto', 2)|list|length }}</span>
+            <span class="stat-number">{{ empleado_count }}</span>
             <span class="stat-label">Empleados</span>
         </div>
         <div class="stat-card residente">
-            <span class="stat-number">{{ usuarios|selectattr('id_rol', 'equalto', 3)|list|length }}</span>
+            <span class="stat-number">{{ residente_count }}</span>
             <span class="stat-label">Residentes</span>
         </div>
         <div class="stat-card">
@@ -289,221 +341,348 @@
         </div>
     </div>
 
-    <!-- Tabla de Administradores y Empleados -->
-    <div class="table-section">
-        <div class="table-header">
-            <div class="table-title">🏢 Personal Administrativo</div>
-            <div class="table-actions">
-                <input type="text" class="search-box" placeholder="Buscar usuario..." id="searchAdmin">
-                <span class="badge badge-admin">{{ usuarios|selectattr('id_rol', 'in', [1, 2])|list|length }} registros</span>
+    <!-- Formulario para cambiar roles -->
+    <form method="POST" action="{{ url_for('admin.cambiar_rol') }}" id="rolesForm">
+        <!-- Tabla de Administradores -->
+        <div class="table-section">
+            <div class="table-header">
+                <div class="table-title">👑 Administradores</div>
+                <div class="table-actions">
+                    <input type="text" class="search-box" placeholder="Buscar administrador..." id="searchAdmin">
+                    <span class="badge badge-admin">{{ admin_count }} registros</span>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="data-table" id="tableAdmin">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre Completo</th>
+                            <th>Contacto</th>
+                            <th>Rol Actual</th>
+                            <th>Cambiar Rol</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios %}
+                        {% if usuario.id_rol == 1 %}
+                        <tr class="{% if usuario.id_usuario == current_user.id_usuario %}current-user{% endif %}">
+                            <td><strong>#{{ usuario.id_usuario }}</strong></td>
+                            <td>
+                                <div style="font-weight: 600;">{{ usuario.nombre }} {{ usuario.ap_paterno }} {{ usuario.ap_materno }}</div>
+                                {% if usuario.id_usuario == current_user.id_usuario %}
+                                <small style="color: #856404;">(Tú)</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ usuario.correo }}</div>
+                                <small style="color: #6c757d;">{{ usuario.telefono or 'Sin teléfono' }}</small>
+                            </td>
+                            <td>
+                                <span class="badge badge-admin">Administrador</span>
+                            </td>
+                            <td>
+                                <input type="hidden" name="id_usuario_{{ loop.index }}" value="{{ usuario.id_usuario }}">
+                                <select name="nuevo_rol_{{ loop.index }}" class="rol-select">
+                                    <option value="1" selected>Administrador</option>
+                                    <option value="2">Empleado</option>
+                                    <option value="3">Residente</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    {% if usuario.id_usuario != current_user.id_usuario %}
+                                    <form method="POST" action="{{ url_for('admin.eliminar_usuario', id_usuario=usuario.id_usuario) }}" style="display: inline;">
+                                        <button type="button" class="btn btn-danger btn-sm" onclick="confirmarEliminacion({{ usuario.id_usuario }}, '{{ usuario.nombre }} {{ usuario.ap_paterno }}')">
+                                            🗑️ Eliminar
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span class="badge badge-secondary">No disponible</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if admin_count == 0 %}
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <h5>👑 No hay administradores</h5>
+                                <p>No se encontraron administradores registrados.</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
-        
-        <div class="table-container">
-            <table class="data-table" id="tableAdmin">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre Completo</th>
-                        <th>Contacto</th>
-                        <th>Rol Actual</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for usuario in usuarios %}
-                    {% if usuario.id_rol in [1, 2] %}
-                    <tr>
-                        <td><strong>#{{ usuario.id_usuario }}</strong></td>
-                        <td>
-                            <div style="font-weight: 600;">{{ usuario.nombre }} {{ usuario.ap_paterno }} {{ usuario.ap_materno }}</div>
-                        </td>
-                        <td>
-                            <div>{{ usuario.correo }}</div>
-                            <small style="color: #6c757d;">{{ usuario.telefono or 'Sin teléfono' }}</small>
-                        </td>
-                        <td>
-                            {% if usuario.id_rol == 1 %}
-                                <span class="badge badge-admin">👑 Administrador</span>
-                            {% else %}
-                                <span class="badge badge-empleado">👨‍💼 Empleado</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="rol-options">
-                                <div class="rol-option {% if usuario.id_rol == 1 %}selected{% endif %}" 
-                                     onclick="cambiarRol({{ usuario.id_usuario }}, 1)">
-                                    👑 Admin
-                                </div>
-                                <div class="rol-option {% if usuario.id_rol == 2 %}selected{% endif %}" 
-                                     onclick="cambiarRol({{ usuario.id_usuario }}, 2)">
-                                    👨‍💼 Empleado
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endif %}
-                    {% else %}
-                    <tr>
-                        <td colspan="5" class="empty-state">
-                            <h5>👥 No hay personal administrativo</h5>
-                            <p>No se encontraron administradores o empleados registrados.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    <!-- Tabla de Residentes -->
-    <div class="table-section">
-        <div class="table-header">
-            <div class="table-title">🏠 Residentes</div>
-            <div class="table-actions">
-                <input type="text" class="search-box" placeholder="Buscar residente..." id="searchResident">
-                <span class="badge badge-residente">{{ usuarios|selectattr('id_rol', 'equalto', 3)|list|length }} registros</span>
+        <!-- Tabla de Empleados -->
+        <div class="table-section">
+            <div class="table-header">
+                <div class="table-title">👨‍💼 Empleados</div>
+                <div class="table-actions">
+                    <input type="text" class="search-box" placeholder="Buscar empleado..." id="searchEmpleado">
+                    <span class="badge badge-empleado">{{ empleado_count }} registros</span>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="data-table" id="tableEmpleado">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre Completo</th>
+                            <th>Contacto</th>
+                            <th>Rol Actual</th>
+                            <th>Cambiar Rol</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios %}
+                        {% if usuario.id_rol == 2 %}
+                        <tr class="{% if usuario.id_usuario == current_user.id_usuario %}current-user{% endif %}">
+                            <td><strong>#{{ usuario.id_usuario }}</strong></td>
+                            <td>
+                                <div style="font-weight: 600;">{{ usuario.nombre }} {{ usuario.ap_paterno }} {{ usuario.ap_materno }}</div>
+                                {% if usuario.id_usuario == current_user.id_usuario %}
+                                <small style="color: #856404;">(Tú)</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ usuario.correo }}</div>
+                                <small style="color: #6c757d;">{{ usuario.telefono or 'Sin teléfono' }}</small>
+                            </td>
+                            <td>
+                                <span class="badge badge-empleado">Empleado</span>
+                            </td>
+                            <td>
+                                <input type="hidden" name="id_usuario_{{ loop.index + 100 }}" value="{{ usuario.id_usuario }}">
+                                <select name="nuevo_rol_{{ loop.index + 100 }}" class="rol-select">
+                                    <option value="1">Administrador</option>
+                                    <option value="2" selected>Empleado</option>
+                                    <option value="3">Residente</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    {% if usuario.id_usuario != current_user.id_usuario %}
+                                    <form method="POST" action="{{ url_for('admin.eliminar_usuario', id_usuario=usuario.id_usuario) }}" style="display: inline;">
+                                        <button type="button" class="btn btn-danger btn-sm" onclick="confirmarEliminacion({{ usuario.id_usuario }}, '{{ usuario.nombre }} {{ usuario.ap_paterno }}')">
+                                            🗑️ Eliminar
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span class="badge badge-secondary">No disponible</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if empleado_count == 0 %}
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <h5>👨‍💼 No hay empleados</h5>
+                                <p>No se encontraron empleados registrados.</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
-        
-        <div class="table-container">
-            <table class="data-table" id="tableResident">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Nombre Completo</th>
-                        <th>Contacto</th>
-                        <th>Departamento</th>
-                        <th>Fecha Ingreso</th>
-                        <th>Tipo</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for usuario in usuarios %}
-                    {% if usuario.id_rol == 3 %}
-                    <tr>
-                        <td><strong>#{{ usuario.id_usuario }}</strong></td>
-                        <td>
-                            <div style="font-weight: 600;">{{ usuario.nombre }} {{ usuario.ap_paterno }} {{ usuario.ap_materno }}</div>
-                        </td>
-                        <td>
-                            <div>{{ usuario.correo }}</div>
-                            <small style="color: #6c757d;">{{ usuario.telefono or 'Sin teléfono' }}</small>
-                        </td>
-                        <td>
-                            {% if usuario.piso and usuario.nro_departamento %}
-                                <span class="badge badge-residente">
-                                    Piso {{ usuario.piso }} - Depto {{ usuario.nro_departamento }}
-                                </span>
-                            {% else %}
-                                <span class="badge badge-secondary">Sin asignar</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if usuario.fecha_ingreso %}
-                                {{ usuario.fecha_ingreso.strftime('%d/%m/%Y') }}
-                            {% else %}
-                                <span style="color: #6c757d;">No especificada</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge badge-residente">Residente</span>
-                        </td>
-                    </tr>
-                    {% endif %}
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <h5>🏠 No hay residentes</h5>
-                            <p>No se encontraron residentes registrados.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+
+        <!-- Tabla de Residentes -->
+        <div class="table-section">
+            <div class="table-header">
+                <div class="table-title">🏠 Residentes</div>
+                <div class="table-actions">
+                    <input type="text" class="search-box" placeholder="Buscar residente..." id="searchResidente">
+                    <span class="badge badge-residente">{{ residente_count }} registros</span>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table class="data-table" id="tableResidente">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre Completo</th>
+                            <th>Contacto</th>
+                            <th>Departamento</th>
+                            <th>Fecha Ingreso</th>
+                            <th>Rol Actual</th>
+                            <th>Cambiar Rol</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios %}
+                        {% if usuario.id_rol == 3 %}
+                        <tr class="{% if usuario.id_usuario == current_user.id_usuario %}current-user{% endif %}">
+                            <td><strong>#{{ usuario.id_usuario }}</strong></td>
+                            <td>
+                                <div style="font-weight: 600;">{{ usuario.nombre }} {{ usuario.ap_paterno }} {{ usuario.ap_materno }}</div>
+                                {% if usuario.id_usuario == current_user.id_usuario %}
+                                <small style="color: #856404;">(Tú)</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ usuario.correo }}</div>
+                                <small style="color: #6c757d;">{{ usuario.telefono or 'Sin teléfono' }}</small>
+                            </td>
+                            <td>
+                                {% if usuario.piso and usuario.nro_departamento %}
+                                    <span class="badge badge-residente">
+                                        Piso {{ usuario.piso }} - Depto {{ usuario.nro_departamento }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Sin asignar</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if usuario.fecha_ingreso %}
+                                    {{ usuario.fecha_ingreso.strftime('%d/%m/%Y') }}
+                                {% else %}
+                                    <span style="color: #6c757d;">No especificada</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-residente">Residente</span>
+                            </td>
+                            <td>
+                                <input type="hidden" name="id_usuario_{{ loop.index + 200 }}" value="{{ usuario.id_usuario }}">
+                                <select name="nuevo_rol_{{ loop.index + 200 }}" class="rol-select">
+                                    <option value="1">Administrador</option>
+                                    <option value="2">Empleado</option>
+                                    <option value="3" selected>Residente</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    {% if usuario.id_usuario != current_user.id_usuario %}
+                                    <form method="POST" action="{{ url_for('admin.eliminar_usuario', id_usuario=usuario.id_usuario) }}" style="display: inline;">
+                                        <button type="button" class="btn btn-danger btn-sm" onclick="confirmarEliminacion({{ usuario.id_usuario }}, '{{ usuario.nombre }} {{ usuario.ap_paterno }}')">
+                                            🗑️ Eliminar
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span class="badge badge-secondary">No disponible</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if residente_count == 0 %}
+                        <tr>
+                            <td colspan="8" class="empty-state">
+                                <h5>🏠 No hay residentes</h5>
+                                <p>No se encontraron residentes registrados.</p>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
+
+        <!-- Botón para guardar cambios -->
+        <div style="text-align: center; margin: 30px 0;">
+            <button type="submit" class="btn btn-success" style="padding: 12px 30px; font-size: 1.1em;">
+                💾 Guardar Cambios de Roles
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    // Funcionalidad de búsqueda
-    document.getElementById('searchAdmin').addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const rows = document.querySelectorAll('#tableAdmin tbody tr');
+    // Funcionalidad de búsqueda para cada tabla
+    function setupSearch(inputId, tableId) {
+        const searchInput = document.getElementById(inputId);
+        const table = document.getElementById(tableId);
         
-        let visibleCount = 0;
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            if (text.includes(searchTerm)) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-        
-        // Actualizar contador
-        document.querySelector('#tableAdmin').closest('.table-section').querySelector('.badge').textContent = visibleCount + ' registros';
-    });
-
-    document.getElementById('searchResident').addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const rows = document.querySelectorAll('#tableResident tbody tr');
-        
-        let visibleCount = 0;
-        rows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            if (text.includes(searchTerm)) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-        
-        // Actualizar contador
-        document.querySelector('#tableResident').closest('.table-section').querySelector('.badge').textContent = visibleCount + ' registros';
-    });
-
-    // Función para cambiar rol (necesitarías implementar el endpoint)
-    function cambiarRol(idUsuario, nuevoRol) {
-        if (confirm('¿Estás seguro de que quieres cambiar el rol de este usuario?')) {
-            fetch('{{ url_for("admin.cambiar_rol") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    id_usuario: idUsuario,
-                    nuevo_rol: nuevoRol
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Rol cambiado exitosamente');
-                    location.reload();
-                } else {
-                    alert('Error al cambiar el rol: ' + data.message);
+        if (searchInput && table) {
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const rows = table.querySelectorAll('tbody tr');
+                
+                let visibleCount = 0;
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(searchTerm)) {
+                        row.style.display = '';
+                        visibleCount++;
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                // Actualizar contador
+                const badge = table.closest('.table-section').querySelector('.badge');
+                if (badge) {
+                    badge.textContent = visibleCount + ' registros';
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al cambiar el rol');
             });
         }
     }
 
-    // Mejorar la UI de selección de roles
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('rol-option')) {
-            const parent = e.target.parentElement;
-            const options = parent.querySelectorAll('.rol-option');
-            options.forEach(opt => opt.classList.remove('selected'));
-            e.target.classList.add('selected');
+    // Función para confirmar eliminación
+    function confirmarEliminacion(idUsuario, nombreUsuario) {
+        if (confirm(`¿Estás seguro de que quieres eliminar al usuario "${nombreUsuario}"?\n\nEsta acción no se puede deshacer.`)) {
+            // Crear un formulario dinámico para enviar la solicitud POST
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/eliminar_usuario/${idUsuario}`;
+            
+            // Agregar el token CSRF si está disponible
+            const csrfToken = document.querySelector('input[name="csrf_token"]');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = csrfToken.value;
+                form.appendChild(csrfInput);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
         }
+    }
+
+    // Configurar búsquedas
+    document.addEventListener('DOMContentLoaded', function() {
+        setupSearch('searchAdmin', 'tableAdmin');
+        setupSearch('searchEmpleado', 'tableEmpleado');
+        setupSearch('searchResidente', 'tableResidente');
+
+        // Confirmación antes de enviar el formulario de roles
+        document.getElementById('rolesForm').addEventListener('submit', function(e) {
+            if (!confirm('¿Estás seguro de que quieres actualizar los roles de los usuarios?')) {
+                e.preventDefault();
+            }
+        });
     });
+
+    // Mostrar mensajes flash
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            document.addEventListener('DOMContentLoaded', function() {
+                {% for category, message in messages %}
+                    alert("{{ category|title }}: {{ message }}");
+                {% endfor %}
+            });
+        {% endif %}
+    {% endwith %}
 </script>
 {% endblock %}

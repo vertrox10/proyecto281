@@ -1,248 +1,750 @@
-
-
-
 {% extends 'administrador/base.html' %}
-
-{% block title %}Dashboard Administrativo{% endblock %}
-
+{% block title %}Panel de Control - Administrador{% endblock %}
 {% block extra_head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='administrador/style_dashboard_administrador.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --primary: #6366f1;
+        --primary-dark: #4f46e5;
+        --secondary: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --info: #06b6d4;
+        --dark: #1f2937;
+        --light: #f8fafc;
+        --gray: #6b7280;
+        --border: #e5e7eb;
+    }
+
+    .admin-dashboard {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        padding: 1.5rem;
+    }
+
+    /* Header Styles */
+    .dashboard-header {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border: 1px solid var(--border);
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2rem;
+    }
+
+    .header-info h1 {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--dark);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .header-info p {
+        color: var(--gray);
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .header-stats {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+    }
+
+    .stat-badge {
+        background: var(--light);
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        text-align: center;
+    }
+
+    .stat-badge .number {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary);
+        display: block;
+    }
+
+    .stat-badge .label {
+        font-size: 0.875rem;
+        color: var(--gray);
+    }
+
+    /* Quick Actions */
+    .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .action-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .action-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+    }
+
+    .action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .action-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+        font-size: 1.5rem;
+        color: white;
+    }
+
+    .action-card.finances .action-icon { background: linear-gradient(135deg, var(--secondary), #059669); }
+    .action-card.consumption .action-icon { background: linear-gradient(135deg, var(--info), #0891b2); }
+    .action-card.reservations .action-icon { background: linear-gradient(135deg, var(--warning), #d97706); }
+    .action-card.tickets .action-icon { background: linear-gradient(135deg, var(--danger), #dc2626); }
+    .action-card.users .action-icon { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+
+    .action-content h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark);
+        margin: 0 0 0.5rem 0;
+    }
+
+    .action-content p {
+        color: var(--gray);
+        margin: 0 0 1.5rem 0;
+        line-height: 1.5;
+    }
+
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: var(--primary);
+        color: white;
+        text-decoration: none;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-action:hover {
+        background: var(--primary-dark);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Stats Overview */
+    .stats-overview {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+    }
+
+    .stat-card.income::after { background: var(--secondary); }
+    .stat-card.users::after { background: var(--primary); }
+    .stat-card.reservations::after { background: var(--warning); }
+    .stat-card.tickets::after { background: var(--danger); }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--dark);
+        margin: 0.5rem 0;
+        line-height: 1;
+    }
+
+    .stat-label {
+        color: var(--gray);
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-trend {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .trend-up { background: #dcfce7; color: #166534; }
+    .trend-down { background: #fee2e2; color: #991b1b; }
+
+    /* Dashboard Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    /* Charts Section */
+    .chart-section {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .chart-placeholder {
+        height: 300px;
+        background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gray);
+        font-weight: 600;
+    }
+
+    /* Activity Feed */
+    .activity-feed {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+    }
+
+    .activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .activity-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: 12px;
+        transition: background 0.3s ease;
+    }
+
+    .activity-item:hover {
+        background: var(--light);
+    }
+
+    .activity-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .activity-icon.alert { background: var(--danger); }
+    .activity-icon.info { background: var(--info); }
+    .activity-icon.success { background: var(--secondary); }
+    .activity-icon.warning { background: var(--warning); }
+
+    .activity-content {
+        flex: 1;
+    }
+
+    .activity-title {
+        font-weight: 600;
+        color: var(--dark);
+        margin: 0 0 0.25rem 0;
+        font-size: 0.95rem;
+    }
+
+    .activity-description {
+        color: var(--gray);
+        margin: 0;
+        font-size: 0.85rem;
+        line-height: 1.4;
+    }
+
+    .activity-time {
+        color: var(--gray);
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Recent Items */
+    .recent-section {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+        margin-bottom: 2rem;
+    }
+
+    .recent-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .recent-item {
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .recent-item:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+
+    .recent-item-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .recent-item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--light);
+        color: var(--primary);
+        font-size: 1rem;
+    }
+
+    .recent-item-title {
+        font-weight: 600;
+        color: var(--dark);
+        margin: 0;
+        font-size: 0.95rem;
+    }
+
+    .recent-item-meta {
+        color: var(--gray);
+        font-size: 0.8rem;
+        margin: 0;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-overview {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .admin-dashboard {
+            padding: 1rem;
+        }
+        
+        .header-content {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+        }
+        
+        .header-stats {
+            justify-content: center;
+        }
+        
+        .stats-overview {
+            grid-template-columns: 1fr;
+        }
+        
+        .quick-actions-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .recent-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="admin-dashboard">
     <!-- Header -->
     <div class="dashboard-header">
-        <div style="display: flex; align-items: center; gap: 1.5rem;">
-            <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" 
-                 style="height: 80px; width: auto; background: white; padding: 10px; border-radius: 10px;">
-            <div style="flex-grow: 1;">
-                <h1 style="margin: 0; font-size: 2.2rem; font-weight: 700;">Dashboard Administrativo</h1>
-                <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 1.1rem;">
-                    👋 Bienvenido, {{ admin_nombre or 'Administrador' }}
-                </p>
+        <div class="header-content">
+            <div class="header-info">
+                <h1>Panel de Control</h1>
+                <p>Bienvenido de vuelta, {{ current_user.nombre or 'Administrador' }} · {{ ahora.strftime('%d %B %Y') if ahora else 'Hoy' }}</p>
             </div>
-            <div style="text-align: right;">
-                <div style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">
-                    {{ ahora.strftime('%d/%m/%Y') }}
+            <div class="header-stats">
+                <div class="stat-badge">
+                    <span class="number">{{ total_usuarios|default(0) }}</span>
+                    <span class="label">Usuarios</span>
                 </div>
-                <div style="font-size: 0.9rem; opacity: 0.8;">
-                    {{ ahora.strftime('%H:%M') }}
+                <div class="stat-badge">
+                    <span class="number">{{ total_tickets|default(0) }}</span>
+                    <span class="label">Tickets</span>
                 </div>
-                <a href="{{ url_for('admin.logout') }}" class="logout-btn">
+                <a href="{{ url_for('admin.logout') }}" class="btn-action" style="background: var(--danger);">
                     <i class="fas fa-sign-out-alt"></i>
-                    Cerrar sesión
+                    Cerrar Sesión
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- Estadísticas Resumen -->
-    <div class="stats-summary">
+    <!-- Quick Actions -->
+    <div class="quick-actions-grid">
+        <div class="action-card finances">
+            <div class="action-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="action-content">
+                <h3>Análisis Financiero</h3>
+                <p>Reportes detallados de ingresos, gastos y métricas financieras clave del sistema.</p>
+                <a href="{{ url_for('admin.finanzas') }}" class="btn-action">
+                    <i class="fas fa-arrow-right"></i>
+                    Ver Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="action-card consumption">
+            <div class="action-icon">
+                <i class="fas fa-bolt"></i>
+            </div>
+            <div class="action-content">
+                <h3>Monitoreo de Consumos</h3>
+                <p>Seguimiento en tiempo real del consumo de agua, luz y gas en todas las unidades.</p>
+                <a href="{{ url_for('admin.panel_admin') }}" class="btn-action">
+                    <i class="fas fa-arrow-right"></i>
+                    Ver Consumos
+                </a>
+            </div>
+        </div>
+
+        <div class="action-card users">
+            <div class="action-icon">
+                <i class="fas fa-users-cog"></i>
+            </div>
+            <div class="action-content">
+                <h3>Gestión de Usuarios</h3>
+                <p>Administra residentes, empleados, permisos y configuración de acceso al sistema.</p>
+                <a href="{{ url_for('admin.usuarios') }}" class="btn-action">
+                    <i class="fas fa-arrow-right"></i>
+                    Gestionar Usuarios
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="stats-overview">
         <div class="stat-card income">
-            <div class="cards">
-                <div class="overview">
-                    <a class="card-link" href="{{ url_for('admin.dashboard_finanzas') }}">
-                        <div class="card">
-                            <i class="fas fa-coins"></i>
-                            <h3>Finanzas</h3>
-                            <p>Ver KPIs financieros</p>
-                        </div>
-                    </a>
-
-                    <a class="card-link" href="{{ url_for('admin.consumos') }}">
-                        <div class="card">
-                            <i class="fas fa-bolt"></i>
-                            <h3>Consumos</h3>
-                            <p>Revisar consumos</p>
-                        </div>
-                    </a>
-
-                    <a class="card-link" href="{{ url_for('admin.reservas') }}">
-                        <div class="card">
-                            <i class="fas fa-calendar-alt"></i>
-                            <h3>Reservas</h3>
-                            <p>Administrar reservas</p>
-                        </div>
-                    </a>
-
-                    <a class="card-link" href="{{ url_for('admin.tickets') }}">
-                        <div class="card">
-                            <i class="fas fa-ticket-alt"></i>
-                            <h3>Tickets</h3>
-                            <p>Ver y responder tickets</p>
-                        </div>
-                    </a>
-
-                    <a class="card-link" href="{{ url_for('admin.usuarios') }}">
-                        <div class="card">
-                            <i class="fas fa-users"></i>
-                            <h3>Usuarios</h3>
-                            <p>Gestionar usuarios</p>
-                        </div>
-                    </a>
-                </div>
+            <div class="stat-label">Ingresos del Mes</div>
+            <div class="stat-value">${{ "{:,.0f}".format(ingresos_mensuales|default(0)) }}</div>
+            <div class="stat-trend trend-up">
+                <i class="fas fa-arrow-up"></i>
+                {{ variacion_ingresos|default(0) }}% vs mes anterior
             </div>
+        </div>
+
+        <div class="stat-card users">
+            <div class="stat-label">Usuarios Activos</div>
+            <div class="stat-value">{{ total_usuarios|default(0) }}</div>
+            <div class="stat-trend trend-up">
+                <i class="fas fa-arrow-up"></i>
+                {{ nuevos_usuarios_mes|default(0) }} nuevos este mes
             </div>
-            <div class="stat-value">{{ reservas_activas }}</div>
+        </div>
+
+        <div class="stat-card reservations">
             <div class="stat-label">Reservas Activas</div>
-            <div class="stat-trend trend-positive">
-                {{ reservas_hoy }} hoy
+            <div class="stat-value">{{ reservas_activas|default(0) }}</div>
+            <div class="stat-trend trend-up">
+                <i class="fas fa-arrow-up"></i>
+                {{ reservas_hoy|default(0) }} para hoy
             </div>
         </div>
 
         <div class="stat-card tickets">
-            <div class="stat-icon">
-                <i class="fas fa-ticket-alt"></i>
-            </div>
-            <div class="stat-value">{{ tickets_abiertos }}</div>
-            <div class="stat-label">Tickets Abiertos</div>
-            <div class="stat-trend trend-negative">
-                {{ tickets_urgentes }} urgentes
+            <div class="stat-label">Tickets Pendientes</div>
+            <div class="stat-value">{{ tickets_pendientes|default(0) }}</div>
+            <div class="stat-trend trend-down">
+                <i class="fas fa-exclamation-circle"></i>
+                {{ tickets_urgentes|default(0) }} urgentes
             </div>
         </div>
     </div>
 
-    <!-- Grid Principal -->
-    <div class="main-grid">
-        <!-- Gráfico y Consumos -->
-        <div class="chart-section">
-            <div class="section-header">
-                <h2 class="section-title">
-                    <i class="fas fa-chart-pie" style="margin-right: 0.5rem;"></i>
-                    Distribución de Consumos
-                </h2>
-                <select class="time-filter">
-                    <option>Últimos 6 meses</option>
-                    <option>2024 Completo</option>
-                    <option>Personalizado</option>
-                </select>
-            </div>
-            <div class="chart-wrapper">
-                <canvas id="pieChart"></canvas>
-            </div>
-            <div class="consumption-breakdown">
-                {% for i in range(labels_consumo|length) %}
-               <div class="consumption-item" >
-                    <div class="consumption-value">{{ "%.0f"|format(data_consumo[i]) }}</div>
-                    <div class="consumption-label">{{ labels_consumo[i] }}</div>
-                    <div style="color: #7f8c8d; font-size: 0.7rem;">kWh</div>
+    <!-- Main Content Grid -->
+    <div class="dashboard-grid">
+        <!-- Left Column -->
+        <div>
+            <!-- Consumption Chart -->
+            <div class="chart-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-chart-pie"></i>
+                        Distribución de Consumos
+                    </h2>
+                    <select class="time-filter" onchange="actualizarGrafico(this.value)">
+                        <option value="7">Últimos 7 días</option>
+                        <option value="30" selected>Últimos 30 días</option>
+                        <option value="90">Últimos 3 meses</option>
+                    </select>
                 </div>
-                {% endfor %}
+                <div class="chart-placeholder">
+                    <div style="text-align: center;">
+                        <i class="fas fa-chart-pie" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                        <p>Distribución de Consumos Mensual</p>
+                        <div class="consumption-breakdown" style="display: flex; gap: 1rem; margin-top: 1rem; justify-content: center;">
+                            {% if consumos_mensuales %}
+                                {% for consumo in consumos_mensuales %}
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: {{ consumo.color|default('#6366f1') }};">
+                                        {{ consumo.total|default(0)|round(2) }} {{ consumo.unidad|default('kWh') }}
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: var(--gray);">
+                                        {{ consumo.tipo|default('Energía') }}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: #6366f1;">
+                                        0 kWh
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: var(--gray);">
+                                        Energía
+                                    </div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: #10b981;">
+                                        0 m³
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: var(--gray);">
+                                        Agua
+                                    </div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 1.2rem; font-weight: bold; color: #06b6d4;">
+                                        0 m³
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: var(--gray);">
+                                        Gas
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="recent-section">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-history"></i>
+                        Actividad Reciente
+                    </h2>
+                </div>
+                <div class="recent-grid">
+                    <div class="recent-item">
+                        <div class="recent-item-header">
+                            <div class="recent-item-icon">
+                                <i class="fas fa-bolt"></i>
+                            </div>
+                            <div>
+                                <h4 class="recent-item-title">Consumo de Energía</h4>
+                                <p class="recent-item-meta">Actualizado recientemente</p>
+                            </div>
+                        </div>
+                        <p style="margin: 0; font-size: 0.9rem; color: var(--gray);">
+                            {% if consumos_mensuales and consumos_mensuales[0] %}
+                                {{ consumos_mensuales[0].total|default(0)|round(2) }} kWh este mes
+                            {% else %}
+                                0 kWh este mes
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="recent-item">
+                        <div class="recent-item-header">
+                            <div class="recent-item-icon">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                            <div>
+                                <h4 class="recent-item-title">Tickets Activos</h4>
+                                <p class="recent-item-meta">{{ tickets_urgentes|default(0) }} requieren atención</p>
+                            </div>
+                        </div>
+                        <p style="margin: 0; font-size: 0.9rem; color: var(--gray);">
+                            {{ tickets_pendientes|default(0) }} tickets en total abiertos
+                        </p>
+                    </div>
+
+                    <div class="recent-item">
+                        <div class="recent-item-header">
+                            <div class="recent-item-icon">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div>
+                                <h4 class="recent-item-title">Reservas del Día</h4>
+                                <p class="recent-item-meta">{{ reservas_hoy|default(0) }} para hoy</p>
+                            </div>
+                        </div>
+                        <p style="margin: 0; font-size: 0.9rem; color: var(--gray);">
+                            {{ reservas_activas|default(0) }} reservas activas en total
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Actividad Reciente -->
-        <div class="activity-section">
+        <!-- Right Column - Activity Feed -->
+        <div class="activity-feed">
             <div class="section-header">
                 <h2 class="section-title">
-                    <i class="fas fa-bell" style="margin-right: 0.5rem;"></i>
-                    Actividad Reciente
+                    <i class="fas fa-stream"></i>
+                    Feed de Actividad
                 </h2>
             </div>
             <div class="activity-list">
-                <div class="activity-item" style="border-left-color: #4caf50;">
-                    <div class="activity-icon" style="background: #4caf50;">
-                        <i class="fas fa-bolt"></i>
+                {% if actividades_recientes %}
+                    {% for actividad in actividades_recientes %}
+                    <div class="activity-item">
+                        <div class="activity-icon {{ actividad.tipo|default('info') }}">
+                            <i class="{{ actividad.icono|default('fas fa-info-circle') }}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <h4 class="activity-title">{{ actividad.titulo|default('Actividad del sistema') }}</h4>
+                            <p class="activity-description">{{ actividad.descripcion|default('Actividad reciente en el sistema') }}</p>
+                            <div class="activity-time">{{ actividad.tiempo|default('Recientemente') }}</div>
+                        </div>
                     </div>
-                    <div class="activity-content">
-                        <p class="activity-title">Consumo Actualizado</p>
-                        <p class="activity-subtitle">Total: {{ "%.1f"|format(consumo_total) }} kWh</p>
+                    {% endfor %}
+                {% else %}
+                    <div class="activity-item">
+                        <div class="activity-icon info">
+                            <i class="fas fa-info-circle"></i>
+                        </div>
+                        <div class="activity-content">
+                            <h4 class="activity-title">Bienvenido al Sistema</h4>
+                            <p class="activity-description">No hay actividades recientes. El sistema está listo para usar.</p>
+                            <div class="activity-time">Justo ahora</div>
+                        </div>
                     </div>
-                </div>
-
-                <div class="activity-item" style="border-left-color: #2196f3;">
-                    <div class="activity-icon" style="background: #2196f3;">
-                        <i class="fas fa-ticket-alt"></i>
+                    <div class="activity-item">
+                        <div class="activity-icon success">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="activity-content">
+                            <h4 class="activity-title">Sistema Inicializado</h4>
+                            <p class="activity-description">Todos los módulos están funcionando correctamente.</p>
+                            <div class="activity-time">Hace unos momentos</div>
+                        </div>
                     </div>
-                    <div class="activity-content">
-                        <p class="activity-title">{{ tickets_abiertos }} Tickets Activos</p>
-                        <p class="activity-subtitle">{{ tickets_urgentes }} requieren atención</p>
-                    </div>
-                </div>
-
-                <div class="activity-item" style="border-left-color: #ff9800;">
-                    <div class="activity-icon" style="background: #ff9800;">
-                        <i class="fas fa-calendar-alt"></i>
-                    </div>
-                    <div class="activity-content">
-                        <p class="activity-title">{{ reservas_activas }} Reservas</p>
-                        <p class="activity-subtitle">{{ reservas_hoy }} para hoy</p>
-                    </div>
-                </div>
-
-                <div class="activity-item" style="border-left-color: #9c27b0;">
-                    <div class="activity-icon" style="background: #9c27b0;">
-                        <i class="fas fa-coins"></i>
-                    </div>
-                    <div class="activity-content">
-                        <p class="activity-title">Ingresos del Mes</p>
-                        <p class="activity-subtitle">${{ "{:,.0f}".format(ingresos_totales) }} acumulados</p>
-                    </div>
-                </div>
+                {% endif %}
             </div>
         </div>
-    </div>
-
-    <!-- Acciones Rápidas -->
-    <div class="quick-actions">
-        <div class="action-card">
-            <div class="action-header">
-                <div class="action-icon" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);">
-                    <i class="fas fa-bullhorn"></i>
-                </div>
-                <h3 class="action-title">Comunicados</h3>
-            </div>
-            <p class="action-description">
-                Envía notificaciones importantes a residentes y empleados mediante correo electrónico.
-            </p>
-            <a href="{{ url_for('admin.comunicado') }}" class="btn-action btn-primary">
-                <i class="fas fa-paper-plane"></i>
-                Gestionar Comunicados
-            </a>
-        </div>
-
-        <div class="action-card">
-            <div class="action-header">
-                <div class="action-icon" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <h3 class="action-title">Reportes Financieros</h3>
-            </div>
-            <p class="action-description">
-                Accede a reportes detallados de ingresos, gastos y estado financiero general.
-            </p>
-            <a href="{{ url_for('admin.dashboard_finanzas') }}" class="btn-action btn-primary">
-                <i class="fas fa-chart-bar"></i>
-                Ver Finanzas
-            </a>
-        </div>
-
-        <div class="action-card">
-            <div class="action-header">
-                <div class="action-icon" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);">
-                    <i class="fas fa-users"></i>
-                </div>
-                <h3 class="action-title">Gestión de Usuarios</h3>
-            </div>
-            <p class="action-description">
-                Administra residentes, empleados y configura permisos del sistema.
-            </p>
-            <a href="{{ url_for('admin.usuarios') }}" class="btn-action btn-success">
-                <i class="fas fa-user-cog"></i>
-                Gestionar Usuarios
-            </a>
-        </div>
-    </div>
-
-    <!-- Invitaciones (sección existente) -->
-    <div class="grid-2-columns">
-        <!-- ... contenido existente de invitaciones ... -->
     </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add loading animation to cards
+        const cards = document.querySelectorAll('.action-card, .stat-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'all 0.5s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    });
 
+    function actualizarGrafico(dias) {
+        console.log('Actualizando gráfico para los últimos ' + dias + ' días');
+        // Aquí iría la lógica para actualizar el gráfico con nuevos datos
+    }
+</script>
 {% endblock %}

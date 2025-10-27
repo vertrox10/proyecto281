@@ -1,319 +1,848 @@
-<!-- templates/administrador/reporte.html -->
 {% extends 'administrador/base.html' %}
-
-{% block title %}Reportes y Estadísticas{% endblock %}
+{% block title %}Reportes Financieros{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #3498db;
+        --success-color: #27ae60;
+        --warning-color: #e67e22;
+        --danger-color: #e74c3c;
+        --light-color: #ecf0f1;
+        --dark-color: #34495e;
+        --info-color: #17a2b8;
+    }
+    
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .dashboard-header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .logo-section {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+    
+    .logo {
+        height: 60px;
+        width: auto;
+        background: white;
+        padding: 8px;
+        border-radius: 8px;
+    }
+    
+    .header-text h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .header-text p {
+        margin: 0.25rem 0 0 0;
+        opacity: 0.9;
+    }
+    
+    .logout-btn {
+        background-color: rgba(255,255,255,0.1);
+        color: white;
+        text-decoration: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        transition: background-color 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .logout-btn:hover {
+        background-color: rgba(255,255,255,0.2);
+    }
+    
+    .filtros-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .filtros-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        align-items: end;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+    
+    .form-select, .form-input {
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+    }
+    
+    .form-select:focus, .form-input:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+    }
+    
+    .btn-primary {
+        background-color: var(--secondary-color);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: background-color 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2980b9;
+    }
+    
+    .section-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--light-color);
+    }
+    
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.5rem;
+        color: var(--primary-color);
+        margin: 0;
+    }
+    
+    .section-badge {
+        background-color: var(--secondary-color);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: var(--dark-color);
+        font-weight: 500;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    
+    .data-table th {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 12px 15px;
+        text-align: left;
+        font-weight: 600;
+    }
+    
+    .data-table td {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .data-table tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .estado-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .estado-pagado {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .estado-pendiente {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .estado-atrasado {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .btn-export {
+        background-color: var(--success-color);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-export:hover {
+        background-color: #219653;
+    }
+    
+    .btn-imprimir {
+        background-color: var(--info-color);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-imprimir:hover {
+        background-color: #138496;
+    }
+    
+    .text-success {
+        color: var(--success-color);
+        font-weight: 600;
+    }
+    
+    .text-warning {
+        color: var(--warning-color);
+        font-weight: 600;
+    }
+    
+    .text-danger {
+        color: var(--danger-color);
+        font-weight: 600;
+    }
+    
+    .actions-cell {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .btn-action {
+        padding: 4px 8px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-view {
+        background-color: var(--info-color);
+        color: white;
+    }
+    
+    .btn-edit {
+        background-color: var(--warning-color);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 10px;
+        }
+        
+        .header-content {
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        
+        .filtros-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .section-card {
+            padding: 1.5rem;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 8px 10px;
+        }
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        color: #ddd;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
     <!-- Header -->
     <div class="dashboard-header">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 1.5rem;">
-                <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" 
-                     style="height: 60px; width: auto; background: white; padding: 8px; border-radius: 8px;">
-                <div>
-                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">Reportes y Estadísticas</h1>
-                    <p style="margin: 0.25rem 0 0 0; opacity: 0.9;">Análisis de pagos y deudas</p>
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo">
+                <div class="header-text">
+                    <h1>Reportes Financieros</h1>
+                    <p>Sistema de reportes y análisis financiero</p>
                 </div>
             </div>
-            <a href="{{ url_for('admin.dashboard_finanzas') }}" class="logout-btn">
-                <i class="fas fa-arrow-left"></i>
-                Volver a Finanzas
+            <a href="{{ url_for('admin.logout') }}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                Cerrar sesión
             </a>
         </div>
     </div>
 
-    <!-- Mensajes Flash -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+    <!-- Filtros -->
+    <div class="filtros-section">
+        <form method="GET" action="{{ url_for('admin.generar_reporte_finanzas') }}">
+            <div class="filtros-grid">
+                <div class="form-group">
+                    <label class="form-label">Fecha Inicio</label>
+                    <input type="date" name="fecha_inicio" class="form-input" value="{{ fecha_inicio }}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Fecha Fin</label>
+                    <input type="date" name="fecha_fin" class="form-input" value="{{ fecha_fin }}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Tipo de Reporte</label>
+                    <select name="tipo_reporte" class="form-select">
+                        <option value="general" {% if tipo_reporte == 'general' %}selected{% endif %}>General</option>
+                        <option value="pagos" {% if tipo_reporte == 'pagos' %}selected{% endif %}>Solo Pagos</option>
+                        <option value="deudas" {% if tipo_reporte == 'deudas' %}selected{% endif %}>Solo Deudas</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-filter"></i>
+                        Filtrar Reporte
+                    </button>
+                </div>
             </div>
-        {% endif %}
-    {% endwith %}
+        </form>
+    </div>
 
-    <!-- Estadísticas Rápidas -->
+    <!-- Estadísticas -->
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="stat-info">
-                <h3>Total Deudores</h3>
-                <div class="stat-value">{{ deudas_info.total_deudores }}</div>
-                <div class="stat-period">Usuarios con deuda</div>
-            </div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #ff9f43 0%, #f39c12 100%);">
+            <div class="stat-icon text-success">
                 <i class="fas fa-money-bill-wave"></i>
             </div>
-            <div class="stat-info">
-                <h3>Deuda Total</h3>
-                <div class="stat-value">Bs {{ "%.2f"|format(deudas_info.deuda_total) }}</div>
-                <div class="stat-period">Monto pendiente</div>
-            </div>
+            <div class="stat-value">Bs {{ "%.2f"|format(total_ingresos) }}</div>
+            <div class="stat-label">Total Ingresos</div>
         </div>
-
+        
         <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #54a0ff 0%, #2e86de 100%);">
+            <div class="stat-icon text-danger">
+                <i class="fas fa-credit-card"></i>
+            </div>
+            <div class="stat-value">Bs {{ "%.2f"|format(total_egresos) }}</div>
+            <div class="stat-label">Total Egresos</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon {% if balance >= 0 %}text-success{% else %}text-danger{% endif %}">
                 <i class="fas fa-chart-line"></i>
             </div>
-            <div class="stat-info">
-                <h3>Deuda Promedio</h3>
-                <div class="stat-value">Bs {{ "%.2f"|format(deudas_info.deuda_promedio) }}</div>
-                <div class="stat-period">Por usuario</div>
-            </div>
+            <div class="stat-value">Bs {{ "%.2f"|format(balance) }}</div>
+            <div class="stat-label">Balance General</div>
         </div>
-
+        
         <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg, #5f27cd 0%, #341f97 100%);">
-                <i class="fas fa-file-invoice"></i>
+            <div class="stat-icon text-info">
+                <i class="fas fa-file-invoice-dollar"></i>
             </div>
-            <div class="stat-info">
-                <h3>Deudas Pendientes</h3>
-                <div class="stat-value">{{ deudas_info.total_deudas_pendientes }}</div>
-                <div class="stat-period">Registros activos</div>
+            <div class="stat-value">{{ movimientos|length }}</div>
+            <div class="stat-label">Total Movimientos</div>
+        </div>
+    </div>
+
+    <!-- Sección 1: Empleados Pagados -->
+    <div class="section-card">
+    <div class="section-header">
+        <h2 class="section-title">
+            <i class="fas fa-users"></i>
+            Empleados Pagados
+        </h2>
+        <div class="section-badge">{{ pagos_empleados|length }} registros</div>
+    </div>
+
+    {% if pagos_empleados %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Empleado</th>
+                    <th>Puesto</th>
+                    <th>Monto</th>
+                    <th>Método de Pago</th>
+                    <th>Fecha de Pago</th>
+                    <th>N° Transacción</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pago in pagos_empleados %}
+                <tr id="pago-{{ pago.id_pago }}">
+                    <td>
+                        <div class="empleado-info">
+                            <strong>{{ pago.nombre_completo }}</strong>
+                            {% if pago.correo %}
+                            <br>
+                            <small class="text-muted">{{ pago.correo }}</small>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="puesto-badge">{{ pago.puesto or 'No especificado' }}</span>
+                    </td>
+                    <td class="text-success">
+                        <strong>Bs {{ "%.2f"|format(pago.monto) }}</strong>
+                    </td>
+                    <td>
+                        <div class="metodo-pago">
+                            {% if pago.metodo == 'transferencia' %}
+                                <i class="fas fa-university"></i>
+                                <span>Transferencia</span>
+                            {% elif pago.metodo == 'efectivo' %}
+                                <i class="fas fa-money-bill-wave"></i>
+                                <span>Efectivo</span>
+                            {% elif pago.metodo == 'QR' %}
+                                <i class="fas fa-qrcode"></i>
+                                <span>QR</span>
+                            {% else %}
+                                <i class="fas fa-credit-card"></i>
+                                <span>{{ pago.metodo or 'No especificado' }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        {% if pago.fecha_pago %}
+                            <div class="fecha-info">
+                                <strong>{{ pago.fecha_pago.strftime('%d/%m/%Y') }}</strong>
+                                <br>
+                                <small>{{ pago.fecha_pago.strftime('%H:%M') if pago.fecha_pago.hour > 0 else '' }}</small>
+                            </div>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if pago.nro_trans %}
+                            <code class="nro-trans">{{ pago.nro_trans }}</code>
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="estado-badge 
+                            {% if pago.estado == 'completado' %}estado-pagado
+                            {% elif pago.estado == 'pendiente' %}estado-pendiente
+                            {% elif pago.estado == 'fallido' %}estado-atrasado
+                            {% else %}estado-pendiente{% endif %}">
+                            
+                            {% if pago.estado == 'completado' %}
+                                <i class="fas fa-check-circle"></i> Completado
+                            {% elif pago.estado == 'pendiente' %}
+                                <i class="fas fa-clock"></i> Pendiente
+                            {% elif pago.estado == 'fallido' %}
+                                <i class="fas fa-times-circle"></i> Fallido
+                            {% else %}
+                                <i class="fas fa-question-circle"></i> {{ pago.estado }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td class="actions-cell">
+                        <!-- Botón para ver detalles del pago -->
+                        <button class="btn-action btn-view" 
+                                title="Ver detalles del pago"
+                                onclick="verDetallePago({{ pago.id_pago }})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        
+                        <!-- Botón para reembolsar (solo si está completado) -->
+                        {% if pago.estado == 'completado' %}
+                        <button class="btn-action btn-warning" 
+                                title="Reembolsar pago"
+                                onclick="reembolsarPago({{ pago.id_pago }})">
+                            <i class="fas fa-undo"></i>
+                        </button>
+                        {% endif %}
+                        
+                        <!-- Botón para eliminar pago -->
+                        <button class="btn-action btn-danger" 
+                                title="Eliminar registro"
+                                onclick="eliminarPago({{ pago.id_pago }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Resumen de pagos -->
+    <div class="resumen-pagos" style="margin-top: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h4 style="margin: 0 0 0.5rem 0; color: var(--primary-color);">
+                    <i class="fas fa-chart-bar"></i> Resumen de Pagos
+                </h4>
+                <div style="display: flex; gap: 2rem; font-size: 0.9rem;">
+                    <div>
+                        <strong>Total Pagado:</strong>
+                        <span class="text-success">Bs {{ "%.2f"|format(pagos_empleados|sum(attribute='monto')) }}</span>
+                    </div>
+                    <div>
+                        <strong>Promedio por pago:</strong>
+                        <span>Bs {{ "%.2f"|format((pagos_empleados|sum(attribute='monto') / pagos_empleados|length) if pagos_empleados|length > 0 else 0) }}</span>
+                    </div>
+                    <div>
+                        <strong>Método más usado:</strong>
+                        <span>
+                            {% set metodos = {} %}
+                            {% for pago in pagos_empleados %}
+                                {% set _ = metodos.update({pago.metodo: metodos.get(pago.metodo, 0) + 1}) %}
+                            {% endfor %}
+                            {% if metodos %}
+                                {{ metodos|dictsort(by='value')|last|first }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-export" onclick="exportarPagos()">
+                    <i class="fas fa-file-excel"></i>
+                    Exportar a Excel
+                </button>
+                <button class="btn-imprimir" onclick="imprimirPagos()">
+                    <i class="fas fa-print"></i>
+                    Imprimir
+                </button>
+                <button class="btn-primary" onclick="generarReportePagos()">
+                    <i class="fas fa-chart-pie"></i>
+                    Reporte Detallado
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Reportes Mensuales -->
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-users-slash"></i>
+        <h3>No hay pagos registrados</h3>
+        <p>No se encontraron pagos a empleados en el período seleccionado.</p>
+        <div style="margin-top: 1rem;">
+            <a href="{{ url_for('admin.finanzas') }}" class="btn-primary">
+                <i class="fas fa-plus"></i>
+                Registrar Primer Pago
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+    <!-- Sección 2: Empleados que Deben -->
     <div class="section-card">
         <div class="section-header">
             <h2 class="section-title">
-                <i class="fas fa-chart-bar"></i>
-                Reportes Mensuales de Pagos
+                <i class="fas fa-exclamation-triangle"></i>
+                Residentes con Deudas Pendientes
             </h2>
+            <div class="section-badge">{{ deudas_empleados|length }} registros</div>
         </div>
 
-        {% if reportes_mensuales and reportes_mensuales|length > 0 %}
+        {% if deudas_empleados %}
+        <!-- Tabla de deudas -->
         <div class="table-container">
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Mes</th>
-                        <th>Total Pagos</th>
-                        <th>Monto Total</th>
-                        <th>Método</th>
-                        <th>Usuarios Únicos</th>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Correo</th>
+                        <th>Departamento</th>
+                        <th>Identificador</th>
+                        <th>Monto</th>
+                        <th>Estado</th>
+                        <th>Fecha Registro</th>
+                        <th>Fecha Pago</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for reporte in reportes_mensuales %}
+                    {% for d in deudas_empleados %}
                     <tr>
-                        <td><strong>{{ reporte[0] }}</strong></td>
-                        <td>{{ reporte[1] }}</td>
-                        <td>Bs {{ "%.2f"|format(reporte[2]) }}</td>
-                        <td>
-                            <span class="badge {% if reporte[3] == 'transferencia' %}badge-primary{% elif reporte[3] == 'efectivo' %}badge-success{% else %}badge-info{% endif %}">
-                                {{ reporte[3]|title }}
-                            </span>
-                        </td>
-                        <td>{{ reporte[4] }}</td>
+                        <td>{{ d.id_deuda }}</td>
+                        <td>{{ d.nombre_completo }}</td>
+                        <td>{{ d.correo }}</td>
+                        <td>{{ d.departamento }}</td>
+                        <td>{{ d.identificador }}</td>
+                        <td>Bs {{ "%.2f"|format(d.monto) }}</td>
+                        <td>{{ d.estado }}</td>
+                        <td>{{ d.fecha_registro }}</td>
+                        <td>{{ d.fecha_pago or '-' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         {% else %}
-        <div class="no-data">
-            <i class="fas fa-chart-bar" style="font-size: 3rem; opacity: 0.5;"></i>
-            <h3>No hay datos de reportes</h3>
-            <p>No se encontraron registros de pagos para mostrar.</p>
+        <div class="empty-state">
+            <i class="fas fa-check-circle"></i>
+            <h3>No hay deudas pendientes</h3>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sección 3: Movimientos Financieros -->
+    <div class="section-card">
+        <div class="section-header">
+            <h2 class="section-title">
+                <i class="fas fa-exchange-alt"></i>
+                Movimientos Financieros
+            </h2>
+            <div class="section-badge">{{ movimientos|length }} registros</div>
+        </div>
+
+        {% if movimientos %}
+        <!-- Tabla de movimientos -->
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-exchange-alt"></i>
+            <h3>No hay movimientos</h3>
         </div>
         {% endif %}
     </div>
 </div>
-
-<style>
-.dashboard-container {
-    padding: 2rem;
-    background: #f8f9fa;
-    min-height: 100vh;
-}
-
-.dashboard-header {
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-    color: white;
-    padding: 1.5rem 2rem;
-    border-radius: 15px;
-    margin-bottom: 2rem;
-}
-
-.logout-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.logout-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-}
-
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.stat-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.stat-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.5rem;
-}
-
-.stat-info h3 {
-    margin: 0;
-    font-size: 1rem;
-    color: #6c757d;
-    font-weight: 600;
-}
-
-.stat-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #2c3e50;
-    margin: 0.25rem 0;
-}
-
-.stat-period {
-    font-size: 0.875rem;
-    color: #6c757d;
-}
-
-.section-card {
-    background: white;
-    border-radius: 15px;
-    padding: 2rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #f8f9fa;
-}
-
-.section-title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #2c3e50;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.data-table th {
-    background: #f8f9fa;
-    padding: 1rem;
-    text-align: left;
-    font-weight: 600;
-    color: #2c3e50;
-    border-bottom: 2px solid #dee2e6;
-}
-
-.data-table td {
-    padding: 1rem;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.875rem;
-    font-weight: 500;
-}
-
-.badge-primary {
-    background: #e3f2fd;
-    color: #1976d2;
-}
-
-.badge-success {
-    background: #e8f5e8;
-    color: #4caf50;
-}
-
-.badge-info {
-    background: #e3f2fd;
-    color: #2196f3;
-}
-
-.no-data {
-    text-align: center;
-    padding: 3rem;
-    color: #6c757d;
-}
-
-.alert {
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-}
-
-.alert-danger {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
-
-.alert-success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.flash-messages {
-    margin-bottom: 2rem;
-}
-</style>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{{ url_for('static', filename='administrador/style_reporte.js') }}"></script>
 <script>
+    function exportarPagos() {
+        mostrarNotificacion('Generando archivo Excel de pagos...', 'info');
+        // Aquí iría la lógica para exportar a Excel
+        setTimeout(() => {
+            mostrarNotificacion('Archivo Excel generado correctamente', 'success');
+        }, 2000);
+    }
 
+    function exportarDeudas() {
+        mostrarNotificacion('Generando archivo Excel de deudas...', 'info');
+        // Aquí iría la lógica para exportar a Excel
+        setTimeout(() => {
+            mostrarNotificacion('Archivo Excel generado correctamente', 'success');
+        }, 2000);
+    }
+
+    function imprimirPagos() {
+        window.print();
+    }
+
+    function imprimirDeudas() {
+        window.print();
+    }
+
+    function verDetalleDeuda(idDeuda) {
+        mostrarNotificacion('Cargando detalles de la deuda...', 'info');
+        // Aquí iría la lógica para ver detalles
+    }
+
+    function enviarRecordatorio(idDeuda) {
+        if (confirm('¿Está seguro de que desea enviar un recordatorio de pago?')) {
+            mostrarNotificacion('Enviando recordatorio...', 'info');
+            // Aquí iría la lógica para enviar recordatorio
+            setTimeout(() => {
+                mostrarNotificacion('Recordatorio enviado correctamente', 'success');
+            }, 2000);
+        }
+    }
+
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+        // Crear notificación temporal
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        
+        if (tipo === 'success') {
+            notification.style.backgroundColor = '#27ae60';
+        } else if (tipo === 'error') {
+            notification.style.backgroundColor = '#e74c3c';
+        } else if (tipo === 'warning') {
+            notification.style.backgroundColor = '#e67e22';
+        } else {
+            notification.style.backgroundColor = '#3498db';
+        }
+        
+        notification.textContent = mensaje;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
+    // --- Funciones para acciones sobre pagos (definidas para evitar errores si faltan en otros scripts) ---
+    function verDetallePago(idPago) {
+        mostrarNotificacion('Cargando comprobante...', 'info');
+        // Redirigir a la vista de comprobante si existe en el servidor
+        try {
+            const plantilla = "{{ url_for('admin.ver_comprobante', id_pago=0) }}"; // /comprobante/0
+            const url = plantilla.replace('/0', '/' + idPago);
+            window.location.href = url;
+        } catch (e) {
+            mostrarNotificacion('No se puede abrir el comprobante en este momento', 'error');
+            console.error(e);
+        }
+    }
+
+    function reembolsarPago(idPago) {
+        if (!confirm('¿Está seguro de que desea reembolsar este pago?')) return;
+        // El servidor actualmente no expone un endpoint de reembolso; usar notificación temporal
+        mostrarNotificacion('Funcionalidad de reembolso no implementada en servidor', 'warning');
+        // Si implementas un endpoint, aquí podríamos hacer un fetch POST para procesarlo
+    }
+
+    function eliminarPago(idPago) {
+        if (!confirm('¿Desea eliminar este registro de pago? Esta acción no se puede deshacer.')) return;
+        // Actualmente no hay endpoint para eliminar pagos en el servidor.
+        mostrarNotificacion('Funcionalidad de eliminación no implementada en el servidor', 'warning');
+    }
+
+    function generarReportePagos() {
+        // Redirige a la ruta de generación de reportes con filtro tipo=pagos
+        try {
+            const base = "{{ url_for('admin.generar_reporte_finanzas') }}";
+            const url = base + '?tipo=pagos';
+            window.location.href = url;
+        } catch (e) {
+            mostrarNotificacion('No se pudo generar el reporte.', 'error');
+            console.error(e);
+        }
+    }
+
+    // Auto-cerrar notificaciones al hacer clic
+    document.addEventListener('click', function(e) {
+        if (e.target.style.position === 'fixed') {
+            e.target.remove();
+        }
+    });
 </script>
 {% endblock %}

@@ -1,16 +1,432 @@
 {% extends 'administrador/base.html' %}
-{% block title %}Gestión de Pagos{% endblock %}
+{% block title %}Gestión de Finanzas{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #3498db;
+        --success-color: #27ae60;
+        --warning-color: #e67e22;
+        --danger-color: #e74c3c;
+        --light-color: #ecf0f1;
+        --dark-color: #34495e;
+        --info-color: #17a2b8;
+    }
+    
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .dashboard-header {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .logo-section {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+    
+    .logo {
+        height: 60px;
+        width: auto;
+        background: white;
+        padding: 8px;
+        border-radius: 8px;
+    }
+    
+    .header-text h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .header-text p {
+        margin: 0.25rem 0 0 0;
+        opacity: 0.9;
+    }
+    
+    .logout-btn {
+        background-color: rgba(255,255,255,0.1);
+        color: white;
+        text-decoration: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        transition: background-color 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .logout-btn:hover {
+        background-color: rgba(255,255,255,0.2);
+    }
+    
+    .main-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+    
+    .form-section {
+        width: 100%;
+    }
+    
+    .section-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        height: fit-content;
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--light-color);
+    }
+    
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.5rem;
+        color: var(--primary-color);
+        margin: 0;
+    }
+    
+    .section-badge {
+        background-color: var(--secondary-color);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .modern-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .form-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+    
+    .form-select, .form-input {
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    
+    .form-select:focus, .form-input:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+    
+    .form-text {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .info-empleado {
+        background-color: rgba(52, 152, 219, 0.05);
+        border: 1px solid rgba(52, 152, 219, 0.2);
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+    
+    .empleado-details {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .detail-label {
+        font-weight: 500;
+        color: var(--dark-color);
+    }
+    
+    .detail-value {
+        font-weight: 600;
+        color: var(--secondary-color);
+    }
+    
+    .btn-primary, .btn-success, .btn-info, .btn-secondary, .btn-outline {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+    }
+    
+    .btn-primary {
+        background-color: var(--secondary-color);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2980b9;
+    }
+    
+    .btn-success {
+        background-color: var(--success-color);
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background-color: #219653;
+    }
+    
+    .btn-info {
+        background-color: var(--info-color);
+        color: white;
+    }
+    
+    .btn-info:hover {
+        background-color: #138496;
+    }
+    
+    .btn-secondary {
+        background-color: var(--warning-color);
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #d35400;
+    }
+    
+    .btn-outline {
+        background-color: transparent;
+        color: var(--dark-color);
+        border: 1px solid #ddd;
+    }
+    
+    .btn-outline:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .btn-large {
+        padding: 15px 30px;
+        font-size: 1.1rem;
+    }
+    
+    .btn-small {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .conceptos-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .concepto-item {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .concepto-input, .monto-input {
+        width: 100%;
+    }
+    
+    .btn-eliminar-concepto {
+        background: none;
+        border: none;
+        color: var(--danger-color);
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-eliminar-concepto:hover {
+        background-color: rgba(231, 76, 60, 0.1);
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .mensaje-section {
+        margin-top: 1.5rem;
+    }
+    
+    .mensaje-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        color: var(--dark-color);
+    }
+    
+    .mensaje-textarea {
+        width: 100%;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        resize: vertical;
+        min-height: 150px;
+    }
+    
+    .mensaje-textarea:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+    
+    /* Notificaciones */
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        padding: 15px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        max-width: 400px;
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    .toast-success {
+        border-left: 4px solid var(--success-color);
+    }
+    
+    .toast-error {
+        border-left: 4px solid var(--danger-color);
+    }
+    
+    .toast-warning {
+        border-left: 4px solid var(--warning-color);
+    }
+    
+    .toast-info {
+        border-left: 4px solid var(--info-color);
+    }
+    
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .toast-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #666;
+        font-size: 1.1rem;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @media (max-width: 1024px) {
+        .main-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 10px;
+        }
+        
+        .header-content {
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        
+        .concepto-item {
+            grid-template-columns: 1fr;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+        
+        .section-card {
+            padding: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="dashboard-container">
     <!-- Header -->
     <div class="dashboard-header">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 1.5rem;">
-                <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" 
-                     style="height: 60px; width: auto; background: white; padding: 8px; border-radius: 8px;">
-                <div>
-                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">Gestión de Pagos</h1>
-                    <p style="margin: 0.25rem 0 0 0; opacity: 0.9;">Sistema integral de pagos y cobranzas</p>
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo">
+                <div class="header-text">
+                    <h1>Gestión de Finanzas</h1>
+                    <p>Sistema integral de pagos y cobranzas</p>
                 </div>
             </div>
             <a href="{{ url_for('admin.logout') }}" class="logout-btn">
@@ -20,7 +436,7 @@
         </div>
     </div>
 
-    <div class="main-grid" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <div class="main-grid">
         <!-- Formulario de Pago a Empleados -->
         <div class="form-section">
             <div class="section-card">
@@ -38,13 +454,32 @@
                             <i class="fas fa-user-tie"></i>
                             Empleado
                         </label>
-                        <select name="id_usuario" class="form-select" required>
+                        <select name="id_usuario" id="select-empleado" class="form-select" required onchange="actualizarInfoEmpleado()">
+                            <option value="">Seleccione un empleado</option>
                             {% for empleado in empleados %}
-                                <option value="{{ empleado.id_usuario }}">
-                                    {{ empleado.nombre }} {{ empleado.ap_paterno }}
+                                <option value="{{ empleado.id_usuario }}" data-salario="{{ empleado.salario }}" data-banco="{{ empleado.banco }}" data-cuenta="{{ empleado.numero_cuenta }}">
+                                    {{ empleado.nombre }} {{ empleado.ap_paterno }} - {{ empleado.puesto }}
                                 </option>
                             {% endfor %}
                         </select>
+                    </div>
+
+                    <!-- Información del empleado seleccionado -->
+                    <div id="info-empleado" class="info-empleado" style="display: none;">
+                        <div class="empleado-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Salario Base:</span>
+                                <span id="salario-base" class="detail-value">Bs 0.00</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Banco:</span>
+                                <span id="banco-empleado" class="detail-value">No registrado</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Cuenta:</span>
+                                <span id="cuenta-empleado" class="detail-value">No registrada</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -52,8 +487,9 @@
                             <i class="fas fa-coins"></i>
                             Monto (Bs)
                         </label>
-                        <input type="number" name="monto" step="0.01" min="0" value="1800.00" 
-                               class="form-input" placeholder="0.00">
+                        <input type="number" name="monto" step="0.01" min="0" 
+                               class="form-input" placeholder="0.00" id="input-monto">
+                        <small class="form-text">Dejar vacío para usar salario base</small>
                     </div>
 
                     <div class="form-group">
@@ -61,20 +497,21 @@
                             <i class="fas fa-credit-card"></i>
                             Método de Pago
                         </label>
-                        <select name="metodo" class="form-select" required>
+                        <select name="metodo" id="metodo-pago" class="form-select" required onchange="mostrarCampoTransferencia()">
                             <option value="transferencia">💰 Transferencia</option>
                             <option value="efectivo">💵 Efectivo</option>
                             <option value="QR">📱 QR</option>
                         </select>
                     </div>
 
-                    <div class="form-group">
+                    <!-- Campo condicional para transferencia -->
+                    <div class="form-group" id="campo-nro-trans" style="display: none;">
                         <label for="nro_trans" class="form-label">
                             <i class="fas fa-receipt"></i>
-                            Número de Transacción
+                            Número de Transacción (Opcional)
                         </label>
-                        <input type="text" name="nro_trans" maxlength="100" 
-                               class="form-input" placeholder="Ingrese referencia...">
+                        <input type="text" name="nro_trans" class="form-input" placeholder="Ej: TRF-123456">
+                        <small class="form-text">Para transferencia se usará automáticamente el número de cuenta del empleado</small>
                     </div>
 
                     <button type="submit" class="btn-primary btn-large">
@@ -85,872 +522,380 @@
             </div>
         </div>
 
-       <!-- Formulario de Cobros a Residentes -->
-<div class="form-section">
-    <div class="section-card">
-        <div class="section-header">
-            <h2 class="section-title">
-                <i class="fas fa-building"></i>
-                Cobros por Uso del Hotel
-            </h2>
-        </div>
-
-        <form method="POST" action="{{ url_for('admin.registrar_cobros') }}" id="form-cobros" class="modern-form">
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-user"></i>
-                    Residente
-                </label>
-                <select name="id_usuario" id="select-residente" class="form-select" required>
-                    {% for residente in residentes %}
-                    <option value="{{ residente.id_usuario }}">{{ residente.nombre }} {{ residente.ap_paterno }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fas fa-list"></i>
-                    Conceptos de Cobro
-                </label>
-                <div id="conceptos-container" class="conceptos-grid">
-                    <div class="concepto-item">
-                        <input type="text" name="concepto[]" placeholder="Ej. Salón de eventos" 
-                               class="form-input concepto-input" required>
-                        <input type="number" step="0.01" name="monto[]" placeholder="0.00" 
-                               class="form-input monto-input" required>
-                    </div>
+        <!-- Formulario de Cobros a Residentes -->
+        <div class="form-section">
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-building"></i>
+                        Cobros a Residentes
+                    </h2>
                 </div>
-            </div>
 
-            <div class="form-actions">
-                <button type="button" onclick="agregarConcepto()" class="btn-secondary btn-small">
-                    <i class="fas fa-plus"></i>
-                    Agregar Concepto
-                </button>
-                <button type="button" onclick="eliminarUltimoConcepto()" class="btn-outline btn-small">
-                    <i class="fas fa-trash"></i>
-                    Eliminar Último
-                </button>
-            </div>
+                <form method="POST" action="{{ url_for('admin.registrar_cobros') }}" id="form-cobros" class="modern-form">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-user"></i>
+                            Residente
+                        </label>
+                        <select name="id_usuario" id="select-residente" class="form-select" required>
+                            <option value="">Seleccione un residente</option>
+                            {% for residente in residentes %}
+                            <option value="{{ residente.id_usuario }}">
+                                {{ residente.nombre }} {{ residente.ap_paterno }} - Piso {{ residente.piso }}, Depto. {{ residente.nro_departamento }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-            <div class="mensaje-section">
-                <h3 class="mensaje-title">
-                    <i class="fas fa-envelope"></i>
-                    Mensaje para el Residente
-                </h3>
-                <textarea id="mensaje-residente" rows="6" class="mensaje-textarea" readonly></textarea>
-            </div>
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-list"></i>
+                            Conceptos de Cobro
+                        </label>
+                        <div id="conceptos-container" class="conceptos-grid">
+                            <div class="concepto-item">
+                                <input type="text" name="concepto[]" placeholder="Ej. Agua" 
+                                       class="form-input concepto-input" required
+                                       oninput="actualizarMensaje()">
+                                <input type="number" step="0.01" name="monto[]" placeholder="0.00" 
+                                       class="form-input monto-input" required
+                                       oninput="actualizarMensaje()">
+                                <button type="button" class="btn-eliminar-concepto" onclick="eliminarConcepto(this)" title="Eliminar concepto">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn-success btn-large">
-                    <i class="fas fa-save"></i>
-                    Registrar Cobros
-                </button>
-                
-                <!-- Cambiamos a un solo botón que envía ambos -->
-                <button type="button" onclick="registrarYEnviar()" class="btn-info btn-large">
-                    <i class="fas fa-paper-plane"></i>
-                    Registrar y Enviar Mensaje
-                </button>
+                    <div class="form-actions">
+                        <button type="button" onclick="agregarConcepto()" class="btn-secondary btn-small">
+                            <i class="fas fa-plus"></i>
+                            Agregar Concepto
+                        </button>
+                        <button type="button" onclick="eliminarUltimoConcepto()" class="btn-outline btn-small">
+                            <i class="fas fa-trash"></i>
+                            Eliminar Último
+                        </button>
+                    </div>
+
+                    <div class="mensaje-section">
+                        <h3 class="mensaje-title">
+                            <i class="fas fa-envelope"></i>
+                            Mensaje para el Residente
+                        </h3>
+                        <textarea id="mensaje-residente" rows="6" class="mensaje-textarea" readonly></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn-success btn-large">
+                            <i class="fas fa-save"></i>
+                            Registrar Cobros
+                        </button>
+                        
+                        <button type="button" onclick="registrarYEnviar()" class="btn-info btn-large">
+                            <i class="fas fa-paper-plane"></i>
+                            Registrar y Enviar Mensaje
+                        </button>
+                        
+                        <a href="{{ url_for('admin.reporte_deudas') }}" class="btn-outline btn-large">
+                            <i class="fas fa-chart-bar"></i>
+                            Ver Reportes
+                        </a>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
 </div>
-<style>
-.dashboard-container {
-    padding: 2rem;
-    background: #f8f9fa;
-    min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.dashboard-header {
-    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-    color: white;
-    padding: 1.5rem 2rem;
-    border-radius: 15px;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-.main-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-}
-
-.form-section {
-    display: flex;
-    flex-direction: column;
-}
-
-.section-card {
-    background: white;
-    border-radius: 15px;
-    padding: 2rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    height: fit-content;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.section-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #f8f9fa;
-}
-
-.section-title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #2c3e50;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.section-badge {
-    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.modern-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.form-label {
-    font-weight: 600;
-    color: #2c3e50;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.95rem;
-}
-
-.form-input, .form-select {
-    padding: 0.75rem 1rem;
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    background: white;
-    font-family: inherit;
-}
-
-.form-input:focus, .form-select:focus {
-    outline: none;
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
-    transform: translateY(-1px);
-}
-
-.form-input::placeholder {
-    color: #adb5bd;
-}
-
-.form-select {
-    cursor: pointer;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 1.5em 1.5em;
-    padding-right: 2.5rem;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-}
-
-.conceptos-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.concepto-item {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 0.75rem;
-    align-items: center;
-    padding: 0.75rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-    transition: all 0.3s ease;
-}
-
-.concepto-item:hover {
-    background: #e9ecef;
-    border-color: #dee2e6;
-}
-
-.concepto-input, .monto-input {
-    width: 100%;
-    border: 1px solid #ced4da;
-    background: white;
-}
-
-.concepto-input:focus, .monto-input:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
-}
-
-.form-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-.btn-primary, .btn-success, .btn-info, .btn-secondary, .btn-outline {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-align: center;
-    justify-content: center;
-    font-family: inherit;
-    font-size: 0.95rem;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-primary::before, .btn-success::before, .btn-info::before, .btn-secondary::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-    transition: left 0.5s;
-}
-
-.btn-primary:hover::before, .btn-success:hover::before, .btn-info:hover::before, .btn-secondary:hover::before {
-    left: 100%;
-}
-
-.btn-large {
-    padding: 1rem 2rem;
-    font-size: 1.1rem;
-    flex: 1;
-}
-
-.btn-small {
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-    color: white;
-}
-
-.btn-success {
-    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-    color: white;
-}
-
-.btn-info {
-    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-    color: white;
-}
-
-.btn-secondary {
-    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-    color: white;
-}
-
-.btn-outline {
-    background: transparent;
-    border: 2px solid #6c757d;
-    color: #6c757d;
-}
-
-.btn-primary:hover, .btn-success:hover, .btn-info:hover, .btn-secondary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-}
-
-.btn-outline:hover {
-    background: #6c757d;
-    color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
-}
-
-.btn:active {
-    transform: translateY(0);
-}
-
-.mensaje-section {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    padding: 1.5rem;
-    border-radius: 10px;
-    border-left: 4px solid #2196f3;
-    position: relative;
-    overflow: hidden;
-}
-
-.mensaje-section::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #2196f3, #4caf50, #ff9800);
-}
-
-.mensaje-title {
-    margin: 0 0 1rem 0;
-    font-size: 1.1rem;
-    color: #2c3e50;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-weight: 600;
-}
-
-.mensaje-textarea {
-    width: 100%;
-    padding: 1rem;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    font-family: inherit;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    resize: vertical;
-    background: white;
-    transition: all 0.3s ease;
-    min-height: 120px;
-}
-
-.mensaje-textarea:focus {
-    outline: none;
-    border-color: #2196f3;
-    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
-}
-
-.mensaje-textarea:read-only {
-    background: #f8f9fa;
-    color: #495057;
-    cursor: not-allowed;
-}
-
-.logout-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
-}
-
-.logout-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* Animaciones */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.section-card {
-    animation: fadeIn 0.5s ease-out;
-}
-
-.concepto-item {
-    animation: fadeIn 0.3s ease-out;
-}
-
-/* Estados de validación */
-.form-input:valid:not(:placeholder-shown) {
-    border-color: #4caf50;
-}
-
-.form-input:invalid:not(:placeholder-shown) {
-    border-color: #f44336;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-    .main-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
-    
-    .concepto-item {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-    }
-}
-
-@media (max-width: 768px) {
-    .dashboard-container {
-        padding: 1rem;
-    }
-    
-    .section-card {
-        padding: 1.5rem;
-        margin: 0.5rem;
-    }
-    
-    .form-actions {
-        flex-direction: column;
-    }
-    
-    .btn-large {
-        width: 100%;
-    }
-    
-    .section-header {
-        flex-direction: column;
-        gap: 1rem;
-        align-items: flex-start;
-    }
-    
-    .section-badge {
-        align-self: flex-start;
-    }
-}
-
-@media (max-width: 480px) {
-    .dashboard-header {
-        padding: 1rem;
-    }
-    
-    .section-card {
-        padding: 1rem;
-    }
-    
-    .form-input, .form-select {
-        padding: 0.625rem 0.75rem;
-    }
-    
-    .mensaje-section {
-        padding: 1rem;
-    }
-}
-
-/* Efectos de carga */
-.btn-loading {
-    position: relative;
-    color: transparent !important;
-}
-
-.btn-loading::after {
-    content: '';
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    border: 2px solid transparent;
-    border-top: 2px solid white;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* Scroll personalizado */
-.conceptos-grid::-webkit-scrollbar {
-    width: 6px;
-}
-
-.conceptos-grid::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.conceptos-grid::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-}
-
-.conceptos-grid::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-</style>
-<script>
-// Variables globales
-let conceptosState = [];
-
-function agregarConcepto() {
-    const container = document.getElementById("conceptos-container");
-    const nuevo = document.createElement("div");
-    nuevo.className = "concepto-item";
-    nuevo.innerHTML = `
-        <input type="text" name="concepto[]" placeholder="Ej. Servicio adicional" 
-               class="form-input concepto-input" required
-               oninput="actualizarMensaje()">
-        <input type="number" step="0.01" name="monto[]" placeholder="0.00" 
-               class="form-input monto-input" required
-               oninput="actualizarMensaje()">
-        <button type="button" class="btn-eliminar-concepto" onclick="eliminarConcepto(this)" title="Eliminar concepto">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    container.appendChild(nuevo);
-    actualizarMensaje();
-}
-
-function eliminarConcepto(element) {
-    const conceptoItem = element.closest('.concepto-item');
-    const container = document.getElementById("conceptos-container");
-    const items = container.getElementsByClassName('concepto-item');
-    
-    if (items.length > 1) {
-        container.removeChild(conceptoItem);
-        actualizarMensaje();
-    } else {
-        mostrarNotificacion('Debe haber al menos un concepto de cobro registrado.', 'warning');
-    }
-}
-
-function eliminarUltimoConcepto() {
-    const container = document.getElementById("conceptos-container");
-    const items = container.getElementsByClassName('concepto-item');
-    
-    if (items.length > 1) {
-        eliminarConcepto(items[items.length - 1].querySelector('.btn-eliminar-concepto'));
-    } else {
-        mostrarNotificacion('Debe haber al menos un concepto de cobro registrado.', 'warning');
-    }
-}
-
-function actualizarMensaje() {
-    const selectResidente = document.getElementById("select-residente");
-    const nombreResidente = selectResidente.options[selectResidente.selectedIndex].text;
-    const conceptos = document.querySelectorAll("input[name='concepto[]']");
-    const montos = document.querySelectorAll("input[name='monto[]']");
-    
-    let total = 0;
-    let conceptosValidos = [];
-    
-    // Procesar conceptos y montos
-    for (let i = 0; i < conceptos.length; i++) {
-        const concepto = conceptos[i].value.trim();
-        const monto = parseFloat(montos[i].value);
-        
-        if (concepto && !isNaN(monto) && monto > 0) {
-            conceptosValidos.push({ concepto, monto });
-            total += monto;
-        }
-    }
-    
-    // Generar mensaje
-    let mensaje = `Estimado/a ${nombreResidente},\n\n`;
-    mensaje += `Se han registrado los siguientes cobros por uso del edificio:\n\n`;
-    
-    if (conceptosValidos.length > 0) {
-        conceptosValidos.forEach(item => {
-            mensaje += `• ${item.concepto}: Bs ${item.monto.toFixed(2)}\n`;
-        });
-        
-        mensaje += `\n💰 Total a pagar: Bs ${total.toFixed(2)}\n\n`;
-        mensaje += `Fecha límite de pago: ${obtenerFechaLimite()}\n\n`;
-        mensaje += `Métodos de pago disponibles:\n`;
-        mensaje += `• Transferencia bancaria\n`;
-        mensaje += `• Efectivo en administración\n`;
-        mensaje += `• QR de pago\n\n`;
-    } else {
-        mensaje += `No se han registrado conceptos de cobro válidos.\n\n`;
-    }
-    
-    mensaje += `Agradecemos su puntualidad en el pago.\n\n`;
-    mensaje += `Atentamente,\n`;
-    mensaje += `Administración del Edificio`;
-    
-    document.getElementById("mensaje-residente").value = mensaje;
-}
-
-function obtenerFechaLimite() {
-    const hoy = new Date();
-    const fechaLimite = new Date(hoy);
-    fechaLimite.setDate(hoy.getDate() + 7);
-    
-    return fechaLimite.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-}
-
-// NUEVA FUNCIÓN: Registrar cobros y enviar mensaje
-function registrarYEnviar() {
-    const formCobros = document.getElementById('form-cobros');
-    const selectResidente = document.getElementById("select-residente");
-    const idUsuario = selectResidente.value;
-    const mensaje = document.getElementById("mensaje-residente").value.trim();
-    
-    // Validaciones
-    if (!mensaje) {
-        mostrarNotificacion('El mensaje está vacío. Por favor, agregue conceptos de cobro primero.', 'error');
-        return false;
-    }
-    
-    const conceptos = document.querySelectorAll("input[name='concepto[]']");
-    let conceptosValidos = false;
-    
-    for (let i = 0; i < conceptos.length; i++) {
-        const concepto = conceptos[i].value.trim();
-        const monto = parseFloat(document.querySelectorAll("input[name='monto[]']")[i].value);
-        
-        if (concepto && !isNaN(monto) && monto > 0) {
-            conceptosValidos = true;
-            break;
-        }
-    }
-    
-    if (!conceptosValidos) {
-        mostrarNotificacion('Debe agregar al menos un concepto de cobro válido antes de enviar.', 'warning');
-        return false;
-    }
-    
-    // Primero registrar los cobros
-    mostrarNotificacion('Registrando cobros...', 'info');
-    
-    // Crear un formulario temporal para enviar el mensaje
-    const formData = new FormData();
-    formData.append('id_usuario', idUsuario);
-    formData.append('mensaje', mensaje);
-    
-    // Enviar primero el formulario de cobros
-    fetch(formCobros.action, {
-        method: 'POST',
-        body: new FormData(formCobros)
-    })
-    .then(response => {
-        if (response.ok) {
-            // Si los cobros se registran bien, enviar el mensaje
-            return fetch("{{ url_for('admin.enviar_mensaje_residente') }}", {
-                method: 'POST',
-                body: formData
-            });
-        } else {
-            throw new Error('Error al registrar cobros');
-        }
-    })
-    .then(response => {
-        if (response.ok) {
-            mostrarNotificacion('✅ Cobros registrados y mensaje enviado correctamente', 'success');
-            // Recargar después de 2 segundos
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-        } else {
-            throw new Error('Error al enviar mensaje');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        mostrarNotificacion('❌ Error en el proceso: ' + error.message, 'error');
-    });
-}
-
-// Función para mostrar notificaciones
-function mostrarNotificacion(mensaje, tipo = 'info') {
-    // Buscar si ya existe una notificación
-    const notificacionesExistentes = document.querySelectorAll('.toast-notification');
-    notificacionesExistentes.forEach(notif => notif.remove());
-    
-    // Crear notificación
-    const toast = document.createElement('div');
-    toast.className = `toast-notification toast-${tipo}`;
-    toast.innerHTML = `
-        <div class="toast-content">
-            <i class="fas ${obtenerIconoTipo(tipo)}"></i>
-            <span>${mensaje}</span>
-        </div>
-        <button class="toast-close" onclick="this.parentElement.remove()">
-            <i class="fas fa-times"></i>
-        </button>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Auto-eliminar después de 5 segundos
-    setTimeout(() => {
-        if (toast.parentElement) {
-            toast.remove();
-        }
-    }, 5000);
-}
-
-function obtenerIconoTipo(tipo) {
-    const iconos = {
-        'success': 'fa-check-circle',
-        'error': 'fa-exclamation-circle',
-        'warning': 'fa-exclamation-triangle',
-        'info': 'fa-info-circle'
-    };
-    return iconos[tipo] || 'fa-info-circle';
-}
-
-// Inicialización
-document.addEventListener("DOMContentLoaded", function() {
-    actualizarMensaje();
-    
-    const selectResidente = document.getElementById("select-residente");
-    if (selectResidente) {
-        selectResidente.addEventListener('change', actualizarMensaje);
-    }
-});
-
-// Validación del formulario de cobros
-document.addEventListener('DOMContentLoaded', function() {
-    const formCobros = document.getElementById('form-cobros');
-    if (formCobros) {
-        formCobros.addEventListener('submit', function(e) {
-            const conceptos = document.querySelectorAll("input[name='concepto[]']");
-            let conceptosValidos = false;
-            
-            for (let i = 0; i < conceptos.length; i++) {
-                const concepto = conceptos[i].value.trim();
-                const monto = parseFloat(document.querySelectorAll("input[name='monto[]']")[i].value);
-                
-                if (concepto && !isNaN(monto) && monto > 0) {
-                    conceptosValidos = true;
-                    break;
-                }
-            }
-            
-            if (!conceptosValidos) {
-                e.preventDefault();
-                mostrarNotificacion('Debe agregar al menos un concepto de cobro válido antes de registrar.', 'warning');
-            } else {
-                mostrarNotificacion('Registrando cobros...', 'info');
-            }
-        });
-    }
-});
-</script>
-
-<style>
-.toast-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 1rem 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    max-width: 400px;
-    animation: slideInRight 0.3s ease;
-}
-
-.toast-success {
-    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-    color: white;
-}
-
-.toast-error {
-    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
-    color: white;
-}
-
-.toast-warning {
-    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-    color: white;
-}
-
-.toast-info {
-    background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
-    color: white;
-}
-
-.toast-close {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 0;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-.btn-eliminar-concepto {
-    background: #f44336;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-eliminar-concepto:hover {
-    background: #d32f2f;
-    transform: scale(1.1);
-}
-</style>
 {% endblock %}
 
-    
+{% block extra_scripts %}
+<script>
+    // Función para actualizar la información del empleado seleccionado
+    function actualizarInfoEmpleado() {
+        const selectEmpleado = document.getElementById("select-empleado");
+        const empleadoOption = selectEmpleado.options[selectEmpleado.selectedIndex];
+        const infoEmpleado = document.getElementById("info-empleado");
+        
+        if (empleadoOption.value && empleadoOption.dataset.salario) {
+            const salario = parseFloat(empleadoOption.dataset.salario);
+            const banco = empleadoOption.dataset.banco || 'No registrado';
+            const cuenta = empleadoOption.dataset.cuenta || 'No registrada';
+            
+            document.getElementById("salario-base").textContent = `Bs ${salario.toFixed(2)}`;
+            document.getElementById("banco-empleado").textContent = banco;
+            document.getElementById("cuenta-empleado").textContent = cuenta;
+            document.getElementById("input-monto").value = salario.toFixed(2);
+            infoEmpleado.style.display = 'block';
+        } else {
+            infoEmpleado.style.display = 'none';
+            document.getElementById("input-monto").value = '';
+        }
+    }
+
+    // Función para mostrar/ocultar campo de número de transacción
+    function mostrarCampoTransferencia() {
+        const metodoPago = document.getElementById("metodo-pago").value;
+        const campoNroTrans = document.getElementById("campo-nro-trans");
+        
+        if (metodoPago === 'transferencia') {
+            campoNroTrans.style.display = 'block';
+        } else {
+            campoNroTrans.style.display = 'none';
+        }
+    }
+
+    // Funciones para gestión de conceptos de cobro
+    function agregarConcepto() {
+        const container = document.getElementById("conceptos-container");
+        const nuevo = document.createElement("div");
+        nuevo.className = "concepto-item";
+        nuevo.innerHTML = `
+            <input type="text" name="concepto[]" placeholder="Ej. Luz" 
+                   class="form-input concepto-input" required
+                   oninput="actualizarMensaje()">
+            <input type="number" step="0.01" name="monto[]" placeholder="0.00" 
+                   class="form-input monto-input" required
+                   oninput="actualizarMensaje()">
+            <button type="button" class="btn-eliminar-concepto" onclick="eliminarConcepto(this)" title="Eliminar concepto">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        container.appendChild(nuevo);
+        actualizarMensaje();
+    }
+
+    function eliminarConcepto(element) {
+        const conceptoItem = element.closest('.concepto-item');
+        const container = document.getElementById("conceptos-container");
+        const items = container.getElementsByClassName('concepto-item');
+        
+        if (items.length > 1) {
+            container.removeChild(conceptoItem);
+            actualizarMensaje();
+        } else {
+            mostrarNotificacion('Debe haber al menos un concepto de cobro registrado.', 'warning');
+        }
+    }
+
+    function eliminarUltimoConcepto() {
+        const container = document.getElementById("conceptos-container");
+        const items = container.getElementsByClassName('concepto-item');
+        
+        if (items.length > 1) {
+            eliminarConcepto(items[items.length - 1].querySelector('.btn-eliminar-concepto'));
+        } else {
+            mostrarNotificacion('Debe haber al menos un concepto de cobro registrado.', 'warning');
+        }
+    }
+
+    // Función para actualizar el mensaje automáticamente
+    function actualizarMensaje() {
+        const selectResidente = document.getElementById("select-residente");
+        const nombreResidente = selectResidente.options[selectResidente.selectedIndex].text;
+        const conceptos = document.querySelectorAll("input[name='concepto[]']");
+        const montos = document.querySelectorAll("input[name='monto[]']");
+        
+        let total = 0;
+        let conceptosValidos = [];
+        
+        // Procesar conceptos y montos
+        for (let i = 0; i < conceptos.length; i++) {
+            const concepto = conceptos[i].value.trim();
+            const monto = parseFloat(montos[i].value);
+            
+            if (concepto && !isNaN(monto) && monto > 0) {
+                conceptosValidos.push({ concepto, monto });
+                total += monto;
+            }
+        }
+        
+        // Generar mensaje
+        let mensaje = `Estimado/a ${nombreResidente},\n\n`;
+        mensaje += `Se han registrado los siguientes cobros por servicios:\n\n`;
+        
+        if (conceptosValidos.length > 0) {
+            conceptosValidos.forEach(item => {
+                mensaje += `• ${item.concepto}: Bs ${item.monto.toFixed(2)}\n`;
+            });
+            
+            mensaje += `\n💰 Total a pagar: Bs ${total.toFixed(2)}\n\n`;
+            mensaje += `Fecha límite de pago: ${obtenerFechaLimite()}\n\n`;
+            mensaje += `Métodos de pago disponibles:\n`;
+            mensaje += `• Transferencia bancaria\n`;
+            mensaje += `• Efectivo en administración\n`;
+            mensaje += `• QR de pago\n\n`;
+        } else {
+            mensaje += `No se han registrado conceptos de cobro válidos.\n\n`;
+        }
+        
+        mensaje += `Agradecemos su puntualidad en el pago.\n\n`;
+        mensaje += `Atentamente,\n`;
+        mensaje += `Administración del Edificio`;
+        
+        document.getElementById("mensaje-residente").value = mensaje;
+    }
+
+    function obtenerFechaLimite() {
+        const hoy = new Date();
+        const fechaLimite = new Date(hoy);
+        fechaLimite.setDate(hoy.getDate() + 7);
+        
+        return fechaLimite.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    }
+
+    // Función para registrar y enviar mensaje
+    function registrarYEnviar() {
+        const formCobros = document.getElementById('form-cobros');
+        const selectResidente = document.getElementById("select-residente");
+        const idUsuario = selectResidente.value;
+        const mensaje = document.getElementById("mensaje-residente").value.trim();
+        
+        // Validaciones
+        if (!mensaje) {
+            mostrarNotificacion('El mensaje está vacío. Por favor, agregue conceptos de cobro primero.', 'error');
+            return false;
+        }
+        
+        const conceptos = document.querySelectorAll("input[name='concepto[]']");
+        let conceptosValidos = false;
+        
+        for (let i = 0; i < conceptos.length; i++) {
+            const concepto = conceptos[i].value.trim();
+            const monto = parseFloat(document.querySelectorAll("input[name='monto[]']")[i].value);
+            
+            if (concepto && !isNaN(monto) && monto > 0) {
+                conceptosValidos = true;
+                break;
+            }
+        }
+        
+        if (!conceptosValidos) {
+            mostrarNotificacion('Debe agregar al menos un concepto de cobro válido antes de enviar.', 'warning');
+            return false;
+        }
+        
+        // Primero registrar los cobros
+        mostrarNotificacion('Registrando cobros...', 'info');
+        
+        // Crear un formulario temporal para enviar el mensaje
+        const formData = new FormData();
+        formData.append('id_usuario', idUsuario);
+        formData.append('mensaje', mensaje);
+        
+        // Enviar primero el formulario de cobros
+        fetch(formCobros.action, {
+            method: 'POST',
+            body: new FormData(formCobros)
+        })
+        .then(response => {
+            if (response.ok) {
+                // Si los cobros se registran bien, enviar el mensaje
+                return fetch("{{ url_for('admin.enviar_mensaje_residente') }}", {
+                    method: 'POST',
+                    body: formData
+                });
+            } else {
+                throw new Error('Error al registrar cobros');
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                mostrarNotificacion('✅ Cobros registrados y mensaje enviado correctamente', 'success');
+                // Recargar después de 2 segundos
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                throw new Error('Error al enviar mensaje');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            mostrarNotificacion('❌ Error en el proceso: ' + error.message, 'error');
+        });
+    }
+
+    // Función para mostrar notificaciones
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+        // Buscar si ya existe una notificación
+        const notificacionesExistentes = document.querySelectorAll('.toast-notification');
+        notificacionesExistentes.forEach(notif => notif.remove());
+        
+        // Crear notificación
+        const toast = document.createElement('div');
+        toast.className = `toast-notification toast-${tipo}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <i class="fas ${obtenerIconoTipo(tipo)}"></i>
+                <span>${mensaje}</span>
+            </div>
+            <button class="toast-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Auto-eliminar después de 5 segundos
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.remove();
+            }
+        }, 5000);
+    }
+
+    function obtenerIconoTipo(tipo) {
+        const iconos = {
+            'success': 'fa-check-circle',
+            'error': 'fa-exclamation-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-info-circle'
+        };
+        return iconos[tipo] || 'fa-info-circle';
+    }
+
+    // Inicialización
+    document.addEventListener("DOMContentLoaded", function() {
+        actualizarMensaje();
+        
+        const selectResidente = document.getElementById("select-residente");
+        if (selectResidente) {
+            selectResidente.addEventListener('change', actualizarMensaje);
+        }
+    });
+
+    // Validación del formulario de cobros
+    document.addEventListener('DOMContentLoaded', function() {
+        const formCobros = document.getElementById('form-cobros');
+        if (formCobros) {
+            formCobros.addEventListener('submit', function(e) {
+                const conceptos = document.querySelectorAll("input[name='concepto[]']");
+                let conceptosValidos = false;
+                
+                for (let i = 0; i < conceptos.length; i++) {
+                    const concepto = conceptos[i].value.trim();
+                    const monto = parseFloat(document.querySelectorAll("input[name='monto[]']")[i].value);
+                    
+                    if (concepto && !isNaN(monto) && monto > 0) {
+                        conceptosValidos = true;
+                        break;
+                    }
+                }
+                
+                if (!conceptosValidos) {
+                    e.preventDefault();
+                    mostrarNotificacion('Debe agregar al menos un concepto de cobro válido antes de registrar.', 'warning');
+                } else {
+                    mostrarNotificacion('Registrando cobros...', 'info');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

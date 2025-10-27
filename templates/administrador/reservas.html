@@ -2,9 +2,528 @@
 {% block title %}Reservas{% endblock %}
 {% block content %}
 <div class="header" style="display: flex; align-items: center; gap: 18px;">
-    <h1 style="margin:0;">Reservas</h1>
+    <h1 style="margin:0;">Reservas - Áreas Comunes</h1>
     <span style="margin-left:auto;"></span>
     <a href="{{ url_for('admin.logout') }}" class="logout-btn">Cerrar sesión</a>
 </div>
-<p>Contenido de la sección Reservas.</p>
+
+<div style="margin-top:20px;background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.06);">
+    <!-- Filtros y búsqueda -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; gap: 10px;">
+            <select class="form-select" style="width: auto;" id="filtroArea">
+                <option value="">Todas las áreas</option>
+                {% for area in areas %}
+                <option value="{{ area.id_area }}">{{ area.nombre }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select" style="width: auto;" id="filtroEstado">
+                <option value="">Todos los estados</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="pagado">Pagado</option>
+                <option value="expirado">Expirado</option>
+            </select>
+            <select class="form-select" style="width: auto;" id="filtroTipo">
+                <option value="">Todos los tipos</option>
+                <option value="residente">Residentes</option>
+                <option value="externo">Externos</option>
+            </select>
+            <input type="date" class="form-control" style="width: auto;" id="filtroFecha">
+        </div>
+        <button class="btn btn-primary" onclick="mostrarModalReserva()">Nueva Reserva</button>
+    </div>
+
+    <!-- Estadísticas rápidas -->
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 25px;">
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; text-align: center;">
+            <h4 style="margin: 0; color: #1976d2;">{{ pendientes }}</h4>
+            <p style="margin: 5px 0 0 0; font-size: 12px;">Pendientes</p>
+        </div>
+        <div style="background: #e8f5e8; padding: 15px; border-radius: 6px; text-align: center;">
+            <h4 style="margin: 0; color: #2e7d32;">{{ pagados }}</h4>
+            <p style="margin: 5px 0 0 0; font-size: 12px;">Pagados</p>
+        </div>
+        <div style="background: #ffebee; padding: 15px; border-radius: 6px; text-align: center;">
+            <h4 style="margin: 0; color: #c62828;">{{ expirados }}</h4>
+            <p style="margin: 5px 0 0 0; font-size: 12px;">Expirados</p>
+        </div>
+        <div style="background: #fff3e0; padding: 15px; border-radius: 6px; text-align: center;">
+            <h4 style="margin: 0; color: #ef6c00;">{{ hoy }}</h4>
+            <p style="margin: 5px 0 0 0; font-size: 12px;">Hoy</p>
+        </div>
+        <div style="background: #e8eaf6; padding: 15px; border-radius: 6px; text-align: center;">
+            <h4 style="margin: 0; color: #303f9f;">{{ residentes_count }}</h4>
+            <p style="margin: 5px 0 0 0; font-size: 12px;">Residentes</p>
+        </div>
+        <div style="background: #f3e5f5; padding: 15px; border-radius: 6px; text-align: center;">
+            <h4 style="margin: 0; color: #7b1fa2;">{{ externos_count }}</h4>
+            <p style="margin: 5px 0 0 0; font-size: 12px;">Externos</p>
+        </div>
+    </div>
+
+    <!-- Lista de reservas -->
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID Reserva</th>
+                    <th>Solicitante</th>
+                    <th>Contacto</th>
+                    <th>Ubicación</th>
+                    <th>Área</th>
+                    <th>Fecha Reserva</th>
+                    <th>Horas</th>
+                    <th>Monto</th>
+                    <th>Estado</th>
+                    <th>Tipo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reserva in reservas %}
+                <tr>
+                    <td>#{{ reserva.id_pago }}</td>
+                    <td>
+                        {{ reserva.solicitante_nombre }}
+                        {% if reserva.tipo_solicitante == 'externo' %}
+                        <br><small class="text-muted">Externo</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small>{{ reserva.solicitante_contacto }}</small>
+                    </td>
+                    <td>
+                        <small>{{ reserva.solicitante_ubicacion }}</small>
+                    </td>
+                    <td>{{ reserva.area_nombre }}</td>
+                    <td>
+                        {% if reserva.fecha_reserva %}
+                            {{ reserva.fecha_reserva.strftime('%d/%m/%Y') }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ reserva.horas or 2 }} hrs</td>
+                    <td>Bs {{ "%.2f"|format(reserva.monto) }}</td>
+                    <td>
+                        <span class="estado-badge estado-{{ reserva.estado }}">
+                            {{ reserva.estado|title }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="tipo-badge tipo-{{ reserva.tipo_solicitante }}">
+                            {{ reserva.tipo_solicitante|title }}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-info btn-sm" onclick="verDetalle({{ reserva.id_pago }})" title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        {% if reserva.estado == 'pendiente' %}
+                        <button class="btn btn-success btn-sm" onclick="aprobarReserva({{ reserva.id_pago }})" title="Aprobar">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="rechazarReserva({{ reserva.id_pago }})" title="Rechazar">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal para nueva reserva -->
+<div class="modal fade" id="modalReserva">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nueva Reserva de Área Común</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formReserva">
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Solicitante *</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="tipoSolicitante" id="tipoResidente" value="residente" checked>
+                                <label class="form-check-label" for="tipoResidente">Residente</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="tipoSolicitante" id="tipoExterno" value="externo">
+                                <label class="form-check-label" for="tipoExterno">Persona Externa</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección para Residentes -->
+                    <div id="seccionResidente">
+                        <div class="mb-3">
+                            <label for="selectResidente" class="form-label">Residente *</label>
+                            <select class="form-select" id="selectResidente" required>
+                                <option value="">Seleccionar residente...</option>
+                                {% for residente in residentes %}
+                                <option value="{{ residente.id_usuario }}">
+                                    {{ residente.nombre_completo }} - {{ residente.departamento }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Sección para Externos -->
+                    <div id="seccionExterno" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nombreExterno" class="form-label">Nombre Completo *</label>
+                                    <input type="text" class="form-control" id="nombreExterno" placeholder="Nombre del solicitante externo">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="ciExterno" class="form-label">Cédula de Identidad *</label>
+                                    <input type="text" class="form-control" id="ciExterno" placeholder="Número de CI">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="telefonoExterno" class="form-label">Teléfono *</label>
+                                    <input type="tel" class="form-control" id="telefonoExterno" placeholder="Número de teléfono">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="correoExterno" class="form-label">Correo Electrónico</label>
+                                    <input type="email" class="form-control" id="correoExterno" placeholder="correo@ejemplo.com">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="selectArea" class="form-label">Área Común *</label>
+                                <select class="form-select" id="selectArea" required>
+                                    <option value="">Seleccionar área...</option>
+                                    {% for area in areas %}
+                                    <option value="{{ area.id_area }}" data-descripcion="{{ area.descripcion }}">
+                                        {{ area.nombre }} - {{ area.ubicacion }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="fechaReserva" class="form-label">Fecha de Reserva *</label>
+                                <input type="date" class="form-control" id="fechaReserva" required>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="horasReserva" class="form-label">Horas de Reserva *</label>
+                                <input type="number" class="form-control" id="horasReserva" min="1" max="8" value="2" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="montoReserva" class="form-label">Monto (Bs) *</label>
+                                <input type="number" class="form-control" id="montoReserva" step="0.01" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descripcionReserva" class="form-label">Descripción del Evento</label>
+                        <textarea class="form-control" id="descripcionReserva" rows="2" placeholder="Descripción del evento o motivo de la reserva..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="observacionesReserva" class="form-label">Observaciones Adicionales</label>
+                        <textarea class="form-control" id="observacionesReserva" rows="2" placeholder="Observaciones adicionales..."></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <small>
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Tarifas:</strong> Residentes: Bs 50 por hora | Externos: Bs 80 por hora
+                        </small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="crearReserva()">Crear Reserva</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .header {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+    }
+    
+    .header h1 {
+        margin: 0;
+    }
+    
+    .logout-btn {
+        margin-left: auto;
+        background-color: #dc3545;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        text-decoration: none;
+        transition: background-color 0.3s;
+    }
+    
+    .logout-btn:hover {
+        background-color: #c82333;
+        color: white;
+        text-decoration: none;
+    }
+    
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 14px;
+    }
+    
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .btn-info {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+    
+    .form-select, .form-control {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .table th, .table td {
+        padding: 10px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+        font-size: 13px;
+    }
+    
+    .table-striped tbody tr:nth-child(odd) {
+        background-color: #f8f9fa;
+    }
+    
+    .estado-badge, .tipo-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+    }
+    
+    .estado-pendiente {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .estado-pagado {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .estado-expirado {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .tipo-residente {
+        background: #e8eaf6;
+        color: #303f9f;
+    }
+    
+    .tipo-externo {
+        background: #f3e5f5;
+        color: #7b1fa2;
+    }
+</style>
+
+<script>
+    // Cambiar entre residente y externo
+    document.querySelectorAll('input[name="tipoSolicitante"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const esExterno = this.value === 'externo';
+            document.getElementById('seccionResidente').style.display = esExterno ? 'none' : 'block';
+            document.getElementById('seccionExterno').style.display = esExterno ? 'block' : 'none';
+            
+            // Actualizar monto según el tipo
+            actualizarMonto();
+        });
+    });
+
+    function actualizarMonto() {
+        const horas = parseInt(document.getElementById('horasReserva').value) || 2;
+        const esExterno = document.querySelector('input[name="tipoSolicitante"]:checked').value === 'externo';
+        const tarifa = esExterno ? 80 : 50;
+        document.getElementById('montoReserva').value = horas * tarifa;
+    }
+
+    document.getElementById('horasReserva').addEventListener('change', actualizarMonto);
+
+    function mostrarModalReserva() {
+        // Resetear formulario
+        document.getElementById('formReserva').reset();
+        
+        // Mostrar sección de residente por defecto
+        document.getElementById('seccionResidente').style.display = 'block';
+        document.getElementById('seccionExterno').style.display = 'none';
+        document.getElementById('tipoResidente').checked = true;
+        
+        // Inicializar monto
+        actualizarMonto();
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalReserva'));
+        modal.show();
+    }
+    
+    function crearReserva() {
+        const tipoSolicitante = document.querySelector('input[name="tipoSolicitante"]:checked').value;
+        
+        const formData = {
+            tipo_solicitante: tipoSolicitante,
+            id_area: document.getElementById('selectArea').value,
+            fecha_reserva: document.getElementById('fechaReserva').value,
+            horas: document.getElementById('horasReserva').value,
+            monto: document.getElementById('montoReserva').value,
+            descripcion: document.getElementById('descripcionReserva').value,
+            observaciones: document.getElementById('observacionesReserva').value
+        };
+        
+        // Agregar datos específicos según el tipo
+        if (tipoSolicitante === 'residente') {
+            formData.id_residente = document.getElementById('selectResidente').value;
+            if (!formData.id_residente) {
+                alert('Por favor, seleccione un residente');
+                return;
+            }
+        } else {
+            const nombre = document.getElementById('nombreExterno').value;
+            const ci = document.getElementById('ciExterno').value;
+            const telefono = document.getElementById('telefonoExterno').value;
+            
+            if (!nombre || !ci || !telefono) {
+                alert('Por favor, complete todos los campos obligatorios para externos');
+                return;
+            }
+            
+            formData.info_externo = {
+                nombre: nombre,
+                ci: ci,
+                telefono: telefono,
+                correo: document.getElementById('correoExterno').value
+            };
+        }
+        
+        // Validaciones básicas
+        if (!formData.id_area || !formData.fecha_reserva) {
+            alert('Por favor, complete todos los campos obligatorios');
+            return;
+        }
+        
+        fetch('/api/reservas/crear', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.mensaje);
+                location.reload();
+            } else {
+                alert(data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al crear la reserva');
+        });
+    }
+    
+    function aprobarReserva(idReserva) {
+    if (confirm('¿Está seguro de que desea aprobar esta reserva? Se generará un comprobante de pago.')) {
+        cambiarEstadoReserva(idReserva, 'pagado');
+    }
+}
+
+function cambiarEstadoReserva(idReserva, estado) {
+    fetch(`/api/reservas/${idReserva}/estado`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ estado: estado })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.id_pago_generado) {
+                alert(`${data.mensaje}. ID de comprobante: ${data.id_pago_generado}`);
+                // Opcional: redirigir al comprobante
+                // window.open(`/admin/comprobante/${data.id_pago_generado}`, '_blank');
+            } else {
+                alert(data.mensaje);
+            }
+            location.reload();
+        } else {
+            alert(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al actualizar la reserva');
+    });
+}
+    function verDetalle(idReserva) {
+        // Implementar vista de detalle
+        alert(`Ver detalle de reserva #${idReserva}`);
+    }
+</script>
 {% endblock %}

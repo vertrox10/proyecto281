@@ -1,300 +1,677 @@
 {% extends 'administrador/base.html' %}
 {% block title %}Dashboard de Consumos y Sensores{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    :root {
+        --primary: #6366f1;
+        --primary-dark: #4f46e5;
+        --secondary: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --info: #06b6d4;
+        --dark: #1f2937;
+        --light: #f8fafc;
+        --gray: #6b7280;
+        --border: #e5e7eb;
+    }
+
+    .dashboard-container {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        min-height: 100vh;
+    }
+
+    .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: white;
+        padding: 1.5rem 2rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+        border: 1px solid var(--border);
+    }
+
+    .header h1 {
+        margin: 0;
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: var(--dark);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .logout-btn {
+        padding: 0.75rem 1.5rem;
+        background: var(--danger);
+        color: white;
+        text-decoration: none;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .logout-btn:hover {
+        background: #dc2626;
+        transform: translateY(-2px);
+    }
+
+    /* Resumen Ejecutivo */
+    .resumen-ejecutivo {
+        margin-bottom: 2rem;
+    }
+
+    .resumen-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+    }
+
+    .resumen-card h4 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .resumen-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .resumen-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        background: var(--light);
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+
+    .resumen-label {
+        font-weight: 600;
+        color: var(--gray);
+        font-size: 0.9rem;
+    }
+
+    .resumen-valor {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--dark);
+    }
+
+    .text-success { color: var(--secondary); }
+
+    /* Costos de Servicios */
+    .consumo-mensual-section {
+        margin-bottom: 2rem;
+    }
+
+    .consumo-mensual-section h4 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .consumo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .consumo-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+
+    .consumo-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .consumo-card.verde { border-left-color: var(--secondary); }
+    .consumo-card.amarillo { border-left-color: var(--warning); }
+    .consumo-card.rojo { border-left-color: var(--danger); }
+
+    .consumo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .consumo-header h5 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--dark);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .consumo-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .bg-primary { background: var(--primary); color: white; }
+    .bg-warning { background: var(--warning); color: black; }
+    .bg-info { background: var(--info); color: white; }
+
+    .costo {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--dark);
+        margin: 0.5rem 0;
+    }
+
+    .consumo-detalle {
+        color: var(--gray);
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+    }
+
+    .variacion {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .variacion.up { color: var(--secondary); }
+    .variacion.down { color: var(--danger); }
+
+    /* Secciones Generales */
+    .sensores-section, .consumos-section {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+        margin-bottom: 2rem;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .section-header h4 {
+        margin: 0;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .filtros {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .badge {
+        padding: 0.5rem 1rem;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .bg-success { background: var(--secondary); color: white; }
+    .bg-danger { background: var(--danger); color: white; }
+    .bg-secondary { background: var(--gray); color: white; }
+
+    /* Tablas */
+    .table-responsive {
+        overflow-x: auto;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+
+    .tabla-sensores {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+    .tabla-sensores th {
+        background: var(--dark);
+        color: white;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid var(--border);
+    }
+
+    .tabla-sensores td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+    }
+
+    .tabla-sensores tr:hover {
+        background: var(--light);
+    }
+
+    .tabla-sensores tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Filtros y Controles */
+    .filtro-servicio {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--dark);
+        margin: 0;
+        white-space: nowrap;
+    }
+
+    .form-select {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: white;
+        font-size: 0.9rem;
+        min-width: 200px;
+    }
+
+    .export-buttons {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-success {
+        background: var(--secondary);
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #059669;
+        transform: translateY(-2px);
+    }
+
+    /* Estados Vacíos */
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: var(--gray);
+    }
+
+    .empty-state h5 {
+        margin: 0 0 1rem 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .empty-state p {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .dashboard-container {
+            padding: 1rem;
+        }
+
+        .header {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .section-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .consumo-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .resumen-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .filtro-servicio {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .form-select {
+            min-width: auto;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="header" style="display: flex; align-items: center; gap: 18px;">
-  <h1 style="margin:0;">📊 Dashboard Completo - Consumos & Sensores</h1>
-  <span style="margin-left:auto;"></span>
-  <link rel="stylesheet" href="{{ url_for('static', filename='administrador/style_consumo.css') }}">
-  <a href="{{ url_for('admin.logout') }}" class="logout-btn">Cerrar sesión</a>
+<div class="dashboard-container">
+    <!-- Header -->
+    <div class="header">
+        <h1><i class="fas fa-chart-bar"></i> Dashboard de Consumos y Sensores</h1>
+        <a href="{{ url_for('admin.logout') }}" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i>
+            Cerrar sesión
+        </a>
+    </div>
+
+    <!-- RESUMEN EJECUTIVO -->
+    <div class="resumen-ejecutivo">
+        <div class="resumen-card">
+            <h4><i class="fas fa-chart-line"></i> Resumen General del Sistema - {{ current_month|default('Actual') }}</h4>
+            <div class="resumen-grid">
+                <div class="resumen-item">
+                    <span class="resumen-label">Total Sensores:</span>
+                    <span class="resumen-valor">{{ metricas_sensores.total_sensores|default(0) }}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Sensores Activos:</span>
+                    <span class="resumen-valor text-success">{{ metricas_sensores.sensores_activos|default(0) }}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Departamentos Monitoreados:</span>
+                    <span class="resumen-valor">{{ metricas_sensores.deptos_con_sensores|default(0) }}</span>
+                </div>
+                <div class="resumen-item">
+                    <span class="resumen-label">Total Registros:</span>
+                    <span class="resumen-valor">{{ total_registros|default(0) }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COSTOS DE SERVICIOS -->
+    <div class="consumo-mensual-section">
+        <h4><i class="fas fa-dollar-sign"></i> COSTOS DE SERVICIOS MENSUALES</h4>
+        <div class="consumo-grid">
+            <!-- Agua -->
+            <div class="consumo-card {% if (agua.variacion|default(0)) <= 5 %}verde{% elif (agua.variacion|default(0)) <= 15 %}amarillo{% else %}rojo{% endif %}">
+                <div class="consumo-header">
+                    <h5><i class="fas fa-tint"></i> Agua</h5>
+                    <span class="consumo-badge bg-primary">{{ agua.registros|default(0) }} reg.</span>
+                </div>
+                <p class="costo">${{ agua.costo|default(0)|round(2) }}/mes</p>
+                <p class="consumo-detalle">Consumo: {{ "%.2f"|format(agua.consumo_total|default(0)) }} m³</p>
+                {% if (agua.variacion|default(0)) < 0 %}
+                    <p class="variacion down"><i class="fas fa-arrow-down"></i> {{ (agua.variacion|default(0))|abs }}% vs anterior</p>
+                {% else %}
+                    <p class="variacion up"><i class="fas fa-arrow-up"></i> {{ agua.variacion|default(0) }}% vs anterior</p>
+                {% endif %}
+            </div>
+
+            <!-- Gas -->
+            <div class="consumo-card {% if (gas.variacion|default(0)) <= 5 %}verde{% elif (gas.variacion|default(0)) <= 15 %}amarillo{% else %}rojo{% endif %}">
+                <div class="consumo-header">
+                    <h5><i class="fas fa-fire"></i> Gas</h5>
+                    <span class="consumo-badge bg-warning">{{ gas.registros|default(0) }} reg.</span>
+                </div>
+                <p class="costo">${{ gas.costo|default(0)|round(2) }}/mes</p>
+                <p class="consumo-detalle">Consumo: {{ "%.2f"|format(gas.consumo_total|default(0)) }} m³</p>
+                {% if (gas.variacion|default(0)) < 0 %}
+                    <p class="variacion down"><i class="fas fa-arrow-down"></i> {{ (gas.variacion|default(0))|abs }}% vs anterior</p>
+                {% else %}
+                    <p class="variacion up"><i class="fas fa-arrow-up"></i> {{ gas.variacion|default(0) }}% vs anterior</p>
+                {% endif %}
+            </div>
+
+            <!-- Luz -->
+            <div class="consumo-card {% if (luz.variacion|default(0)) <= 5 %}verde{% elif (luz.variacion|default(0)) <= 15 %}amarillo{% else %}rojo{% endif %}">
+                <div class="consumo-header">
+                    <h5><i class="fas fa-bolt"></i> Luz</h5>
+                    <span class="consumo-badge bg-info">{{ luz.registros|default(0) }} reg.</span>
+                </div>
+                <p class="costo">${{ luz.costo|default(0)|round(2) }}/mes</p>
+                <p class="consumo-detalle">Consumo: {{ "%.2f"|format(luz.consumo_total|default(0)) }} kWh</p>
+                {% if (luz.variacion|default(0)) < 0 %}
+                    <p class="variacion down"><i class="fas fa-arrow-down"></i> {{ (luz.variacion|default(0))|abs }}% vs anterior</p>
+                {% else %}
+                    <p class="variacion up"><i class="fas fa-arrow-up"></i> {{ luz.variacion|default(0) }}% vs anterior</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- INVENTARIO DE SENSORES -->
+    <div class="sensores-section">
+        <div class="section-header">
+            <h4><i class="fas fa-satellite-dish"></i> Inventario de Sensores</h4>
+            <div class="filtros">
+                <span class="badge bg-primary">Total: {{ sensores|length|default(0) }} sensores</span>
+                <span class="badge bg-success">Activos: {{ metricas_sensores.sensores_activos|default(0) }}</span>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="tabla-sensores">
+                <thead>
+                    <tr>
+                        <th>ID SENSOR</th>
+                        <th>DEPARTAMENTO</th>
+                        <th>NÚMERO DE SERIE</th>
+                        <th>DISPONIBILIDAD</th>
+                        <th>DESCRIPCIÓN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if sensores %}
+                        {% for sensor in sensores %}
+                        <tr>
+                            <td><strong>#{{ sensor.id_sensor }}</strong></td>
+                            <td>
+                                {% if sensor.id_departamento %}
+                                    <span class="badge bg-info">Depto {{ sensor.id_departamento }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Sin asignar</span>
+                                {% endif %}
+                            </td>
+                            <td><code>{{ sensor.num_serie|default('N/A') }}</code></td>
+                            <td>
+                                {% if sensor.disponibilidad %}
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Activo</span>
+                                {% else %}
+                                    <span class="badge bg-danger"><i class="fas fa-times"></i> Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td><small>{{ sensor.descripcion|default('Sin descripción') }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <h5><i class="fas fa-satellite-dish"></i> No hay sensores registrados</h5>
+                                    <p>No se encontraron sensores en la base de datos.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- REGISTROS DE CONSUMO -->
+    <div class="consumos-section">
+        <div class="section-header">
+            <h4><i class="fas fa-clipboard-list"></i> Registros de Consumo</h4>
+            <div class="filtros">
+                <span class="badge bg-primary">Total: {{ consumos|length|default(0) }} registros</span>
+            </div>
+        </div>
+
+        <div class="filtro-servicio">
+            <label for="filtro-select" class="form-label"><strong>Filtrar por servicio:</strong></label>
+            <select id="filtro-select" onchange="filtrarConsumos()" class="form-select">
+                <option value="todos">Todos los servicios</option>
+                <option value="agua">💧 Agua</option>
+                <option value="gas">🔥 Gas</option>
+                <option value="luz">💡 Luz</option>
+            </select>
+            <div class="export-buttons">
+                <button onclick="exportarExcel()" class="btn btn-success">
+                    <i class="fas fa-download"></i> Exportar a Excel
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="tabla-sensores" id="tabla-consumos">
+                <thead>
+                    <tr>
+                        <th>SERVICIO</th>
+                        <th>SENSOR</th>
+                        <th>DEPARTAMENTO</th>
+                        <th>CONSUMO REGISTRADO</th>
+                        <th>FECHA REGISTRO</th>
+                        <th>ESTADO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if consumos %}
+                        {% for registro in consumos %}
+                        <tr class="fila-consumo" data-servicio="{{ registro.tipo|lower|default('luz') }}">
+                            <td>
+                                {% if registro.tipo == 'agua' %}
+                                    <span class="badge bg-primary"><i class="fas fa-tint"></i> AGUA</span>
+                                {% elif registro.tipo == 'gas' %}
+                                    <span class="badge bg-warning"><i class="fas fa-fire"></i> GAS</span>
+                                {% else %}
+                                    <span class="badge bg-info"><i class="fas fa-bolt"></i> LUZ</span>
+                                {% endif %}
+                            </td>
+                            <td><small>#{{ registro.id_sensor|default('N/A') }}</small></td>
+                            <td>
+                                {% if registro.id_departamento %}
+                                    <span class="badge bg-secondary">Depto {{ registro.id_departamento }}</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ "%.2f"|format(registro.cantidad_registrada|default(0)) }}</strong></td>
+                            <td>
+                                {% if registro.fecha_registro %}
+                                    {{ registro.fecha_registro.strftime('%d/%m/%Y %H:%M') }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-success"><i class="fas fa-check"></i> OK</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <h5><i class="fas fa-clipboard-list"></i> No hay registros de consumo</h5>
+                                    <p>No se encontraron registros en las tablas de consumo.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-<!-- RESUMEN EJECUTIVO -->
-<div class="resumen-ejecutivo mb-4">
-  <div class="resumen-card">
-    <h4>📈 Resumen General del Sistema - {{ current_month }}</h4>
-    <div class="resumen-grid">
-      <div class="resumen-item">
-        <span class="resumen-label">Total Sensores:</span>
-        <span class="resumen-valor">{{ metricas_sensores.total_sensores if metricas_sensores else 0 }}</span>
-      </div>
-      <div class="resumen-item">
-        <span class="resumen-label">Sensores Activos:</span>
-        <span class="resumen-valor text-success">{{ metricas_sensores.sensores_activos if metricas_sensores else 0 }}</span>
-      </div>
-      <div class="resumen-item">
-        <span class="resumen-label">Departamentos Monitoreados:</span>
-        <span class="resumen-valor">{{ metricas_sensores.deptos_con_sensores if metricas_sensores else 0 }}</span>
-      </div>
-      <div class="resumen-item">
-        <span class="resumen-label">Total Registros Consumo:</span>
-        <span class="resumen-valor">{{ consumos|length }}</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- COSTOS DE SERVICIOS -->
-<div class="consumo-mensual-section mb-5">
-  <h4>💧 COSTOS DE SERVICIOS MENSUALES</h4>
-  <div class="consumo-grid">
-    <!-- Agua -->
-    <div class="consumo-card {% if agua.variacion <= 5 %}verde{% elif agua.variacion <= 15 %}amarillo{% else %}rojo{% endif %}">
-      <div class="consumo-header">
-        <h5>💧 Agua</h5>
-        <span class="consumo-badge bg-primary">{{ agua.registros }} reg.</span>
-      </div>
-      <p class="costo">${{ agua.costo }}/mes</p>
-      <p class="consumo-detalle">Consumo: {{ "%.2f"|format(agua.consumo_total) }} unidades</p>
-      {% if agua.variacion < 0 %}
-        <p class="variacion down">↘️ {{ agua.variacion | abs }}% vs anterior</p>
-      {% else %}
-        <p class="variacion up">↗️ {{ agua.variacion }}% vs anterior</p>
-      {% endif %}
-    </div>
-
-    <!-- Gas -->
-    <div class="consumo-card {% if gas.variacion <= 5 %}verde{% elif gas.variacion <= 15 %}amarillo{% else %}rojo{% endif %}">
-      <div class="consumo-header">
-        <h5>🔥 Gas</h5>
-        <span class="consumo-badge bg-warning">{{ gas.registros }} reg.</span>
-      </div>
-      <p class="costo">${{ gas.costo }}/mes</p>
-      <p class="consumo-detalle">Consumo: {{ "%.2f"|format(gas.consumo_total) }} unidades</p>
-      {% if gas.variacion < 0 %}
-        <p class="variacion down">↘️ {{ gas.variacion | abs }}% vs anterior</p>
-      {% else %}
-        <p class="variacion up">↗️ {{ gas.variacion }}% vs anterior</p>
-      {% endif %}
-    </div>
-
-    <!-- Luz -->
-    <div class="consumo-card {% if luz.variacion <= 5 %}verde{% elif luz.variacion <= 15 %}amarillo{% else %}rojo{% endif %}">
-      <div class="consumo-header">
-        <h5>💡 Luz</h5>
-        <span class="consumo-badge bg-info">{{ luz.registros }} reg.</span>
-      </div>
-      <p class="costo">${{ luz.costo }}/mes</p>
-      <p class="consumo-detalle">Consumo: {{ "%.2f"|format(luz.consumo_total) }} unidades</p>
-      {% if luz.variacion < 0 %}
-        <p class="variacion down">↘️ {{ luz.variacion | abs }}% vs anterior</p>
-      {% else %}
-        <p class="variacion up">↗️ {{ luz.variacion }}% vs anterior</p>
-      {% endif %}
-    </div>
-  </div>
-</div>
-
-<!-- INVENTARIO DE SENSORES -->
-<div class="sensores-section mb-5">
-  <div class="section-header">
-    <h4>📡 Inventario de Sensores</h4>
-    <div class="filtros">
-      <span class="badge bg-primary">Total: {{ sensores|length }} sensores</span>
-      <span class="badge bg-success">Activos: {{ metricas_sensores.sensores_activos if metricas_sensores else 0 }}</span>
-    </div>
-  </div>
-  
-  <div class="table-responsive">
-    <table class="tabla-sensores">
-      <thead>
-        <tr>
-          <th>ID SENSOR</th>
-          <th>ÁREA</th>
-          <th>DEPARTAMENTO</th>
-          <th>NÚMERO DE SERIE</th>
-          <th>CAPACIDAD</th>
-          <th>ESTADO</th>
-          <th>DESCRIPCIÓN</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% if sensores %}
-          {% for sensor in sensores %}
-          <tr>
-            <td><strong>{{ sensor.id_sensor }}</strong></td>
-            <td><span class="badge bg-secondary">Área {{ sensor.id_area }}</span></td>
-            <td><span class="badge bg-info">Depto {{ sensor.id_departamento }}</span></td>
-            <td><code>{{ sensor.num_serie }}</code></td>
-            <td>{{ sensor.capacidad }}</td>
-            <td>
-              {% if sensor.disponibilidad %}
-                <span class="badge bg-success">✅ Activo</span>
-              {% else %}
-                <span class="badge bg-danger">❌ Inactivo</span>
-              {% endif %}
-            </td>
-            <td><small>{{ sensor.descripcion or 'Sin descripción' }}</small></td>
-          </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="7" class="text-center text-muted py-4">
-              <div class="empty-state">
-                <h5>📡 No hay sensores registrados</h5>
-                <p>No se encontraron sensores en la base de datos.</p>
-              </div>
-            </td>
-          </tr>
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- REGISTROS DE CONSUMO -->
-<div class="consumos-section">
-  <div class="section-header">
-    <h4>📋 Registros de Consumo - Últimos Registros</h4>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <div class="filtro-servicio">
-        <label for="filtro-select" class="form-label"><strong>Filtrar por servicio:</strong></label>
-        <select id="filtro-select" onchange="filtrarConsumos()" class="form-select" style="max-width: 300px;">
-          <option value="todos">Todos los servicios</option>
-          <option value="agua">💧 Agua</option>
-          <option value="gas">🔥 Gas</option>
-          <option value="luz">💡 Luz</option>
-        </select>
-      </div>
-      <div class="export-buttons">
-        <button onclick="exportarExcel()" class="btn btn-success">
-          📥 Exportar a Excel
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div class="table-responsive">
-    <table class="tabla-sensores" id="tabla-consumos">
-      <thead>
-        <tr>
-          <th>SERVICIO</th>
-          <th>SENSOR</th>
-          <th>DEPARTAMENTO</th>
-          <th>LECT. INICIAL</th>
-          <th>LECT. FINAL</th>
-          <th>CONSUMO REGISTRADO</th>
-          <th>FECHA</th>
-          <th>ESTADO</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% if consumos %}
-          {% for registro in consumos %}
-          <tr class="fila-consumo" data-servicio="{{ registro.servicio }}">
-            <td>
-              {% if registro.servicio == 'agua' %}
-                <span class="badge bg-primary">💧 AGUA</span>
-              {% elif registro.servicio == 'gas' %}
-                <span class="badge bg-warning">🔥 GAS</span>
-              {% else %}
-                <span class="badge bg-info">💡 LUZ</span>
-              {% endif %}
-            </td>
-            <td><small>{{ registro.id_sensor }}</small></td>
-            <td><strong>Depto {{ registro.id_departamento }}</strong></td>
-            <td>{{ "%.2f"|format(registro.lectura_inicial) }}</td>
-            <td>{{ "%.2f"|format(registro.lectura_final) }}</td>
-            <td><strong>{{ "%.2f"|format(registro.cantidad_registrada) }}</strong></td>
-            <td>{{ registro.fecha_registro.strftime('%d/%m/%Y %H:%M') }}</td>
-            <td>
-              {% set diferencia = registro.consumo_calculado %}
-              {% if diferencia == registro.cantidad_registrada %}
-                <span class="badge bg-success">✅ OK</span>
-              {% else %}
-                <span class="badge bg-warning">🟡 Diff</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="8" class="text-center text-muted py-4">
-              <div class="empty-state">
-                <h5>📊 No hay registros de consumo</h5>
-                <p>No se encontraron registros en las tablas de consumo.</p>
-              </div>
-            </td>
-          </tr>
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Scripts al final del body -->
+<!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 <script>
 function filtrarConsumos() {
-  const filtro = document.getElementById("filtro-select").value;
-  const filas = document.querySelectorAll(".fila-consumo");
+    const filtro = document.getElementById("filtro-select").value;
+    const filas = document.querySelectorAll(".fila-consumo");
 
-  filas.forEach(fila => {
-    const servicio = fila.getAttribute("data-servicio");
-    if (filtro === "todos" || servicio === filtro) {
-      fila.style.display = "";
-    } else {
-      fila.style.display = "none";
-    }
-  });
+    filas.forEach(fila => {
+        const servicio = fila.getAttribute("data-servicio");
+        if (filtro === "todos" || servicio === filtro) {
+            fila.style.display = "";
+        } else {
+            fila.style.display = "none";
+        }
+    });
 }
 
 function exportarExcel() {
-  const tabla = document.getElementById('tabla-consumos');
-  const wb = XLSX.utils.table_to_book(tabla, { sheet: "Consumos" });
-  const fecha = new Date().toISOString().split('T')[0];
-  XLSX.writeFile(wb, `consumos_${fecha}.xlsx`);
+    const tabla = document.getElementById('tabla-consumos');
+    const wb = XLSX.utils.table_to_book(tabla, { sheet: "Consumos" });
+    const fecha = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `consumos_${fecha}.xlsx`);
 }
 
 // Inicializar filtro al cargar
 document.addEventListener('DOMContentLoaded', function() {
-  filtrarConsumos();
+    filtrarConsumos();
+    
+    // Agregar animaciones a las tarjetas
+    const cards = document.querySelectorAll('.consumo-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
 });
 </script>
-
-<style>
-.filtro-servicio {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.form-label {
-  margin-bottom: 0;
-  font-weight: 600;
-}
-
-.export-buttons {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.empty-state {
-  padding: 40px;
-  text-align: center;
-  color: #6c757d;
-}
-
-.tabla-sensores {
-  font-size: 0.85em;
-}
-
-.tabla-sensores th {
-  background-color: #2c3e50;
-  color: white;
-  font-weight: 600;
-  padding: 12px 8px;
-}
-
-.tabla-sensores td {
-  padding: 10px 8px;
-  vertical-align: middle;
-}
-
-.fila-consumo:hover {
-  background-color: #f8f9fa;
-}
-</style>
 {% endblock %}
