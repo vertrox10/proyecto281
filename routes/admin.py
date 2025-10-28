@@ -9,6 +9,23 @@ from email.mime.text import MIMEText as MimeText
 
 admin_bp = Blueprint("admin", __name__)
 
+
+def get_id_administrador():
+    """Obtener el id_administrador del usuario actual"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id_administrador FROM administrador WHERE id_usuario = %s", (current_user.id,))
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return result[0] if result else None
+    except Exception as e:
+        print(f"❌ Error obteniendo id_administrador: {e}")
+        return None
+
+
+
 @admin_bp.route("/dashboard")
 @login_required
 def dashboard():
@@ -2218,7 +2235,7 @@ def tickets():
         estado_filter = request.args.get('estado', 'all')
         prioridad_filter = request.args.get('prioridad', 'all')
         
-        # Construir consulta base
+        # Construir consulta base SIN JOIN con mantenimiento (porque no hay relación directa)
         query = """
             SELECT 
                 t.id_ticket,
@@ -2233,31 +2250,31 @@ def tickets():
                 u.nombre as empleado_nombre,
                 u.ap_paterno as empleado_ap_paterno,
                 a.nombre as area_nombre,
-                res_u.nombre as residente_nombre,
-                res_u.ap_paterno as residente_ap_paterno
+                a.ubicacion as area_ubicacion,
+                -- Determinar tipo de ubicación
+                CASE 
+                    WHEN t.id_departamento IS NOT NULL THEN 'departamento'
+                    WHEN t.id_area IS NOT NULL THEN 'area_comun'
+                    ELSE 'sin_ubicacion'
+                END as tipo_ubicacion
             FROM ticket t
             LEFT JOIN departamento d ON t.id_departamento = d.id_departamento
             LEFT JOIN empleado e ON t.id_empleado = e.id_empleado
             LEFT JOIN usuario u ON e.id_usuario = u.id_usuario
             LEFT JOIN area a ON t.id_area = a.id_area
-            LEFT JOIN residente r ON t.id_departamento = d.id_departamento
-            LEFT JOIN usuario res_u ON r.id_usuario = res_u.id_usuario
+            WHERE 1=1
         """
         
         params = []
-        where_clauses = []
         
         # Aplicar filtros
         if estado_filter != 'all':
-            where_clauses.append("t.estado = %s")
+            query += " AND t.estado = %s"
             params.append(estado_filter)
         
         if prioridad_filter != 'all':
-            where_clauses.append("t.prioridad = %s")
+            query += " AND t.prioridad = %s"
             params.append(prioridad_filter)
-        
-        if where_clauses:
-            query += " WHERE " + " AND ".join(where_clauses)
         
         query += """
             ORDER BY 
@@ -2281,6 +2298,62 @@ def tickets():
         # Convertir a lista de diccionarios
         tickets_list = []
         for ticket in tickets:
+            # Determinar ubicación basado en tipo
+            if ticket[13] == 'departamento':
+                ubicacion = f"Piso {ticket[6]}, Dpto. {ticket[7]}"
+            elif ticket[13] == 'area_comun':
+                ubicacion = f"Área: {ticket[11]} ({ticket[12]})"
+            else:
+                ubicacion = "Sin ubicación específica"
+            
+            # Buscar mantenimiento relacionado por departamento/área y empleado
+            # Como no hay id_ticket en mantenimiento, buscamos por coincidencia de ubicación y empleado
+            cursor.execute("""
+                SELECT 
+                    m.id_mantenimiento,
+                    m.descripcion,
+                    m.fecha_programada,
+                    m.estado
+                FROM mantenimiento m
+                WHERE 
+                    (m.id_departamento = %s OR (m.id_departamento IS NULL AND %s IS NULL))
+                    AND (m.id_area = %s OR (m.id_area IS NULL AND %s IS NULL))
+                    AND m.id_empleado = %s
+                    AND m.descripcion LIKE %s
+                ORDER BY m.fecha_programada DESC
+                LIMIT 1
+            """, (
+                ticket[8] if ticket[13] == 'departamento' else None,  # id_departamento
+                ticket[8] if ticket[13] == 'departamento' else None,
+                ticket[15] if ticket[13] == 'area_comun' else None,   # id_area
+                ticket[15] if ticket[13] == 'area_comun' else None,
+                ticket[8],  # id_empleado
+                f"%{ticket[1][:50]}%"  # Buscar por similitud en descripción
+            ))
+            
+            mantenimiento = cursor.fetchone()
+            
+            tiene_mantenimiento = mantenimiento is not None
+            mantenimiento_info = {
+                'id_mantenimiento': mantenimiento[0] if mantenimiento else None,
+                'descripcion': mantenimiento[1] if mantenimiento else None,
+                'fecha_programada': mantenimiento[2] if mantenimiento else None,
+                'estado': mantenimiento[3] if mantenimiento else None
+            } if tiene_mantenimiento else None
+            
+            # Determinar badge de mantenimiento
+            if tiene_mantenimiento:
+                if mantenimiento_info['estado'] == 'completado':
+                    mantenimiento_badge = '<span class="badge-success">Mantenimiento Completado</span>'
+                elif mantenimiento_info['estado'] == 'en_proceso':
+                    mantenimiento_badge = '<span class="badge-warning">Mantenimiento en Proceso</span>'
+                elif mantenimiento_info['estado'] == 'programado':
+                    mantenimiento_badge = '<span class="badge-info">Mantenimiento Programado</span>'
+                else:
+                    mantenimiento_badge = f'<span class="badge-secondary">Mantenimiento: {mantenimiento_info["estado"]}</span>'
+            else:
+                mantenimiento_badge = '<span class="badge-light">Sin Mantenimiento</span>'
+                
             tickets_list.append({
                 'id_ticket': ticket[0],
                 'descripcion': ticket[1],
@@ -2290,10 +2363,14 @@ def tickets():
                 'fecha_finalizacion': ticket[5],
                 'piso': ticket[6],
                 'nro_departamento': ticket[7],
+                'ubicacion': ubicacion,
                 'id_empleado': ticket[8],
                 'empleado_nombre': f"{ticket[9]} {ticket[10]}" if ticket[9] else "No asignado",
                 'area_nombre': ticket[11],
-                'residente_nombre': f"{ticket[12]} {ticket[13]}" if ticket[12] else "N/A"
+                'tipo_ubicacion': ticket[13],
+                'tiene_mantenimiento': tiene_mantenimiento,
+                'mantenimiento_info': mantenimiento_info,
+                'mantenimiento_badge': mantenimiento_badge
             })
         
         # Obtener estadísticas
@@ -2302,272 +2379,13 @@ def tickets():
                 COUNT(*) as total,
                 COUNT(CASE WHEN estado = 'pendiente' THEN 1 END) as pendientes,
                 COUNT(CASE WHEN estado = 'en_proceso' THEN 1 END) as en_proceso,
-                COUNT(CASE WHEN estado = 'resuelto' THEN 1 END) as resueltos
+                COUNT(CASE WHEN estado = 'resuelto' THEN 1 END) as resueltos,
+                COUNT(CASE WHEN estado = 'cancelado' THEN 1 END) as cancelados
             FROM ticket
         """)
         stats = cursor.fetchone()
         
         # Obtener empleados para asignación
-        cursor.execute("""
-            SELECT 
-                e.id_empleado,
-                u.nombre,
-                u.ap_paterno,
-                u.ap_materno,
-                e.puesto,
-                e.turno
-            FROM empleado e
-            JOIN usuario u ON e.id_usuario = u.id_usuario
-            WHERE e.estado = 'activo'
-            ORDER BY e.puesto, u.nombre
-        """)
-        empleados = cursor.fetchall()
-        
-        empleados_list = []
-        for emp in empleados:
-            empleados_list.append({
-                'id_empleado': emp[0],
-                'nombre_completo': f"{emp[1]} {emp[2]} {emp[3]}",
-                'puesto': emp[4],
-                'turno': emp[5]
-            })
-        
-        cursor.close()
-        conn.close()
-        
-        return render_template("administrador/tickets.html", 
-                             tickets=tickets_list,
-                             total_tickets=stats[0],
-                             pendientes=stats[1],
-                             en_proceso=stats[2],
-                             resueltos=stats[3],
-                             empleados=empleados_list,
-                             hoy=datetime.now().strftime('%Y-%m-%d'))
-        
-    except Exception as e:
-        print(f"Error obteniendo tickets: {str(e)}")
-        flash("Error al cargar los tickets.", "danger")
-        return render_template("administrador/tickets.html", 
-                             tickets=[], 
-                             total_tickets=0,
-                             pendientes=0,
-                             en_proceso=0,
-                             resueltos=0,
-                             empleados=[],
-                             hoy=datetime.now().strftime('%Y-%m-%d'))
-
-@admin_bp.route("/ticket/<int:id_ticket>")
-@login_required
-def obtener_ticket(id_ticket):
-    if current_user.id_rol != 1:
-        return jsonify({'error': 'Acceso no autorizado'}), 403
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Obtener información completa del ticket
-        cursor.execute("""
-            SELECT 
-                t.id_ticket,
-                t.descripcion,
-                t.prioridad,
-                t.estado,
-                t.fecha_emision,
-                t.fecha_finalizacion,
-                d.piso,
-                d.nro as nro_departamento,
-                e.id_empleado,
-                u.nombre as empleado_nombre,
-                u.ap_paterno as empleado_ap_paterno,
-                u.ap_materno as empleado_ap_materno,
-                a.nombre as area_nombre,
-                res_u.nombre as residente_nombre,
-                res_u.ap_paterno as residente_ap_paterno,
-                res_u.correo as residente_correo,
-                res_u.telefono as residente_telefono
-            FROM ticket t
-            LEFT JOIN departamento d ON t.id_departamento = d.id_departamento
-            LEFT JOIN empleado e ON t.id_empleado = e.id_empleado
-            LEFT JOIN usuario u ON e.id_usuario = u.id_usuario
-            LEFT JOIN area a ON t.id_area = a.id_area
-            LEFT JOIN residente r ON t.id_departamento = d.id_departamento
-            LEFT JOIN usuario res_u ON r.id_usuario = res_u.id_usuario
-            WHERE t.id_ticket = %s
-        """, (id_ticket,))
-        
-        ticket = cursor.fetchone()
-        
-        if not ticket:
-            return jsonify({'error': 'Ticket no encontrado'}), 404
-        
-        # Obtener comentarios del ticket
-        cursor.execute("""
-            SELECT 
-                ct.id_comentario,
-                ct.mensaje,
-                ct.fecha_creacion,
-                ct.es_interno,
-                u.nombre,
-                u.ap_paterno,
-                u.ap_materno,
-                r.nombre as rol_nombre
-            FROM comentario_ticket ct
-            JOIN usuario u ON ct.id_usuario = u.id_usuario
-            JOIN rol r ON u.id_rol = r.id_rol
-            WHERE ct.id_ticket = %s
-            ORDER BY ct.fecha_creacion ASC
-        """, (id_ticket,))
-        
-        comentarios = cursor.fetchall()
-        
-        cursor.close()
-        conn.close()
-        
-        # Formatear respuesta
-        ticket_data = {
-            'id_ticket': ticket[0],
-            'descripcion': ticket[1],
-            'prioridad': ticket[2],
-            'estado': ticket[3],
-            'fecha_emision': ticket[4].strftime('%d/%m/%Y %H:%M') if ticket[4] else None,
-            'fecha_finalizacion': ticket[5].strftime('%d/%m/%Y %H:%M') if ticket[5] else None,
-            'piso': ticket[6],
-            'nro_departamento': ticket[7],
-            'id_empleado': ticket[8],
-            'empleado_asignado': f"{ticket[9]} {ticket[10]} {ticket[11]}" if ticket[9] else "No asignado",
-            'area_nombre': ticket[12],
-            'residente_nombre': f"{ticket[13]} {ticket[14]}" if ticket[13] else "N/A",
-            'residente_contacto': f"{ticket[15]} | {ticket[16]}" if ticket[15] else "N/A",
-            'comentarios': []
-        }
-        
-        for comentario in comentarios:
-            ticket_data['comentarios'].append({
-                'id_comentario': comentario[0],
-                'mensaje': comentario[1],
-                'fecha_creacion': comentario[2].strftime('%d/%m/%Y %H:%M'),
-                'es_interno': comentario[3],
-                'usuario_nombre': f"{comentario[4]} {comentario[5]} {comentario[6]}",
-                'rol_nombre': comentario[7]
-            })
-        
-        return jsonify(ticket_data)
-        
-    except Exception as e:
-        print(f"Error obteniendo ticket: {str(e)}")
-        return jsonify({'error': 'Error al obtener el ticket'}), 500
-
-@admin_bp.route("/tickets/asignar", methods=["POST"])
-@login_required
-def asignar_ticket():
-    if current_user.id_rol != 1:
-        return jsonify({'error': 'Acceso no autorizado'}), 403
-    
-    try:
-        data = request.get_json()
-        id_ticket = data.get('id_ticket')
-        id_empleado = data.get('id_empleado')
-        fecha_estimada = data.get('fecha_estimada')
-        instrucciones = data.get('instrucciones')
-        
-        if not id_ticket or not id_empleado:
-            return jsonify({'error': 'Datos incompletos'}), 400
-        
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Verificar que el ticket existe y está pendiente
-        cursor.execute("""
-            SELECT estado FROM ticket WHERE id_ticket = %s
-        """, (id_ticket,))
-        
-        ticket = cursor.fetchone()
-        if not ticket:
-            return jsonify({'error': 'Ticket no encontrado'}), 404
-        
-        if ticket[0] != 'pendiente':
-            return jsonify({'error': 'Solo se pueden asignar tickets pendientes'}), 400
-        
-        # Verificar que el empleado existe y está activo
-        cursor.execute("""
-            SELECT estado FROM empleado WHERE id_empleado = %s
-        """, (id_empleado,))
-        
-        empleado = cursor.fetchone()
-        if not empleado or empleado[0] != 'activo':
-            return jsonify({'error': 'Empleado no disponible'}), 400
-        
-        # Actualizar ticket con empleado asignado y cambiar estado
-        cursor.execute("""
-            UPDATE ticket 
-            SET id_empleado = %s, estado = 'en_proceso'
-            WHERE id_ticket = %s
-        """, (id_empleado, id_ticket))
-        
-        # Agregar comentario interno con las instrucciones si existen
-        if instrucciones:
-            cursor.execute("""
-                INSERT INTO comentario_ticket 
-                (id_ticket, id_usuario, mensaje, fecha_creacion, es_interno)
-                VALUES (%s, %s, %s, NOW(), true)
-            """, (id_ticket, current_user.id_usuario, f"Instrucciones del administrador: {instrucciones}"))
-        
-        # Registrar en mantenimiento
-        cursor.execute("""
-            INSERT INTO mantenimiento 
-            (descripcion, fecha_programada, estado, id_departamento, id_empleado, id_ticket)
-            SELECT 
-                t.descripcion,
-                %s as fecha_programada,
-                'programado' as estado,
-                t.id_departamento,
-                %s as id_empleado,
-                t.id_ticket
-            FROM ticket t
-            WHERE t.id_ticket = %s
-        """, (fecha_estimada, id_empleado, id_ticket))
-        
-        conn.commit()
-        
-        # Obtener información para la respuesta
-        cursor.execute("""
-            SELECT 
-                u.nombre, u.ap_paterno, u.ap_materno, e.puesto
-            FROM empleado e
-            JOIN usuario u ON e.id_usuario = u.id_usuario
-            WHERE e.id_empleado = %s
-        """, (id_empleado,))
-        
-        empleado_info = cursor.fetchone()
-        
-        cursor.close()
-        conn.close()
-        
-        empleado_nombre = f"{empleado_info[0]} {empleado_info[1]} {empleado_info[2]}"
-        
-        return jsonify({
-            'success': True, 
-            'message': f'Ticket asignado a {empleado_nombre} ({empleado_info[3]})',
-            'empleado_nombre': empleado_nombre,
-            'puesto': empleado_info[3]
-        })
-        
-    except Exception as e:
-        print(f"Error asignando ticket: {str(e)}")
-        return jsonify({'error': 'Error al asignar el ticket'}), 500
-
-@admin_bp.route("/empleados/disponibles")
-@login_required
-def empleados_disponibles():
-    if current_user.id_rol != 1:
-        return jsonify({'error': 'Acceso no autorizado'}), 403
-    
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Obtener empleados activos con su información y carga de trabajo
         cursor.execute("""
             SELECT 
                 e.id_empleado,
@@ -2584,7 +2402,6 @@ def empleados_disponibles():
             GROUP BY e.id_empleado, u.nombre, u.ap_paterno, u.ap_materno, e.puesto, e.turno
             ORDER BY e.puesto, u.nombre
         """)
-        
         empleados = cursor.fetchall()
         
         empleados_list = []
@@ -2592,10 +2409,13 @@ def empleados_disponibles():
             # Calcular disponibilidad
             if emp[6] < 3:
                 disponibilidad = 'Alta'
+                badge_class = 'success'
             elif emp[6] < 5:
                 disponibilidad = 'Media'
+                badge_class = 'warning'
             else:
                 disponibilidad = 'Baja'
+                badge_class = 'danger'
                 
             empleados_list.append({
                 'id_empleado': emp[0],
@@ -2603,92 +2423,148 @@ def empleados_disponibles():
                 'puesto': emp[4],
                 'turno': emp[5],
                 'tickets_activos': emp[6],
-                'disponibilidad': disponibilidad
+                'disponibilidad': disponibilidad,
+                'badge_class': badge_class
             })
         
         cursor.close()
         conn.close()
         
-        return jsonify(empleados_list)
+        return render_template("administrador/tickets.html", 
+                             tickets=tickets_list,
+                             total_tickets=stats[0],
+                             pendientes=stats[1],
+                             en_proceso=stats[2],
+                             resueltos=stats[3],
+                             cancelados=stats[4],
+                             empleados=empleados_list,
+                             hoy=datetime.now().strftime('%Y-%m-%d'))
         
     except Exception as e:
-        print(f"Error obteniendo empleados: {str(e)}")
-        return jsonify({'error': 'Error al obtener empleados'}), 500
+        print(f"Error obteniendo tickets: {str(e)}")
+        flash("Error al cargar los tickets.", "danger")
+        return render_template("administrador/tickets.html", 
+                             tickets=[], 
+                             total_tickets=0,
+                             pendientes=0,
+                             en_proceso=0,
+                             resueltos=0,
+                             cancelados=0,
+                             empleados=[],
+                             hoy=datetime.now().strftime('%Y-%m-%d'))
 
-@admin_bp.route("/ticket/<int:id_ticket>/comentario", methods=["POST"])
+# Eliminar estas rutas ya que no podemos relacionar directamente tickets con mantenimiento
+# @admin_bp.route("/ticket/<int:id_ticket>/mantenimiento")
+# @admin_bp.route("/ticket/<int:id_ticket>/mantenimiento/actualizar", methods=["POST"])
+
+@admin_bp.route("/tickets/asignar", methods=["POST"])
 @login_required
-def agregar_comentario_ticket(id_ticket):
+def asignar_ticket():
     if current_user.id_rol != 1:
         return jsonify({'error': 'Acceso no autorizado'}), 403
     
+    conn = None
+    cursor = None
     try:
         data = request.get_json()
-        mensaje = data.get('mensaje')
-        es_interno = data.get('es_interno', False)
+        if not data:
+            return jsonify({'error': 'No se recibieron datos JSON'}), 400
+            
+        id_ticket = data.get('id_ticket')
+        id_empleado = data.get('id_empleado')
+        fecha_estimada = data.get('fecha_estimada')
+        instrucciones = data.get('instrucciones', '')
         
-        if not mensaje:
-            return jsonify({'error': 'El mensaje no puede estar vacío'}), 400
+        if not id_ticket or not id_empleado:
+            return jsonify({'error': 'Datos incompletos'}), 400
         
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Insertar comentario
+        # Iniciar transacción
+        conn.autocommit = False
+        
+        # Verificar que el ticket existe y está pendiente
+        cursor.execute("""
+            SELECT estado, id_departamento, id_area, descripcion
+            FROM ticket WHERE id_ticket = %s
+        """, (id_ticket,))
+        
+        ticket = cursor.fetchone()
+        if not ticket:
+            raise Exception('Ticket no encontrado')
+        
+        if ticket[0] != 'pendiente':
+            raise Exception('Solo se pueden asignar tickets pendientes')
+        
+        # Verificar que el empleado existe y está activo
+        cursor.execute("""
+            SELECT estado FROM empleado WHERE id_empleado = %s
+        """, (id_empleado,))
+        
+        empleado = cursor.fetchone()
+        if not empleado or empleado[0] != 'activo':
+            raise Exception('Empleado no disponible')
+        
+        # Actualizar ticket con empleado asignado y cambiar estado
+        cursor.execute("""
+            UPDATE ticket 
+            SET id_empleado = %s, estado = 'en_proceso'
+            WHERE id_ticket = %s
+        """, (id_empleado, id_ticket))
+        
+        # Agregar comentario interno con las instrucciones
+        comentario_texto = f"Ticket asignado al empleado ID: {id_empleado}"
+        if instrucciones:
+            comentario_texto += f" | Instrucciones: {instrucciones}"
+        if fecha_estimada:
+            comentario_texto += f" | Fecha estimada: {fecha_estimada}"
+        
         cursor.execute("""
             INSERT INTO comentario_ticket 
             (id_ticket, id_usuario, mensaje, fecha_creacion, es_interno)
-            VALUES (%s, %s, %s, NOW(), %s)
-        """, (id_ticket, current_user.id_usuario, mensaje, es_interno))
+            VALUES (%s, %s, %s, NOW(), true)
+        """, (id_ticket, current_user.id_usuario, comentario_texto))
+        
+        # Registrar en mantenimiento (sin relación directa con ticket)
+        cursor.execute("""
+            INSERT INTO mantenimiento 
+            (descripcion, fecha_programada, estado, id_departamento, id_empleado, id_area)
+            VALUES (%s, %s, 'programado', %s, %s, %s)
+        """, (ticket[3], fecha_estimada, ticket[1], id_empleado, ticket[2]))
         
         conn.commit()
-        cursor.close()
-        conn.close()
         
-        return jsonify({'success': True, 'message': 'Comentario agregado correctamente'})
+        # Obtener información para la respuesta
+        cursor.execute("""
+            SELECT 
+                u.nombre, u.ap_paterno, u.ap_materno, e.puesto
+            FROM empleado e
+            JOIN usuario u ON e.id_usuario = u.id_usuario
+            WHERE e.id_empleado = %s
+        """, (id_empleado,))
         
-    except Exception as e:
-        print(f"Error agregando comentario: {str(e)}")
-        return jsonify({'error': 'Error al agregar comentario'}), 500
-
-@admin_bp.route("/ticket/<int:id_ticket>/cambiar-estado", methods=["POST"])
-@login_required
-def cambiar_estado_ticket(id_ticket):
-    if current_user.id_rol != 1:
-        return jsonify({'error': 'Acceso no autorizado'}), 403
-    
-    try:
-        data = request.get_json()
-        nuevo_estado = data.get('estado')
+        empleado_info = cursor.fetchone()
         
-        if not nuevo_estado:
-            return jsonify({'error': 'Estado no especificado'}), 400
+        empleado_nombre = f"{empleado_info[0]} {empleado_info[1]} {empleado_info[2]}"
         
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Actualizar estado del ticket
-        if nuevo_estado == 'resuelto':
-            cursor.execute("""
-                UPDATE ticket 
-                SET estado = %s, fecha_finalizacion = NOW()
-                WHERE id_ticket = %s
-            """, (nuevo_estado, id_ticket))
-        else:
-            cursor.execute("""
-                UPDATE ticket 
-                SET estado = %s
-                WHERE id_ticket = %s
-            """, (nuevo_estado, id_ticket))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True, 'message': f'Estado actualizado a {nuevo_estado}'})
+        return jsonify({
+            'success': True, 
+            'message': f'Ticket asignado a {empleado_nombre} ({empleado_info[3]}) y mantenimiento creado',
+            'empleado_nombre': empleado_nombre,
+            'puesto': empleado_info[3]
+        })
         
     except Exception as e:
-        print(f"Error cambiando estado del ticket: {str(e)}")
-        return jsonify({'error': 'Error al cambiar estado del ticket'}), 500
-
+        if conn:
+            conn.rollback()
+        print(f"Error asignando ticket: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @admin_bp.route("/usuarios")
 @login_required
@@ -2843,11 +2719,230 @@ def cambiar_rol():
     
     return redirect(url_for("admin.usuarios"))
 
+from flask import render_template, request, flash, redirect, url_for
+from flask_mail import Mail, Message
+from models import Usuario  # Asegúrate de importar tu modelo de Usuario
 
-@admin_bp.route('/comunicado', endpoint='comunicado')
+# Configuración de Flask-Mail (debes agregar esto a tu app)
+mail = Mail()
+
+@admin_bp.route('/comunicado', methods=['GET', 'POST'])
 @login_required
-def comunicados():
-    return render_template("administrador/comunicado.html")
+def comunicado():
+    if current_user.id_rol != 1:
+        flash("Acceso no autorizado.", "danger")
+        return redirect(url_for("auth.login"))
+    
+    if request.method == 'POST':
+        try:
+            # Obtener datos del formulario
+            titulo = request.form.get('titulo')
+            mensaje = request.form.get('mensaje')
+            destinatarios = request.form.getlist('destinatarios')
+            
+            # Validaciones
+            if not all([titulo, mensaje, destinatarios]):
+                flash('Todos los campos son obligatorios', 'danger')
+                return render_template('administrador/comunicado.html')
+            
+            # Obtener emails de los destinatarios
+            emails = obtener_emails_destinatarios(destinatarios)
+            
+            if not emails:
+                flash('No se encontraron destinatarios con email válido', 'warning')
+                return render_template('administrador/comunicado.html')
+            
+            # Enviar comunicados
+            enviados = enviar_comunicados(titulo, mensaje, emails)
+            
+            # Mostrar resultado
+            if enviados:
+                flash(f'✅ Comunicado enviado exitosamente a {enviados} destinatarios', 'success')
+            else:
+                flash('❌ Error al enviar el comunicado', 'danger')
+                
+            return redirect(url_for('admin.comunicado'))
+            
+        except Exception as e:
+            print(f"Error enviando comunicado: {str(e)}")
+            flash('Error al procesar el comunicado', 'danger')
+            return render_template('administrador/comunicado.html')
+    
+    return render_template('administrador/comunicado.html')
+
+def obtener_emails_destinatarios(destinatarios):
+    """Obtiene los emails de los destinatarios seleccionados"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        emails = []
+        
+        # Construir consulta basada en los tipos seleccionados
+        condiciones = []
+        params = []
+        
+        if 'residentes' in destinatarios:
+            condiciones.append("id_rol = 3")  # Residentes
+        if 'empleados' in destinatarios:
+            condiciones.append("id_rol = 2")  # Empleados
+        
+        if not condiciones:
+            return []
+        
+        where_clause = " OR ".join(condiciones)
+        
+        query = f"""
+            SELECT correo, nombre, ap_paterno 
+            FROM usuario 
+            WHERE ({where_clause}) AND correo IS NOT NULL AND correo != ''
+        """
+        
+        cursor.execute(query)
+        resultados = cursor.fetchall()
+        
+        for resultado in resultados:
+            email = resultado[0]
+            nombre = f"{resultado[1]} {resultado[2]}"
+            if email and '@' in email:  # Validación básica de email
+                emails.append({
+                    'email': email.strip(),
+                    'nombre': nombre
+                })
+        
+        cursor.close()
+        conn.close()
+        
+        return emails
+        
+    except Exception as e:
+        print(f"Error obteniendo emails: {str(e)}")
+        return []
+
+def enviar_comunicados(titulo, mensaje, destinatarios):
+    """Envía el comunicado por email a todos los destinatarios"""
+    try:
+        enviados = 0
+        
+        for destinatario in destinatarios:
+            try:
+                # Crear el mensaje de email
+                msg = Message(
+                    subject=f"[Comunicado Edificio] {titulo}",
+                    sender='noreply@edificio.com',  # Cambia por tu email
+                    recipients=[destinatario['email']]
+                )
+                
+                # Construir el cuerpo del email
+                cuerpo_email = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }}
+                        .content {{ padding: 20px; background: #f8f9fa; }}
+                        .message {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+                        .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>🏢 Comunicado Oficial</h1>
+                        <h2>{titulo}</h2>
+                    </div>
+                    <div class="content">
+                        <div class="message">
+                            <p>Estimado/a {destinatario['nombre']},</p>
+                            <p>{mensaje.replace(chr(10), '<br>')}</p>
+                            <br>
+                            <p><strong>Atentamente,<br>Administración del Edificio</strong></p>
+                        </div>
+                    </div>
+                    <div class="footer">
+                        <p>Este es un mensaje automático. Por favor no responda a este correo.</p>
+                        <p>© 2024 Sistema de Gestión de Edificios</p>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                msg.html = cuerpo_email
+                
+                # Enviar el email
+                mail.send(msg)
+                enviados += 1
+                
+                # Pequeña pausa para no saturar el servidor de email
+                import time
+                time.sleep(0.1)
+                
+            except Exception as e:
+                print(f"Error enviando a {destinatario['email']}: {str(e)}")
+                continue
+        
+        return enviados
+        
+    except Exception as e:
+        print(f"Error en el sistema de envío: {str(e)}")
+        return 0
+
+# Ruta alternativa si no tienes Flask-Mail configurado
+@admin_bp.route('/comunicado_sin_email', methods=['POST'])
+@login_required
+def comunicado_sin_email():
+    """Versión alternativa que solo registra el comunicado sin enviar emails"""
+    if current_user.id_rol != 1:
+        flash("Acceso no autorizado.", "danger")
+        return redirect(url_for("auth.login"))
+    
+    try:
+        titulo = request.form.get('titulo')
+        mensaje = request.form.get('mensaje')
+        destinatarios = request.form.getlist('destinatarios')
+        
+        if not all([titulo, mensaje, destinatarios]):
+            flash('Todos los campos son obligatorios', 'danger')
+            return redirect(url_for('admin.comunicado'))
+        
+        # Obtener conteo de destinatarios
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        condiciones = []
+        if 'residentes' in destinatarios:
+            condiciones.append("id_rol = 3")
+        if 'empleados' in destinatarios:
+            condiciones.append("id_rol = 2")
+        
+        where_clause = " OR ".join(condiciones)
+        
+        query = f"""
+            SELECT COUNT(*) 
+            FROM usuario 
+            WHERE ({where_clause}) AND correo IS NOT NULL AND correo != ''
+        """
+        
+        cursor.execute(query)
+        total_destinatarios = cursor.fetchone()[0]
+        
+        # Guardar el comunicado en la base de datos (opcional)
+        cursor.execute("""
+            INSERT INTO comunicados (titulo, mensaje, destinatarios, enviado_por, fecha_envio)
+            VALUES (%s, %s, %s, %s, NOW())
+        """, (titulo, mensaje, ','.join(destinatarios), current_user.id_usuario))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        flash(f'📝 Comunicado guardado para {total_destinatarios} destinatarios (sistema de email no configurado)', 'info')
+        
+    except Exception as e:
+        print(f"Error guardando comunicado: {str(e)}")
+        flash('Error al procesar el comunicado', 'danger')
+    
+    return redirect(url_for('admin.comunicado'))
 
 
 
