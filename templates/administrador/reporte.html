@@ -1,848 +1,587 @@
 {% extends 'administrador/base.html' %}
-{% block title %}Reportes Financieros{% endblock %}
+{% block title %}Reporte de Deudas - Administrador{% endblock %}
 {% block extra_head %}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-    :root {
-        --primary-color: #2c3e50;
-        --secondary-color: #3498db;
-        --success-color: #27ae60;
-        --warning-color: #e67e22;
-        --danger-color: #e74c3c;
-        --light-color: #ecf0f1;
-        --dark-color: #34495e;
-        --info-color: #17a2b8;
-    }
-    
-    .dashboard-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-    
-    .dashboard-header {
-        background-color: var(--primary-color);
-        color: white;
-        padding: 15px 20px;
-        border-radius: 10px;
-        margin-bottom: 25px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    
-    .header-content {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .logo-section {
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-    }
-    
-    .logo {
-        height: 60px;
-        width: auto;
-        background: white;
-        padding: 8px;
-        border-radius: 8px;
-    }
-    
-    .header-text h1 {
-        margin: 0;
-        font-size: 2rem;
-        font-weight: 700;
-    }
-    
-    .header-text p {
-        margin: 0.25rem 0 0 0;
-        opacity: 0.9;
-    }
-    
-    .logout-btn {
-        background-color: rgba(255,255,255,0.1);
-        color: white;
-        text-decoration: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        transition: background-color 0.3s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .logout-btn:hover {
-        background-color: rgba(255,255,255,0.2);
-    }
-    
-    .filtros-section {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    .reporte-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         padding: 1.5rem;
-        margin-bottom: 2rem;
     }
-    
-    .filtros-grid {
+
+    .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 1rem;
-        align-items: end;
-    }
-    
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .form-label {
-        font-weight: 600;
-        color: var(--dark-color);
-    }
-    
-    .form-select, .form-input {
-        padding: 10px 12px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: border-color 0.3s;
-    }
-    
-    .form-select:focus, .form-input:focus {
-        outline: none;
-        border-color: var(--secondary-color);
-    }
-    
-    .btn-primary {
-        background-color: var(--secondary-color);
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 1rem;
-        transition: background-color 0.3s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .btn-primary:hover {
-        background-color: #2980b9;
-    }
-    
-    .section-card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        padding: 2rem;
         margin-bottom: 2rem;
     }
-    
-    .section-header {
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        text-align: center;
+        border: 1px solid var(--border);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .stat-card.pendiente { border-top: 4px solid var(--warning); }
+    .stat-card.pagado { border-top: 4px solid var(--secondary); }
+    .stat-card.total { border-top: 4px solid var(--primary); }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-pendiente .stat-number { color: var(--warning); }
+    .stat-pagado .stat-number { color: var(--secondary); }
+    .stat-total .stat-number { color: var(--primary); }
+
+    .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border);
+    }
+
+    .table-container {
+        overflow-x: auto;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+
+    .deudas-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+
+    .deudas-table th {
+        background: #f8fafc;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        color: var(--dark);
+        border-bottom: 2px solid var(--border);
+    }
+
+    .deudas-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        transition: all 0.5s ease;
+    }
+
+    .badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .badge-pendiente {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-pagado {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+
+    .btn-success { 
+        background: var(--secondary); 
+        color: white; 
+    }
+    .btn-success:hover { 
+        background: #059669;
+        transform: translateY(-1px);
+    }
+    .btn-success:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .btn-info { 
+        background: var(--info); 
+        color: white; 
+    }
+    .btn-info:hover { 
+        background: #0891b2;
+        transform: translateY(-1px);
+    }
+
+    .text-danger { color: var(--danger); }
+    .text-success { color: var(--secondary); }
+
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 1rem;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+
+    .modal-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 1.5rem;
         padding-bottom: 1rem;
-        border-bottom: 2px solid var(--light-color);
+        border-bottom: 1px solid var(--border);
     }
-    
-    .section-title {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 1.5rem;
-        color: var(--primary-color);
+
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark);
         margin: 0;
     }
-    
-    .section-badge {
-        background-color: var(--secondary-color);
-        color: white;
-        padding: 5px 10px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: bold;
-    }
-    
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-    
-    .stat-card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        padding: 1.5rem;
-        text-align: center;
-    }
-    
-    .stat-icon {
-        font-size: 2rem;
-        margin-bottom: 1rem;
-    }
-    
-    .stat-value {
-        font-size: 2rem;
-        font-weight: bold;
-        color: var(--primary-color);
-        margin-bottom: 0.5rem;
-    }
-    
-    .stat-label {
-        color: var(--dark-color);
-        font-weight: 500;
-    }
-    
-    .table-container {
-        overflow-x: auto;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        background: white;
-    }
-    
-    .data-table th {
-        background-color: var(--primary-color);
-        color: white;
-        padding: 12px 15px;
-        text-align: left;
-        font-weight: 600;
-    }
-    
-    .data-table td {
-        padding: 12px 15px;
-        border-bottom: 1px solid #eee;
-    }
-    
-    .data-table tr:hover {
-        background-color: #f8f9fa;
-    }
-    
-    .estado-badge {
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 0.8rem;
-        font-weight: 500;
-    }
-    
-    .estado-pagado {
-        background-color: #d4edda;
-        color: #155724;
-    }
-    
-    .estado-pendiente {
-        background-color: #fff3cd;
-        color: #856404;
-    }
-    
-    .estado-atrasado {
-        background-color: #f8d7da;
-        color: #721c24;
-    }
-    
-    .btn-export {
-        background-color: var(--success-color);
-        color: white;
+
+    .btn-close {
+        background: none;
         border: none;
-        padding: 8px 16px;
-        border-radius: 6px;
+        font-size: 1.5rem;
         cursor: pointer;
-        font-size: 0.9rem;
+        color: var(--gray);
+        padding: 0;
+        width: 30px;
+        height: 30px;
         display: flex;
         align-items: center;
-        gap: 5px;
-        transition: background-color 0.3s;
+        justify-content: center;
+        border-radius: 50%;
     }
-    
-    .btn-export:hover {
-        background-color: #219653;
+
+    .btn-close:hover {
+        background: #f3f4f6;
+        color: var(--dark);
     }
-    
-    .btn-imprimir {
-        background-color: var(--info-color);
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.9rem;
+
+    .detalle-item {
         display: flex;
+        justify-content: space-between;
         align-items: center;
-        gap: 5px;
-        transition: background-color 0.3s;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f1f5f9;
     }
-    
-    .btn-imprimir:hover {
-        background-color: #138496;
-    }
-    
-    .text-success {
-        color: var(--success-color);
+
+    .detalle-label {
         font-weight: 600;
+        color: var(--dark);
+    }
+
+    .detalle-value {
+        color: var(--gray);
+        text-align: right;
+    }
+
+    /* Animation keyframes */
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
     }
     
-    .text-warning {
-        color: var(--warning-color);
-        font-weight: 600;
-    }
-    
-    .text-danger {
-        color: var(--danger-color);
-        font-weight: 600;
-    }
-    
-    .actions-cell {
-        display: flex;
-        gap: 5px;
-    }
-    
-    .btn-action {
-        padding: 4px 8px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.8rem;
-        transition: background-color 0.3s;
-    }
-    
-    .btn-view {
-        background-color: var(--info-color);
-        color: white;
-    }
-    
-    .btn-edit {
-        background-color: var(--warning-color);
-        color: white;
-    }
-    
-    @media (max-width: 768px) {
-        .dashboard-container {
-            padding: 10px;
-        }
-        
-        .header-content {
-            flex-direction: column;
-            gap: 15px;
-            align-items: flex-start;
-        }
-        
-        .filtros-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .stats-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .section-card {
-            padding: 1.5rem;
-        }
-        
-        .data-table {
-            font-size: 0.9rem;
-        }
-        
-        .data-table th,
-        .data-table td {
-            padding: 8px 10px;
-        }
-    }
-    
-    .empty-state {
-        text-align: center;
-        padding: 3rem;
-        color: #666;
-    }
-    
-    .empty-state i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        color: #ddd;
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="reporte-container">
     <!-- Header -->
     <div class="dashboard-header">
         <div class="header-content">
-            <div class="logo-section">
-                <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo">
-                <div class="header-text">
-                    <h1>Reportes Financieros</h1>
-                    <p>Sistema de reportes y análisis financiero</p>
-                </div>
+            <div class="header-info">
+                <h1>Reporte de Deudas</h1>
+                <p>Seguimiento de deudores y historial de pagos</p>
             </div>
-            <a href="{{ url_for('admin.logout') }}" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i>
-                Cerrar sesión
-            </a>
         </div>
-    </div>
-
-    <!-- Filtros -->
-    <div class="filtros-section">
-        <form method="GET" action="{{ url_for('admin.generar_reporte_finanzas') }}">
-            <div class="filtros-grid">
-                <div class="form-group">
-                    <label class="form-label">Fecha Inicio</label>
-                    <input type="date" name="fecha_inicio" class="form-input" value="{{ fecha_inicio }}">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Fecha Fin</label>
-                    <input type="date" name="fecha_fin" class="form-input" value="{{ fecha_fin }}">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Tipo de Reporte</label>
-                    <select name="tipo_reporte" class="form-select">
-                        <option value="general" {% if tipo_reporte == 'general' %}selected{% endif %}>General</option>
-                        <option value="pagos" {% if tipo_reporte == 'pagos' %}selected{% endif %}>Solo Pagos</option>
-                        <option value="deudas" {% if tipo_reporte == 'deudas' %}selected{% endif %}>Solo Deudas</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <button type="submit" class="btn-primary">
-                        <i class="fas fa-filter"></i>
-                        Filtrar Reporte
-                    </button>
-                </div>
-            </div>
-        </form>
     </div>
 
     <!-- Estadísticas -->
     <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon text-success">
-                <i class="fas fa-money-bill-wave"></i>
-            </div>
-            <div class="stat-value">Bs {{ "%.2f"|format(total_ingresos) }}</div>
-            <div class="stat-label">Total Ingresos</div>
+        <div class="stat-card total">
+            <div class="stat-number stat-total">{{ metricas.total_deudas }}</div>
+            <div class="stat-label">Total Deudas</div>
         </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon text-danger">
-                <i class="fas fa-credit-card"></i>
-            </div>
-            <div class="stat-value">Bs {{ "%.2f"|format(total_egresos) }}</div>
-            <div class="stat-label">Total Egresos</div>
+        <div class="stat-card pendiente">
+            <div class="stat-number stat-pendiente">{{ metricas.deudas_pendientes }}</div>
+            <div class="stat-label">Deudas Pendientes</div>
         </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon {% if balance >= 0 %}text-success{% else %}text-danger{% endif %}">
-                <i class="fas fa-chart-line"></i>
-            </div>
-            <div class="stat-value">Bs {{ "%.2f"|format(balance) }}</div>
-            <div class="stat-label">Balance General</div>
+        <div class="stat-card pagado">
+            <div class="stat-number stat-pagado">{{ metricas.deudas_pagadas }}</div>
+            <div class="stat-label">Deudas Pagadas</div>
         </div>
-        
-        <div class="stat-card">
-            <div class="stat-icon text-info">
-                <i class="fas fa-file-invoice-dollar"></i>
-            </div>
-            <div class="stat-value">{{ movimientos|length }}</div>
-            <div class="stat-label">Total Movimientos</div>
+        <div class="stat-card total">
+            <div class="stat-number stat-total">Bs {{ "%.2f"|format(metricas.total_general) }}</div>
+            <div class="stat-label">Monto Total</div>
         </div>
     </div>
 
-    <!-- Sección 1: Empleados Pagados -->
-    <div class="section-card">
-    <div class="section-header">
-        <h2 class="section-title">
-            <i class="fas fa-users"></i>
-            Empleados Pagados
-        </h2>
-        <div class="section-badge">{{ pagos_empleados|length }} registros</div>
-    </div>
-
-    {% if pagos_empleados %}
-    <div class="table-container">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Empleado</th>
-                    <th>Puesto</th>
-                    <th>Monto</th>
-                    <th>Método de Pago</th>
-                    <th>Fecha de Pago</th>
-                    <th>N° Transacción</th>
-                    <th>Estado</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for pago in pagos_empleados %}
-                <tr id="pago-{{ pago.id_pago }}">
-                    <td>
-                        <div class="empleado-info">
-                            <strong>{{ pago.nombre_completo }}</strong>
-                            {% if pago.correo %}
-                            <br>
-                            <small class="text-muted">{{ pago.correo }}</small>
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td>
-                        <span class="puesto-badge">{{ pago.puesto or 'No especificado' }}</span>
-                    </td>
-                    <td class="text-success">
-                        <strong>Bs {{ "%.2f"|format(pago.monto) }}</strong>
-                    </td>
-                    <td>
-                        <div class="metodo-pago">
-                            {% if pago.metodo == 'transferencia' %}
-                                <i class="fas fa-university"></i>
-                                <span>Transferencia</span>
-                            {% elif pago.metodo == 'efectivo' %}
-                                <i class="fas fa-money-bill-wave"></i>
-                                <span>Efectivo</span>
-                            {% elif pago.metodo == 'QR' %}
-                                <i class="fas fa-qrcode"></i>
-                                <span>QR</span>
-                            {% else %}
-                                <i class="fas fa-credit-card"></i>
-                                <span>{{ pago.metodo or 'No especificado' }}</span>
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td>
-                        {% if pago.fecha_pago %}
-                            <div class="fecha-info">
-                                <strong>{{ pago.fecha_pago.strftime('%d/%m/%Y') }}</strong>
-                                <br>
-                                <small>{{ pago.fecha_pago.strftime('%H:%M') if pago.fecha_pago.hour > 0 else '' }}</small>
-                            </div>
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if pago.nro_trans %}
-                            <code class="nro-trans">{{ pago.nro_trans }}</code>
-                        {% else %}
-                            <span class="text-muted">N/A</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <span class="estado-badge 
-                            {% if pago.estado == 'completado' %}estado-pagado
-                            {% elif pago.estado == 'pendiente' %}estado-pendiente
-                            {% elif pago.estado == 'fallido' %}estado-atrasado
-                            {% else %}estado-pendiente{% endif %}">
-                            
-                            {% if pago.estado == 'completado' %}
-                                <i class="fas fa-check-circle"></i> Completado
-                            {% elif pago.estado == 'pendiente' %}
-                                <i class="fas fa-clock"></i> Pendiente
-                            {% elif pago.estado == 'fallido' %}
-                                <i class="fas fa-times-circle"></i> Fallido
-                            {% else %}
-                                <i class="fas fa-question-circle"></i> {{ pago.estado }}
-                            {% endif %}
-                        </span>
-                    </td>
-                    <td class="actions-cell">
-                        <!-- Botón para ver detalles del pago -->
-                        <button class="btn-action btn-view" 
-                                title="Ver detalles del pago"
-                                onclick="verDetallePago({{ pago.id_pago }})">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        
-                        <!-- Botón para reembolsar (solo si está completado) -->
-                        {% if pago.estado == 'completado' %}
-                        <button class="btn-action btn-warning" 
-                                title="Reembolsar pago"
-                                onclick="reembolsarPago({{ pago.id_pago }})">
-                            <i class="fas fa-undo"></i>
-                        </button>
-                        {% endif %}
-                        
-                        <!-- Botón para eliminar pago -->
-                        <button class="btn-action btn-danger" 
-                                title="Eliminar registro"
-                                onclick="eliminarPago({{ pago.id_pago }})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Resumen de pagos -->
-    <div class="resumen-pagos" style="margin-top: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h4 style="margin: 0 0 0.5rem 0; color: var(--primary-color);">
-                    <i class="fas fa-chart-bar"></i> Resumen de Pagos
-                </h4>
-                <div style="display: flex; gap: 2rem; font-size: 0.9rem;">
-                    <div>
-                        <strong>Total Pagado:</strong>
-                        <span class="text-success">Bs {{ "%.2f"|format(pagos_empleados|sum(attribute='monto')) }}</span>
-                    </div>
-                    <div>
-                        <strong>Promedio por pago:</strong>
-                        <span>Bs {{ "%.2f"|format((pagos_empleados|sum(attribute='monto') / pagos_empleados|length) if pagos_empleados|length > 0 else 0) }}</span>
-                    </div>
-                    <div>
-                        <strong>Método más usado:</strong>
-                        <span>
-                            {% set metodos = {} %}
-                            {% for pago in pagos_empleados %}
-                                {% set _ = metodos.update({pago.metodo: metodos.get(pago.metodo, 0) + 1}) %}
-                            {% endfor %}
-                            {% if metodos %}
-                                {{ metodos|dictsort(by='value')|last|first }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-export" onclick="exportarPagos()">
-                    <i class="fas fa-file-excel"></i>
-                    Exportar a Excel
-                </button>
-                <button class="btn-imprimir" onclick="imprimirPagos()">
-                    <i class="fas fa-print"></i>
-                    Imprimir
-                </button>
-                <button class="btn-primary" onclick="generarReportePagos()">
-                    <i class="fas fa-chart-pie"></i>
-                    Reporte Detallado
-                </button>
-            </div>
-        </div>
-    </div>
-
-    {% else %}
-    <div class="empty-state">
-        <i class="fas fa-users-slash"></i>
-        <h3>No hay pagos registrados</h3>
-        <p>No se encontraron pagos a empleados en el período seleccionado.</p>
-        <div style="margin-top: 1rem;">
-            <a href="{{ url_for('admin.finanzas') }}" class="btn-primary">
-                <i class="fas fa-plus"></i>
-                Registrar Primer Pago
-            </a>
-        </div>
-    </div>
-    {% endif %}
-</div>
-
-    <!-- Sección 2: Empleados que Deben -->
+    <!-- Deudas Pendientes -->
     <div class="section-card">
         <div class="section-header">
             <h2 class="section-title">
                 <i class="fas fa-exclamation-triangle"></i>
-                Residentes con Deudas Pendientes
+                Deudas Pendientes
+                <span class="badge badge-pendiente">{{ deudas_pendientes|length }}</span>
             </h2>
-            <div class="section-badge">{{ deudas_empleados|length }} registros</div>
         </div>
 
-        {% if deudas_empleados %}
-        <!-- Tabla de deudas -->
         <div class="table-container">
-            <table class="data-table">
+            <table class="deudas-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
-                        <th>Correo</th>
+                        <th>Residente</th>
                         <th>Departamento</th>
-                        <th>Identificador</th>
+                        <th>Concepto</th>
                         <th>Monto</th>
-                        <th>Estado</th>
-                        <th>Fecha Registro</th>
-                        <th>Fecha Pago</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for d in deudas_empleados %}
+                    {% for deuda in deudas_pendientes %}
                     <tr>
-                        <td>{{ d.id_deuda }}</td>
-                        <td>{{ d.nombre_completo }}</td>
-                        <td>{{ d.correo }}</td>
-                        <td>{{ d.departamento }}</td>
-                        <td>{{ d.identificador }}</td>
-                        <td>Bs {{ "%.2f"|format(d.monto) }}</td>
-                        <td>{{ d.estado }}</td>
-                        <td>{{ d.fecha_registro }}</td>
-                        <td>{{ d.fecha_pago or '-' }}</td>
+                        <td>
+                            <strong>{{ deuda.residente_nombre }}</strong>
+                            <br><small class="text-muted">{{ deuda.correo }}</small>
+                        </td>
+                        <td>{{ deuda.departamento }}</td>
+                        <td>{{ deuda.concepto }}</td>
+                        <td><strong class="text-danger">Bs {{ "%.2f"|format(deuda.monto) }}</strong></td>
+                        <td>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button class="btn-action btn-success"  onclick="marcarComoPagado('{{ deuda.id_deuda }}', this)">
+                          <i class="fas fa-check"></i>
+                            Pagar
+                        </button>
+<button class="btn-action btn-info" 
+        onclick="verDetalles('{{ deuda.id_deuda }}')">
+    <i class="fas fa-eye"></i>
+</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                            <p class="text-muted">No hay deudas pendientes</p>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        {% else %}
-        <div class="empty-state">
-            <i class="fas fa-check-circle"></i>
-            <h3>No hay deudas pendientes</h3>
-        </div>
-        {% endif %}
     </div>
 
-    <!-- Sección 3: Movimientos Financieros -->
+    <!-- Deudas Pagadas (Histórico) -->
     <div class="section-card">
         <div class="section-header">
             <h2 class="section-title">
-                <i class="fas fa-exchange-alt"></i>
-                Movimientos Financieros
+                <i class="fas fa-history"></i>
+                Historial de Pagos
+                <span class="badge badge-pagado">{{ deudas_pagadas|length }}</span>
             </h2>
-            <div class="section-badge">{{ movimientos|length }} registros</div>
         </div>
 
-        {% if movimientos %}
-        <!-- Tabla de movimientos -->
-        {% else %}
-        <div class="empty-state">
-            <i class="fas fa-exchange-alt"></i>
-            <h3>No hay movimientos</h3>
+        <div class="table-container">
+            <table class="deudas-table">
+                <thead>
+                    <tr>
+                        <th>Residente</th>
+                        <th>Departamento</th>
+                        <th>Concepto</th>
+                        <th>Monto</th>
+                        <th>Fecha Pago</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for deuda in deudas_pagadas %}
+                    <tr>
+                        <td>
+                            <strong>{{ deuda.residente_nombre }}</strong>
+                            <br><small class="text-muted">{{ deuda.correo }}</small>
+                        </td>
+                        <td>{{ deuda.departamento }}</td>
+                        <td>{{ deuda.concepto }}</td>
+                        <td><strong class="text-success">Bs {{ "%.2f"|format(deuda.monto) }}</strong></td>
+                        <td>{{ deuda.fecha_pago }}</td>
+                        <td>
+                            <span class="badge badge-pagado">Pagado</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-receipt fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">No hay historial de pagos</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para detalles -->
+<div class="modal-overlay" id="modalDetalles">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Detalles de la Deuda</h3>
+            <button class="btn-close" onclick="cerrarModal()">&times;</button>
+        </div>
+        <div id="detallesContenido">
+            <!-- Los detalles se cargarán dinámicamente aquí -->
+        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-    function exportarPagos() {
-        mostrarNotificacion('Generando archivo Excel de pagos...', 'info');
-        // Aquí iría la lógica para exportar a Excel
-        setTimeout(() => {
-            mostrarNotificacion('Archivo Excel generado correctamente', 'success');
-        }, 2000);
-    }
-
-    function exportarDeudas() {
-        mostrarNotificacion('Generando archivo Excel de deudas...', 'info');
-        // Aquí iría la lógica para exportar a Excel
-        setTimeout(() => {
-            mostrarNotificacion('Archivo Excel generado correctamente', 'success');
-        }, 2000);
-    }
-
-    function imprimirPagos() {
-        window.print();
-    }
-
-    function imprimirDeudas() {
-        window.print();
-    }
-
-    function verDetalleDeuda(idDeuda) {
-        mostrarNotificacion('Cargando detalles de la deuda...', 'info');
-        // Aquí iría la lógica para ver detalles
-    }
-
-    function enviarRecordatorio(idDeuda) {
-        if (confirm('¿Está seguro de que desea enviar un recordatorio de pago?')) {
-            mostrarNotificacion('Enviando recordatorio...', 'info');
-            // Aquí iría la lógica para enviar recordatorio
+// Funciones JavaScript para interactuar con las APIs
+async function marcarComoPagado(idDeuda, button) {
+    if (!confirm('¿Está seguro de marcar esta deuda como pagada?\n\nEsta acción registrará el pago y moverá la deuda al historial.')) return;
+    
+    try {
+        // Mostrar loading en el botón específico
+        const boton = button;
+        const textoOriginal = boton.innerHTML;
+        boton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+        boton.disabled = true;
+        
+        const response = await fetch(`/admin/marcar-pagado/${idDeuda}`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Mostrar mensaje de éxito
+            mostrarNotificacion('success', data.message);
+            
+            // Encontrar la fila y desvanecerla
+            const fila = boton.closest('tr');
+            fila.style.opacity = '0';
+            fila.style.transform = 'translateX(-100px)';
+            
+            // Esperar a que termine la animación y eliminar la fila
             setTimeout(() => {
-                mostrarNotificacion('Recordatorio enviado correctamente', 'success');
-            }, 2000);
-        }
-    }
-
-    function mostrarNotificacion(mensaje, tipo = 'info') {
-        // Crear notificación temporal
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            z-index: 1000;
-            font-weight: 500;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        `;
-        
-        if (tipo === 'success') {
-            notification.style.backgroundColor = '#27ae60';
-        } else if (tipo === 'error') {
-            notification.style.backgroundColor = '#e74c3c';
-        } else if (tipo === 'warning') {
-            notification.style.backgroundColor = '#e67e22';
+                fila.remove();
+                
+                // Verificar si no quedan más deudas pendientes
+                const tbody = document.querySelector('.deudas-table tbody');
+                const filasRestantes = tbody.querySelectorAll('tr');
+                
+                // Si no hay filas o solo queda la fila de "no hay deudas", mostrar mensaje
+                if (filasRestantes.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                <p class="text-muted">No hay deudas pendientes</p>
+                            </td>
+                        </tr>
+                    `;
+                } else if (filasRestantes.length === 1 && filasRestantes[0].querySelector('.text-muted')) {
+                    // Ya está mostrando el mensaje de no hay deudas
+                }
+                
+                // Actualizar el contador de deudas pendientes
+                actualizarContadorDeudas();
+                
+            }, 500);
+            
         } else {
-            notification.style.backgroundColor = '#3498db';
+            mostrarNotificacion('error', data.message);
+            // Restaurar botón
+            boton.innerHTML = textoOriginal;
+            boton.disabled = false;
         }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarNotificacion('error', 'Error de conexión al procesar el pago');
+        // Restaurar botón
+        boton.innerHTML = textoOriginal;
+        boton.disabled = false;
+    }
+}
+
+async function verDetalles(idDeuda) {
+    try {
+        const response = await fetch(`/admin/obtener-detalle-deuda/${idDeuda}`);
+        const data = await response.json();
         
-        notification.textContent = mensaje;
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.remove();
-        }, 3000);
-    }
-
-    // --- Funciones para acciones sobre pagos (definidas para evitar errores si faltan en otros scripts) ---
-    function verDetallePago(idPago) {
-        mostrarNotificacion('Cargando comprobante...', 'info');
-        // Redirigir a la vista de comprobante si existe en el servidor
-        try {
-            const plantilla = "{{ url_for('admin.ver_comprobante', id_pago=0) }}"; // /comprobante/0
-            const url = plantilla.replace('/0', '/' + idPago);
-            window.location.href = url;
-        } catch (e) {
-            mostrarNotificacion('No se puede abrir el comprobante en este momento', 'error');
-            console.error(e);
+        if (data.success) {
+            mostrarDetallesModal(data.deuda);
+        } else {
+            mostrarNotificacion('error', data.message);
         }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarNotificacion('error', 'Error al cargar detalles');
     }
+}
 
-    function reembolsarPago(idPago) {
-        if (!confirm('¿Está seguro de que desea reembolsar este pago?')) return;
-        // El servidor actualmente no expone un endpoint de reembolso; usar notificación temporal
-        mostrarNotificacion('Funcionalidad de reembolso no implementada en servidor', 'warning');
-        // Si implementas un endpoint, aquí podríamos hacer un fetch POST para procesarlo
-    }
+function mostrarDetallesModal(deuda) {
+    const modal = document.getElementById('modalDetalles');
+    const contenido = document.getElementById('detallesContenido');
+    
+    contenido.innerHTML = `
+        <div class="detalle-item">
+            <span class="detalle-label">Residente:</span>
+            <span class="detalle-value">${deuda.nombre_completo}</span>
+        </div>
+        <div class="detalle-item">
+            <span class="detalle-label">Departamento:</span>
+            <span class="detalle-value">${deuda.departamento}</span>
+        </div>
+        <div class="detalle-item">
+            <span class="detalle-label">Concepto:</span>
+            <span class="detalle-value">${deuda.concepto}</span>
+        </div>
+        <div class="detalle-item">
+            <span class="detalle-label">Monto:</span>
+            <span class="detalle-value"><strong>Bs ${parseFloat(deuda.monto).toFixed(2)}</strong></span>
+        </div>
+        <div class="detalle-item">
+            <span class="detalle-label">Estado:</span>
+            <span class="detalle-value">
+                <span class="badge ${deuda.estado === 'pendiente' ? 'badge-pendiente' : 'badge-pagado'}">
+                    ${deuda.estado}
+                </span>
+            </span>
+        </div>
+        ${deuda.fecha_pago && deuda.fecha_pago !== 'No pagado' ? `
+        <div class="detalle-item">
+            <span class="detalle-label">Fecha de Pago:</span>
+            <span class="detalle-value">${deuda.fecha_pago}</span>
+        </div>
+        ` : ''}
+    `;
+    
+    modal.style.display = 'flex';
+}
 
-    function eliminarPago(idPago) {
-        if (!confirm('¿Desea eliminar este registro de pago? Esta acción no se puede deshacer.')) return;
-        // Actualmente no hay endpoint para eliminar pagos en el servidor.
-        mostrarNotificacion('Funcionalidad de eliminación no implementada en el servidor', 'warning');
-    }
+function cerrarModal() {
+    document.getElementById('modalDetalles').style.display = 'none';
+}
 
-    function generarReportePagos() {
-        // Redirige a la ruta de generación de reportes con filtro tipo=pagos
-        try {
-            const base = "{{ url_for('admin.generar_reporte_finanzas') }}";
-            const url = base + '?tipo=pagos';
-            window.location.href = url;
-        } catch (e) {
-            mostrarNotificacion('No se pudo generar el reporte.', 'error');
-            console.error(e);
-        }
-    }
-
-    // Auto-cerrar notificaciones al hacer clic
-    document.addEventListener('click', function(e) {
-        if (e.target.style.position === 'fixed') {
-            e.target.remove();
+// Función para actualizar el contador de deudas pendientes
+function actualizarContadorDeudas() {
+    const tbody = document.querySelector('.deudas-table tbody');
+    const filasDeudas = tbody.querySelectorAll('tr');
+    let contador = 0;
+    
+    // Contar solo las filas que tienen deudas (no el mensaje de "no hay deudas")
+    filasDeudas.forEach(fila => {
+        if (!fila.querySelector('.text-muted')) {
+            contador++;
         }
     });
+    
+    // Actualizar el badge del título
+    const badge = document.querySelector('.section-title .badge-pendiente');
+    if (badge) {
+        badge.textContent = contador;
+    }
+}
+
+// Función para mostrar notificaciones
+function mostrarNotificacion(tipo, mensaje) {
+    // Crear elemento de notificación
+    const notificacion = document.createElement('div');
+    notificacion.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease;
+        max-width: 400px;
+    `;
+    
+    if (tipo === 'success') {
+        notificacion.style.background = 'var(--secondary)';
+        notificacion.innerHTML = `<i class="fas fa-check-circle"></i> ${mensaje}`;
+    } else {
+        notificacion.style.background = 'var(--danger)';
+        notificacion.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${mensaje}`;
+    }
+    
+    document.body.appendChild(notificacion);
+    
+    // Auto-eliminar después de 5 segundos
+    setTimeout(() => {
+        notificacion.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notificacion.parentNode) {
+                notificacion.parentNode.removeChild(notificacion);
+            }
+        }, 300);
+    }, 5000);
+}
+
+// Cerrar modal al hacer clic fuera
+document.getElementById('modalDetalles').addEventListener('click', function(e) {
+    if (e.target === this) {
+        cerrarModal();
+    }
+});
+
+// Cerrar modal con ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cerrarModal();
+    }
+});
 </script>
 {% endblock %}

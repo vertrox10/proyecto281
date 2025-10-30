@@ -6,9 +6,11 @@ from datetime import datetime, timedelta
 import smtplib
 from email.mime.multipart import MIMEMultipart as MimeMultipart
 from email.mime.text import MIMEText as MimeText
+from flask import render_template, request, flash, redirect, url_for
+from flask_mail import Mail, Message
+from models import Usuario 
 
 admin_bp = Blueprint("admin", __name__)
-
 
 def get_id_administrador():
     """Obtener el id_administrador del usuario actual"""
@@ -22,7 +24,7 @@ def get_id_administrador():
         return result[0] if result else None
     except Exception as e:
         print(f"❌ Error obteniendo id_administrador: {e}")
-        return None
+        return 
 
 
 
@@ -464,12 +466,12 @@ def calcular_metricas_servicio(consumos, tipo_servicio):
 @admin_bp.route("/dashboard-finanzas")
 @login_required
 def finanzas():
-    """Página principal del dashboard de finanzas"""
+    """Dashboard principal de finanzas - PAGOS Y COBROS"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Obtener empleados activos
+        # Obtener empleados activos para pagos
         cursor.execute("""
             SELECT 
                 u.id_usuario,
@@ -504,7 +506,7 @@ def finanzas():
                 'estado': row[9]
             })
 
-        # Obtener residentes activos
+        # Obtener residentes activos para cobros
         cursor.execute("""
             SELECT 
                 u.id_usuario,
@@ -618,7 +620,7 @@ def finanzas():
             conn.close()
 
     return render_template(
-        "administrador/finanzas.html",
+        "administrador/finanzas.html",  # Este es para PAGOS Y COBROS
         empleados=empleados,
         residentes=residentes,
         pagos_recientes=pagos_recientes,
@@ -626,6 +628,7 @@ def finanzas():
         current_date=datetime.now().date(),
         current_month=datetime.now().strftime('%B %Y')
     )
+
 
 @admin_bp.route("/pagar-empleado", methods=["POST"])
 @login_required
@@ -740,127 +743,176 @@ def pagar_empleado():
 
     return redirect(url_for('admin.finanzas'))
 
-@admin_bp.route("/registrar-cobros", methods=["POST"])
+@admin_bp.route("/registrar-cobros", methods=["GET", "POST"])
 @login_required
 def registrar_cobros():
     """Registrar cobros a residentes - VERSIÓN CORREGIDA"""
-    conn = None
-    cursor = None
-    try:
-        id_usuario = request.form.get('id_usuario')
-        conceptos = request.form.getlist('concepto[]')
-        montos = request.form.getlist('monto[]')
+    if request.method == "GET":
+        # Obtener lista de residentes para el formulario
+        conn = None
+        cursor = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
 
-        # Validaciones
-        if not id_usuario:
-            flash('Debe seleccionar un residente', 'error')
-            return redirect(url_for('admin.finanzas'))
+            cursor.execute("""
+                SELECT 
+                    u.id_usuario,
+                    u.nombre,
+                    u.ap_paterno,
+                    u.correo,
+                    r.piso,
+                    r.nro_departamento
+                FROM usuario u
+                JOIN residente r ON u.id_usuario = r.id_usuario
+                WHERE u.id_rol = 3
+                ORDER BY r.piso, r.nro_departamento
+            """)
+            
+            residentes = cursor.fetchall()
+            
+            residentes_list = []
+            for residente in residentes:
+                residentes_list.append({
+                    'id_usuario': residente[0],
+                    'nombre': residente[1],
+                    'ap_paterno': residente[2],
+                    'correo': residente[3],
+                    'piso': residente[4],
+                    'nro_departamento': residente[5]
+                })
 
-        if not conceptos or not montos:
-            flash('Debe agregar al menos un concepto de cobro', 'error')
-            return redirect(url_for('admin.finanzas'))
+            return render_template('admin/cobros.html', residentes=residentes_list)
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        except Exception as e:
+            print(f"❌ Error al cargar residentes: {str(e)}")
+            flash(f'Error al cargar residentes: {str(e)}', 'error')
+            return render_template('admin/cobros.html', residentes=[])
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
 
-        # Obtener información del residente
-        cursor.execute("""
-            SELECT u.nombre, u.ap_paterno, u.correo, r.piso, r.nro_departamento
-            FROM usuario u
-            JOIN residente r ON u.id_usuario = r.id_usuario
-            WHERE u.id_usuario = %s
-        """, (id_usuario,))
-        
-        residente = cursor.fetchone()
-        if not residente:
-            flash('Residente no encontrado', 'error')
-            return redirect(url_for('admin.finanzas'))
+    elif request.method == "POST":
+        # Código existente para procesar el POST...
+        conn = None
+        cursor = None
+        try:
+            id_usuario = request.form.get('id_usuario')
+            conceptos = request.form.getlist('concepto[]')
+            montos = request.form.getlist('monto[]')
 
-        # INICIALIZAR total_monto aquí
-        total_monto = 0.0
-        descripcion_factura = "Cobros varios:\n"
+            # Validaciones
+            if not id_usuario:
+                flash('Debe seleccionar un residente', 'error')
+                return redirect(url_for('admin.registrar_cobros'))
 
-        # Procesar cada concepto
-        for i, (concepto, monto_str) in enumerate(zip(conceptos, montos)):
-            if concepto.strip() and monto_str:
-                try:
-                    monto_float = float(monto_str)
-                    total_monto += monto_float
-                    descripcion_factura += f"- {concepto}: Bs {monto_float:.2f}\n"
-                except ValueError:
-                    flash(f'Error: El monto "{monto_str}" no es válido', 'error')
-                    return redirect(url_for('admin.finanzas'))
+            if not conceptos or not montos:
+                flash('Debe agregar al menos un concepto de cobro', 'error')
+                return redirect(url_for('admin.registrar_cobros'))
 
-        # Validar que haya al menos un concepto válido
-        if total_monto <= 0:
-            flash('Debe agregar al menos un concepto de cobro con monto válido', 'error')
-            return redirect(url_for('admin.finanzas'))
+            conn = get_db_connection()
+            cursor = conn.cursor()
 
-        # Crear factura
-        cursor.execute("""
-            INSERT INTO factura (
-                monto_total, fecha_emision, fecha_vencimiento, 
-                estado_factura, pdf_url, id_usuario
-            ) VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id_factura
-        """, (
-            total_monto, 
-            datetime.now().date(), 
-            (datetime.now() + timedelta(days=7)).date(),
-            'pendiente', 
-            None, 
-            id_usuario
-        ))
-        
-        id_factura = cursor.fetchone()[0]
+            # Obtener información del residente
+            cursor.execute("""
+                SELECT u.nombre, u.ap_paterno, u.correo, r.piso, r.nro_departamento
+                FROM usuario u
+                JOIN residente r ON u.id_usuario = r.id_usuario
+                WHERE u.id_usuario = %s
+            """, (id_usuario,))
+            
+            residente = cursor.fetchone()
+            if not residente:
+                flash('Residente no encontrado', 'error')
+                return redirect(url_for('admin.registrar_cobros'))
 
-        # Registrar movimiento financiero
-        cursor.execute("""
-            INSERT INTO movimientos (
-                tipo, monto, categoria, descripcion, fecha, id_factura
-            ) VALUES (%s, %s, %s, %s, %s, %s)
-        """, (
-            'ingreso', 
-            total_monto, 
-            'cobros',
-            f'Cobros a {residente[0]} {residente[1]} - Depto. {residente[3]}-{residente[4]}',
-            datetime.now().date(), 
-            id_factura
-        ))
+            # INICIALIZAR total_monto aquí
+            total_monto = 0.0
+            descripcion_factura = "Cobros varios:\n"
 
-        # Registrar deuda
-        cursor.execute("""
-            INSERT INTO deuda (
-                id_usuario, identificador, monto, estado, 
-                fecha_pago, invoice_id, invoice_url
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """, (
-            id_usuario, 
-            f"FAC-{id_factura}", 
-            total_monto, 
-            'pendiente',
-            None, 
-            f"INV-{id_factura}", 
-            None
-        ))
+            # Procesar cada concepto
+            for i, (concepto, monto_str) in enumerate(zip(conceptos, montos)):
+                if concepto.strip() and monto_str:
+                    try:
+                        monto_float = float(monto_str)
+                        total_monto += monto_float
+                        descripcion_factura += f"- {concepto}: Bs {monto_float:.2f}\n"
+                    except ValueError:
+                        flash(f'Error: El monto "{monto_str}" no es válido', 'error')
+                        return redirect(url_for('admin.registrar_cobros'))
 
-        conn.commit()
+            # Validar que haya al menos un concepto válido
+            if total_monto <= 0:
+                flash('Debe agregar al menos un concepto de cobro con monto válido', 'error')
+                return redirect(url_for('admin.registrar_cobros'))
 
-        flash(f'✅ Cobros registrados exitosamente por Bs {total_monto:.2f} para {residente[0]} {residente[1]}', 'success')
-        
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        print(f"❌ Error al registrar cobros: {str(e)}")
-        flash(f'Error al registrar cobros: {str(e)}', 'error')
+            # Crear factura
+            cursor.execute("""
+                INSERT INTO factura (
+                    monto_total, fecha_emision, fecha_vencimiento, 
+                    estado_factura, pdf_url, id_usuario
+                ) VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id_factura
+            """, (
+                total_monto, 
+                datetime.now().date(), 
+                (datetime.now() + timedelta(days=7)).date(),
+                'pendiente', 
+                None, 
+                id_usuario
+            ))
+            
+            id_factura = cursor.fetchone()[0]
 
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+            # Registrar movimiento financiero
+            cursor.execute("""
+                INSERT INTO movimientos (
+                    tipo, monto, categoria, descripcion, fecha, id_factura
+                ) VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                'ingreso', 
+                total_monto, 
+                'cobros',
+                f'Cobros a {residente[0]} {residente[1]} - Depto. {residente[3]}-{residente[4]}',
+                datetime.now().date(), 
+                id_factura
+            ))
 
-    return redirect(url_for('admin.finanzas'))
+            # Registrar deuda
+            cursor.execute("""
+                INSERT INTO deuda (
+                    id_usuario, identificador, monto, estado, 
+                    fecha_pago, invoice_id, invoice_url
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                id_usuario, 
+                f"FAC-{id_factura}", 
+                total_monto, 
+                'pendiente',
+                None, 
+                f"INV-{id_factura}", 
+                None
+            ))
+
+            conn.commit()
+
+            flash(f'✅ Cobros registrados exitosamente por Bs {total_monto:.2f} para {residente[0]} {residente[1]}', 'success')
+            
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            print(f"❌ Error al registrar cobros: {str(e)}")
+            flash(f'Error al registrar cobros: {str(e)}', 'error')
+
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+        return redirect(url_for('admin.registrar_cobros'))
 
 @admin_bp.route('/marcar-pagado/<int:id_deuda>', methods=['POST'])
 @login_required
@@ -899,29 +951,36 @@ def marcar_pagado(id_deuda):
             WHERE id_deuda = %s
         """, (datetime.now().date(), id_deuda))
 
-        # Registrar pago
+        # Registrar pago en la tabla pago
         cursor.execute("""
             INSERT INTO pago (
                 id_usuario, monto, metodo, estado, fecha_pago, 
                 nro_trans, pagado_por, id_factura
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (
-            id_usuario, monto, 'efectivo', 'completado', 
-            datetime.now().date(), f"PAGO-{id_deuda}", 
-            current_user.id_usuario, None
+            id_usuario, 
+            monto, 
+            'efectivo',  # Método por defecto
+            'completado', 
+            datetime.now().date(), 
+            f"PAGO-{id_deuda}-{datetime.now().strftime('%Y%m%d%H%M%S')}", 
+            current_user.id_usuario, 
+            None  # id_factura puede ser null
         ))
 
-        # Actualizar estado de la factura si existe
-        if identificador.startswith('FAC-'):
-            try:
-                id_factura = identificador.split('-')[1]
-                cursor.execute("""
-                    UPDATE factura 
-                    SET estado_factura = 'pagada' 
-                    WHERE id_factura = %s
-                """, (id_factura,))
-            except:
-                print("⚠️ No se pudo actualizar la factura asociada")
+        # Registrar movimiento financiero
+        cursor.execute("""
+            INSERT INTO movimientos (
+                tipo, monto, categoria, descripcion, fecha, id_factura
+            ) VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            'ingreso', 
+            monto, 
+            'cobros',
+            f'Pago de deuda: {identificador} - {nombre}',
+            datetime.now().date(), 
+            None
+        ))
 
         conn.commit()
 
@@ -1029,6 +1088,109 @@ def obtener_detalle_deuda(id_deuda):
 
     except Exception as e:
         print(f"❌ Error al obtener detalle de deuda: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@admin_bp.route('/deudas/listar')
+@login_required
+def listar_deudas():
+    """Obtener lista de deudas para el frontend"""
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT 
+                d.id_deuda,
+                u.nombre || ' ' || u.ap_paterno as nombre_completo,
+                u.correo,
+                r.piso,
+                r.nro_departamento,
+                d.identificador as concepto,
+                d.monto,
+                d.estado,
+                d.fecha_creacion as fecha_emision
+            FROM deuda d
+            JOIN usuario u ON d.id_usuario = u.id_usuario
+            LEFT JOIN residente r ON u.id_usuario = r.id_usuario
+            ORDER BY d.estado, d.fecha_creacion DESC
+        """)
+        
+        deudas = cursor.fetchall()
+
+        deudas_list = []
+        for deuda in deudas:
+            deudas_list.append({
+                'id_deuda': deuda[0],
+                'nombre_completo': deuda[1],
+                'correo': deuda[2],
+                'departamento': f"Piso {deuda[3]} - Depto {deuda[4]}" if deuda[3] and deuda[4] else "No asignado",
+                'concepto': deuda[5],
+                'monto': float(deuda[6]),
+                'estado': deuda[7],
+                'fecha_emision': deuda[8].strftime('%d/%m/%Y') if deuda[8] else 'N/A'
+            })
+
+        return jsonify({'success': True, 'deudas': deudas_list})
+
+    except Exception as e:
+        print(f"❌ Error al listar deudas: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error: {str(e)}'})
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@admin_bp.route('/residentes/listar')
+@login_required
+def listar_residentes():
+    """Obtener lista de residentes para el formulario"""
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT 
+                u.id_usuario,
+                u.nombre,
+                u.ap_paterno,
+                u.correo,
+                r.piso,
+                r.nro_departamento
+            FROM usuario u
+            JOIN residente r ON u.id_usuario = r.id_usuario
+            WHERE u.id_rol = 3  -- Rol de residente
+            ORDER BY r.piso, r.nro_departamento
+        """)
+        
+        residentes = cursor.fetchall()
+
+        residentes_list = []
+        for residente in residentes:
+            residentes_list.append({
+                'id_usuario': residente[0],
+                'nombre': residente[1],
+                'ap_paterno': residente[2],
+                'correo': residente[3],
+                'piso': residente[4],
+                'nro_departamento': residente[5]
+            })
+
+        return jsonify({'success': True, 'residentes': residentes_list})
+
+    except Exception as e:
+        print(f"❌ Error al listar residentes: {str(e)}")
         return jsonify({'success': False, 'message': f'Error: {str(e)}'})
 
     finally:
@@ -1281,37 +1443,45 @@ def generar_reporte_finanzas():
         return redirect(url_for('admin.finanzas'))
 
 
-@admin_bp.route('/reporte-deudas')
+@admin_bp.route("/reporte-deudas")
 @login_required
 def reporte_deudas():
-    """Lista de deudas pendientes - VERSIÓN SIMPLIFICADA"""
-    if current_user.id_rol != 1:
-        flash("Acceso no autorizado.", "danger")
-        return redirect(url_for("auth.login"))
-
+    """Reporte completo de deudores y pagos"""
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        # CONSULTA SIMPLIFICADA - sin fecha_creacion
+
+        # Deudas pendientes - usando solo columnas que existen
         cursor.execute("""
-            SELECT
+            SELECT 
                 d.id_deuda,
-                u.nombre || ' ' || u.ap_paterno || 
-                CASE 
-                    WHEN u.ap_materno IS NOT NULL THEN ' ' || u.ap_materno 
-                    ELSE '' 
-                END as nombre_completo,
+                u.nombre || ' ' || u.ap_paterno as residente_nombre,
                 u.correo,
-                CASE 
-                    WHEN r.piso IS NOT NULL AND r.nro_departamento IS NOT NULL 
-                    THEN 'Piso ' || r.piso || ' - Depto ' || r.nro_departamento
-                    WHEN r.piso IS NOT NULL THEN 'Piso ' || r.piso
-                    WHEN r.nro_departamento IS NOT NULL THEN 'Depto ' || r.nro_departamento
-                    ELSE 'No asignado'
-                END as departamento,
+                r.piso,
+                r.nro_departamento,
+                d.identificador,
+                d.monto,
+                d.estado,
+                d.fecha_pago  -- Usando fecha_pago en lugar de fecha_creacion
+            FROM deuda d
+            JOIN usuario u ON d.id_usuario = u.id_usuario
+            LEFT JOIN residente r ON u.id_usuario = r.id_usuario
+            WHERE d.estado = 'pendiente'
+            ORDER BY d.id_deuda DESC
+        """)
+        
+        deudas_pendientes = cursor.fetchall()
+
+        # Deudas pagadas
+        cursor.execute("""
+            SELECT 
+                d.id_deuda,
+                u.nombre || ' ' || u.ap_paterno as residente_nombre,
+                u.correo,
+                r.piso,
+                r.nro_departamento,
                 d.identificador,
                 d.monto,
                 d.estado,
@@ -1319,74 +1489,98 @@ def reporte_deudas():
             FROM deuda d
             JOIN usuario u ON d.id_usuario = u.id_usuario
             LEFT JOIN residente r ON u.id_usuario = r.id_usuario
-            WHERE d.estado = 'pendiente'
-            ORDER BY d.id_deuda DESC
+            WHERE d.estado = 'pagado'
+            ORDER BY d.fecha_pago DESC
+            LIMIT 50
         """)
-        rows = cursor.fetchall()
+        
+        deudas_pagadas = cursor.fetchall()
 
-        deudas = []
-        for r in rows:
-            deudas.append({
-                'id_deuda': r[0],
-                'nombre_completo': r[1],
-                'correo': r[2],
-                'departamento': r[3],
-                'identificador': r[4],
-                'monto': float(r[5]) if r[5] is not None else 0.0,
-                'estado': r[6],
-                'fecha_registro': r[7],  # Usamos fecha_pago como fecha_registro
-                'fecha_pago': r[7]
+        # Estadísticas usando solo campos existentes
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total_deudas,
+                COUNT(CASE WHEN estado = 'pendiente' THEN 1 END) as pendientes,
+                COUNT(CASE WHEN estado = 'pagado' THEN 1 END) as pagadas,
+                COALESCE(SUM(monto), 0) as total_general
+            FROM deuda
+        """)
+        
+        stats = cursor.fetchone()
+        
+        # Métricas usando solo los datos que existen
+        metricas = {}
+        if stats:
+            metricas = {
+                'total_deudas': stats[0],
+                'deudas_pendientes': stats[1],
+                'deudas_pagadas': stats[2],
+                'total_general': float(stats[3])
+            }
+        else:
+            metricas = {
+                'total_deudas': 0,
+                'deudas_pendientes': 0,
+                'deudas_pagadas': 0,
+                'total_general': 0.0
+            }
+
+        # Procesar deudas pendientes - SIN fecha_creacion
+        deudas_pendientes_list = []
+        for deuda in deudas_pendientes:
+            # Para deudas pendientes, no tenemos fecha_creacion, usamos fecha actual para cálculo
+            dias_vencido = 0  # No podemos calcular días sin fecha_creacion
+            
+            deudas_pendientes_list.append({
+                'id_deuda': deuda[0],
+                'residente_nombre': deuda[1],
+                'correo': deuda[2],
+                'departamento': f"Piso {deuda[3]} - Depto {deuda[4]}" if deuda[3] and deuda[4] else "No asignado",
+                'concepto': deuda[5],  # identificador
+                'monto': float(deuda[6]),
+                'estado': deuda[7],
+                'fecha_emision': 'N/A',  # No tenemos esta fecha
+                'dias_vencido': dias_vencido
             })
 
-        # El resto del código de estadísticas permanece igual...
-        cursor.execute("SELECT COALESCE(SUM(monto),0) FROM deuda WHERE estado = 'pendiente'")
-        total_pendiente = float(cursor.fetchone()[0] or 0.0)
+        # Procesar deudas pagadas
+        deudas_pagadas_list = []
+        for deuda in deudas_pagadas:
+            deudas_pagadas_list.append({
+                'id_deuda': deuda[0],
+                'residente_nombre': deuda[1],
+                'correo': deuda[2],
+                'departamento': f"Piso {deuda[3]} - Depto {deuda[4]}" if deuda[3] and deuda[4] else "No asignado",
+                'concepto': deuda[5],  # identificador
+                'monto': float(deuda[6]),
+                'estado': deuda[7],
+                'fecha_pago': deuda[8].strftime('%d/%m/%Y') if deuda[8] else 'N/A'
+            })
 
-        cursor.execute("SELECT COALESCE(SUM(monto),0) FROM deuda WHERE estado = 'pagado'")
-        total_pagado = float(cursor.fetchone()[0] or 0.0)
-
-        cursor.execute("SELECT COUNT(*) FROM deuda WHERE estado = 'pendiente'")
-        total_deudas_pendientes = int(cursor.fetchone()[0] or 0)
-
-        print(f"📊 Reporte deudas cargado: {len(deudas)} deudas pendientes")
-        
-        return render_template('administrador/reporte.html',
-                               deudas=deudas,
-                               deudas_empleados=deudas,
-                               pagos_empleados=[],
-                               movimientos=[],
-                               total_ingresos=0.0,
-                               total_egresos=0.0,
-                               balance=0.0,
-                               total_pendiente=total_pendiente,
-                               total_pagado=total_pagado,
-                               total_deudas_pendientes=total_deudas_pendientes,
-                               fecha_inicio=None,
-                               fecha_fin=None,
-                               tipo_reporte='deudas')
-                               
     except Exception as e:
-        print(f"❌ Error cargando reporte de deudas: {e}")
-        flash('Error al cargar reporte de deudas.', 'danger')
-        return render_template('administrador/reporte.html',
-                               deudas=[],
-                               total_pendiente=0.0,
-                               total_pagado=0.0,
-                               total_deudas_pendientes=0,
-                               total_ingresos=0.0,
-                               total_egresos=0.0,
-                               balance=0.0,
-                               movimientos=[],
-                               pagos_empleados=[],
-                               deudas_empleados=[],
-                               fecha_inicio=None,
-                               fecha_fin=None,
-                               tipo_reporte='deudas')
+        print(f"❌ Error al cargar reporte de deudas: {e}")
+        flash("Error al cargar reporte de deudas.", "danger")
+        deudas_pendientes_list = []
+        deudas_pagadas_list = []
+        metricas = {
+            'total_deudas': 0,
+            'deudas_pendientes': 0,
+            'deudas_pagadas': 0,
+            'total_general': 0.0
+        }
+
     finally:
         if cursor:
             cursor.close()
         if conn:
             conn.close()
+
+    return render_template(
+        "administrador/reporte.html",
+        deudas_pendientes=deudas_pendientes_list,
+        deudas_pagadas=deudas_pagadas_list,
+        metricas=metricas
+    )
 
 @admin_bp.route("/obtener-datos-empleado/<int:id_usuario>")
 @login_required
@@ -2235,7 +2429,7 @@ def tickets():
         estado_filter = request.args.get('estado', 'all')
         prioridad_filter = request.args.get('prioridad', 'all')
         
-        # Construir consulta base SIN JOIN con mantenimiento (porque no hay relación directa)
+        # Construir consulta base SIN MANTENIMIENTO
         query = """
             SELECT 
                 t.id_ticket,
@@ -2295,7 +2489,7 @@ def tickets():
         cursor.execute(query, params)
         tickets = cursor.fetchall()
         
-        # Convertir a lista de diccionarios
+        # Convertir a lista de diccionarios SIN MANTENIMIENTO
         tickets_list = []
         for ticket in tickets:
             # Determinar ubicación basado en tipo
@@ -2305,54 +2499,6 @@ def tickets():
                 ubicacion = f"Área: {ticket[11]} ({ticket[12]})"
             else:
                 ubicacion = "Sin ubicación específica"
-            
-            # Buscar mantenimiento relacionado por departamento/área y empleado
-            # Como no hay id_ticket en mantenimiento, buscamos por coincidencia de ubicación y empleado
-            cursor.execute("""
-                SELECT 
-                    m.id_mantenimiento,
-                    m.descripcion,
-                    m.fecha_programada,
-                    m.estado
-                FROM mantenimiento m
-                WHERE 
-                    (m.id_departamento = %s OR (m.id_departamento IS NULL AND %s IS NULL))
-                    AND (m.id_area = %s OR (m.id_area IS NULL AND %s IS NULL))
-                    AND m.id_empleado = %s
-                    AND m.descripcion LIKE %s
-                ORDER BY m.fecha_programada DESC
-                LIMIT 1
-            """, (
-                ticket[8] if ticket[13] == 'departamento' else None,  # id_departamento
-                ticket[8] if ticket[13] == 'departamento' else None,
-                ticket[15] if ticket[13] == 'area_comun' else None,   # id_area
-                ticket[15] if ticket[13] == 'area_comun' else None,
-                ticket[8],  # id_empleado
-                f"%{ticket[1][:50]}%"  # Buscar por similitud en descripción
-            ))
-            
-            mantenimiento = cursor.fetchone()
-            
-            tiene_mantenimiento = mantenimiento is not None
-            mantenimiento_info = {
-                'id_mantenimiento': mantenimiento[0] if mantenimiento else None,
-                'descripcion': mantenimiento[1] if mantenimiento else None,
-                'fecha_programada': mantenimiento[2] if mantenimiento else None,
-                'estado': mantenimiento[3] if mantenimiento else None
-            } if tiene_mantenimiento else None
-            
-            # Determinar badge de mantenimiento
-            if tiene_mantenimiento:
-                if mantenimiento_info['estado'] == 'completado':
-                    mantenimiento_badge = '<span class="badge-success">Mantenimiento Completado</span>'
-                elif mantenimiento_info['estado'] == 'en_proceso':
-                    mantenimiento_badge = '<span class="badge-warning">Mantenimiento en Proceso</span>'
-                elif mantenimiento_info['estado'] == 'programado':
-                    mantenimiento_badge = '<span class="badge-info">Mantenimiento Programado</span>'
-                else:
-                    mantenimiento_badge = f'<span class="badge-secondary">Mantenimiento: {mantenimiento_info["estado"]}</span>'
-            else:
-                mantenimiento_badge = '<span class="badge-light">Sin Mantenimiento</span>'
                 
             tickets_list.append({
                 'id_ticket': ticket[0],
@@ -2367,10 +2513,7 @@ def tickets():
                 'id_empleado': ticket[8],
                 'empleado_nombre': f"{ticket[9]} {ticket[10]}" if ticket[9] else "No asignado",
                 'area_nombre': ticket[11],
-                'tipo_ubicacion': ticket[13],
-                'tiene_mantenimiento': tiene_mantenimiento,
-                'mantenimiento_info': mantenimiento_info,
-                'mantenimiento_badge': mantenimiento_badge
+                'tipo_ubicacion': ticket[13]
             })
         
         # Obtener estadísticas
@@ -2453,10 +2596,6 @@ def tickets():
                              empleados=[],
                              hoy=datetime.now().strftime('%Y-%m-%d'))
 
-# Eliminar estas rutas ya que no podemos relacionar directamente tickets con mantenimiento
-# @admin_bp.route("/ticket/<int:id_ticket>/mantenimiento")
-# @admin_bp.route("/ticket/<int:id_ticket>/mantenimiento/actualizar", methods=["POST"])
-
 @admin_bp.route("/tickets/asignar", methods=["POST"])
 @login_required
 def asignar_ticket():
@@ -2526,12 +2665,8 @@ def asignar_ticket():
             VALUES (%s, %s, %s, NOW(), true)
         """, (id_ticket, current_user.id_usuario, comentario_texto))
         
-        # Registrar en mantenimiento (sin relación directa con ticket)
-        cursor.execute("""
-            INSERT INTO mantenimiento 
-            (descripcion, fecha_programada, estado, id_departamento, id_empleado, id_area)
-            VALUES (%s, %s, 'programado', %s, %s, %s)
-        """, (ticket[3], fecha_estimada, ticket[1], id_empleado, ticket[2]))
+        # NO CREAR MANTENIMIENTO - Eliminamos esta parte
+        # Ya que no hay relación directa y está causando errores
         
         conn.commit()
         
@@ -2550,7 +2685,7 @@ def asignar_ticket():
         
         return jsonify({
             'success': True, 
-            'message': f'Ticket asignado a {empleado_nombre} ({empleado_info[3]}) y mantenimiento creado',
+            'message': f'Ticket asignado a {empleado_nombre} ({empleado_info[3]})',
             'empleado_nombre': empleado_nombre,
             'puesto': empleado_info[3]
         })
@@ -2565,6 +2700,13 @@ def asignar_ticket():
             cursor.close()
         if conn:
             conn.close()
+            
+
+# Eliminar estas rutas ya que no podemos relacionar directamente tickets con mantenimiento
+# @admin_bp.route("/ticket/<int:id_ticket>/mantenimiento")
+# @admin_bp.route("/ticket/<int:id_ticket>/mantenimiento/actualizar", methods=["POST"])
+
+
 
 @admin_bp.route("/usuarios")
 @login_required
@@ -2719,9 +2861,7 @@ def cambiar_rol():
     
     return redirect(url_for("admin.usuarios"))
 
-from flask import render_template, request, flash, redirect, url_for
-from flask_mail import Mail, Message
-from models import Usuario  # Asegúrate de importar tu modelo de Usuario
+ # Asegúrate de importar tu modelo de Usuario
 
 # Configuración de Flask-Mail (debes agregar esto a tu app)
 mail = Mail()
@@ -2943,11 +3083,6 @@ def comunicado_sin_email():
         flash('Error al procesar el comunicado', 'danger')
     
     return redirect(url_for('admin.comunicado'))
-
-
-
-
-
 
 
 

@@ -2,6 +2,7 @@
 {% block title %}Panel de Control - Administrador{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     :root {
         --primary: #6366f1;
@@ -244,7 +245,7 @@
 
     .section-header {
         display: flex;
-        justify-content: between;
+        justify-content: space-between;
         align-items: center;
         margin-bottom: 1.5rem;
     }
@@ -259,15 +260,102 @@
         gap: 0.5rem;
     }
 
-    .chart-placeholder {
+    .time-filter {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: white;
+        color: var(--dark);
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 400px;
+    }
+
+    .chart-wrapper {
+        position: relative;
         height: 300px;
-        background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-        border-radius: 12px;
+        margin-bottom: 1rem;
+    }
+
+    .chart-loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: var(--gray);
+    }
+
+    .chart-empty {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: var(--gray);
+    }
+
+    .chart-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 1rem;
+    }
+
+    .legend-item {
         display: flex;
         align-items: center;
-        justify-content: center;
-        color: var(--gray);
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #f8f9fa;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .legend-item:hover {
+        background: #e9ecef;
+    }
+
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    .legend-text {
+        font-weight: 500;
+    }
+
+    .legend-value {
         font-weight: 600;
+        color: var(--dark);
+    }
+
+    .consumption-summary {
+        text-align: center;
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .summary-total {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .summary-period {
+        color: var(--gray);
+        font-size: 0.9rem;
     }
 
     /* Activity Feed */
@@ -436,6 +524,11 @@
         .recent-grid {
             grid-template-columns: 1fr;
         }
+        
+        .chart-legend {
+            flex-direction: column;
+            align-items: center;
+        }
     }
 </style>
 {% endblock %}
@@ -561,55 +654,37 @@
                         <i class="fas fa-chart-pie"></i>
                         Distribución de Consumos
                     </h2>
-                    <select class="time-filter" onchange="actualizarGrafico(this.value)">
+                    <select class="time-filter" id="timeFilter" onchange="actualizarGraficoConsumos(this.value)">
                         <option value="7">Últimos 7 días</option>
                         <option value="30" selected>Últimos 30 días</option>
                         <option value="90">Últimos 3 meses</option>
                     </select>
                 </div>
-                <div class="chart-placeholder">
-                    <div style="text-align: center;">
-                        <i class="fas fa-chart-pie" style="font-size: 3rem; margin-bottom: 1rem;"></i>
-                        <p>Distribución de Consumos Mensual</p>
-                        <div class="consumption-breakdown" style="display: flex; gap: 1rem; margin-top: 1rem; justify-content: center;">
-                            {% if consumos_mensuales %}
-                                {% for consumo in consumos_mensuales %}
-                                <div style="text-align: center;">
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: {{ consumo.color|default('#6366f1') }};">
-                                        {{ consumo.total|default(0)|round(2) }} {{ consumo.unidad|default('kWh') }}
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--gray);">
-                                        {{ consumo.tipo|default('Energía') }}
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            {% else %}
-                                <div style="text-align: center;">
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: #6366f1;">
-                                        0 kWh
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--gray);">
-                                        Energía
-                                    </div>
-                                </div>
-                                <div style="text-align: center;">
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: #10b981;">
-                                        0 m³
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--gray);">
-                                        Agua
-                                    </div>
-                                </div>
-                                <div style="text-align: center;">
-                                    <div style="font-size: 1.2rem; font-weight: bold; color: #06b6d4;">
-                                        0 m³
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: var(--gray);">
-                                        Gas
-                                    </div>
-                                </div>
-                            {% endif %}
+                <div class="chart-container">
+                    <div class="chart-wrapper">
+                        <canvas id="pieChart"></canvas>
+                        
+                        <!-- Loading State -->
+                        <div id="chartLoading" class="chart-loading" style="display: none;">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 1rem;"></i>
+                            <p>Cargando datos de consumo...</p>
                         </div>
+                        
+                        <!-- Empty State -->
+                        <div id="chartEmpty" class="chart-empty" style="display: none;">
+                            <i class="fas fa-chart-pie" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                            <p>No hay datos de consumo disponibles</p>
+                            <p style="font-size: 0.9rem; margin-top: 0.5rem;">Intenta cambiar el período de tiempo</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Chart Legend -->
+                    <div id="chartLegend" class="chart-legend" style="display: none;"></div>
+                    
+                    <!-- Consumption Summary -->
+                    <div id="consumoSummary" class="consumption-summary" style="display: none;">
+                        <div class="summary-total" id="totalConsumo">Total: 0 kWh</div>
+                        <div class="summary-period" id="periodoConsumo">Últimos 30 días</div>
                     </div>
                 </div>
             </div>
@@ -634,11 +709,7 @@
                             </div>
                         </div>
                         <p style="margin: 0; font-size: 0.9rem; color: var(--gray);">
-                            {% if consumos_mensuales and consumos_mensuales[0] %}
-                                {{ consumos_mensuales[0].total|default(0)|round(2) }} kWh este mes
-                            {% else %}
-                                0 kWh este mes
-                            {% endif %}
+                            <span id="currentEnergy">0</span> kWh este mes
                         </p>
                     </div>
 
@@ -727,24 +798,230 @@
 
 {% block extra_scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Add loading animation to cards
-        const cards = document.querySelectorAll('.action-card, .stat-card');
-        cards.forEach((card, index) => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(20px)';
-            
-            setTimeout(() => {
-                card.style.transition = 'all 0.5s ease';
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-            }, index * 100);
-        });
-    });
+// Variable global para la instancia del gráfico
+let pieChartInstance = null;
 
-    function actualizarGrafico(dias) {
-        console.log('Actualizando gráfico para los últimos ' + dias + ' días');
-        // Aquí iría la lógica para actualizar el gráfico con nuevos datos
+// Colores para los tipos de consumo
+const consumoColors = {
+    'Energía Eléctrica': '#6366f1',
+    'Agua': '#10b981',
+    'Gas': '#06b6d4'
+};
+
+// Inicializar el dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargar datos iniciales
+    cargarDatosConsumo(30);
+    
+    // Animaciones de entrada
+    const cards = document.querySelectorAll('.action-card, .stat-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+
+// Función para cargar datos de consumo
+async function cargarDatosConsumo(dias) {
+    try {
+        // Mostrar loading
+        mostrarEstadoCarga(true);
+        
+        const response = await fetch(`/admin/dashboard/consumos?dias=${dias}`);
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Ocultar estados
+            mostrarEstadoCarga(false);
+            mostrarEstadoVacio(false);
+            
+            // Actualizar la interfaz con los datos
+            actualizarInterfazConsumos(data);
+            
+            // Crear o actualizar el gráfico
+            crearActualizarGrafico(data.consumos);
+        } else {
+            throw new Error(data.error || 'Error al cargar datos');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarEstadoCarga(false);
+        mostrarEstadoVacio(true);
     }
+}
+
+// Función para mostrar/ocultar estado de carga
+function mostrarEstadoCarga(mostrar) {
+    const loading = document.getElementById('chartLoading');
+    const canvas = document.getElementById('pieChart');
+    
+    if (mostrar) {
+        loading.style.display = 'block';
+        canvas.style.display = 'none';
+        document.getElementById('chartLegend').style.display = 'none';
+        document.getElementById('consumoSummary').style.display = 'none';
+    } else {
+        loading.style.display = 'none';
+        canvas.style.display = 'block';
+    }
+}
+
+// Función para mostrar/ocultar estado vacío
+function mostrarEstadoVacio(mostrar) {
+    const empty = document.getElementById('chartEmpty');
+    const canvas = document.getElementById('pieChart');
+    
+    if (mostrar) {
+        empty.style.display = 'block';
+        canvas.style.display = 'none';
+        document.getElementById('chartLegend').style.display = 'none';
+        document.getElementById('consumoSummary').style.display = 'none';
+    } else {
+        empty.style.display = 'none';
+        canvas.style.display = 'block';
+    }
+}
+
+// Función para actualizar la interfaz con los datos de consumo
+function actualizarInterfazConsumos(data) {
+    // Actualizar resumen
+    const totalElement = document.getElementById('totalConsumo');
+    const periodoElement = document.getElementById('periodoConsumo');
+    
+    // Calcular total en la unidad más apropiada
+    const total = data.total_general;
+    let unidad = 'kWh';
+    
+    if (total >= 1000) {
+        // Podrías implementar conversiones si es necesario
+    }
+    
+    totalElement.textContent = `Total: ${total.toFixed(2)} ${unidad}`;
+    periodoElement.textContent = data.periodo;
+    
+    // Mostrar elementos
+    document.getElementById('chartLegend').style.display = 'flex';
+    document.getElementById('consumoSummary').style.display = 'block';
+    
+    // Actualizar consumo actual en la tarjeta de actividad reciente
+    const energiaData = data.consumos.find(c => c.tipo === 'Energía Eléctrica');
+    if (energiaData) {
+        document.getElementById('currentEnergy').textContent = energiaData.total.toFixed(2);
+    }
+}
+
+// Función para crear o actualizar el gráfico de pastel
+function crearActualizarGrafico(consumos) {
+    const ctx = document.getElementById('pieChart').getContext('2d');
+    
+    // Destruir gráfico existente si existe
+    if (pieChartInstance) {
+        pieChartInstance.destroy();
+    }
+    
+    // Filtrar consumos que tienen valor > 0
+    const consumosFiltrados = consumos.filter(consumo => consumo.total > 0);
+    
+    if (consumosFiltrados.length === 0) {
+        mostrarEstadoVacio(true);
+        return;
+    }
+    
+    // Preparar datos para Chart.js
+    const labels = consumosFiltrados.map(consumo => consumo.tipo);
+    const data = consumosFiltrados.map(consumo => consumo.total);
+    const backgroundColors = consumosFiltrados.map(consumo => consumo.color);
+    const unidades = consumosFiltrados.map(consumo => consumo.unidad);
+    
+    // Crear el gráfico
+    pieChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: backgroundColors,
+                borderColor: '#ffffff',
+                borderWidth: 2,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false // Usaremos nuestra propia leyenda
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const dataset = context.dataset;
+                            const total = dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            const consumo = consumosFiltrados.find(c => c.tipo === label);
+                            const unidad = consumo ? consumo.unidad : '';
+                            
+                            return `${label}: ${value.toFixed(2)} ${unidad} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true
+            }
+        }
+    });
+    
+    // Actualizar leyenda
+    actualizarLeyenda(consumosFiltrados);
+}
+
+// Función para actualizar la leyenda personalizada
+function actualizarLeyenda(consumos) {
+    const legendContainer = document.getElementById('chartLegend');
+    legendContainer.innerHTML = '';
+    
+    consumos.forEach(consumo => {
+        const legendItem = document.createElement('div');
+        legendItem.className = 'legend-item';
+        legendItem.innerHTML = `
+            <div class="legend-color" style="background-color: ${consumo.color};"></div>
+            <span class="legend-text">${consumo.tipo}</span>
+            <span class="legend-value">${consumo.total.toFixed(2)} ${consumo.unidad}</span>
+        `;
+        
+        // Agregar evento click para resaltar segmento del gráfico
+        legendItem.addEventListener('click', function() {
+            if (pieChartInstance) {
+                const index = consumos.findIndex(c => c.tipo === consumo.tipo);
+                pieChartInstance.toggleDataVisibility(index);
+                pieChartInstance.update();
+            }
+        });
+        
+        legendContainer.appendChild(legendItem);
+    });
+}
+
+// Función para actualizar el gráfico cuando cambia el filtro de tiempo
+function actualizarGraficoConsumos(dias) {
+    cargarDatosConsumo(dias);
+}
+
+// Función para exportar datos (opcional)
+function exportarDatosConsumo() {
+    // Implementar lógica de exportación si es necesario
+    console.log('Exportando datos de consumo...');
+}
 </script>
 {% endblock %}
