@@ -1,0 +1,115 @@
+{% extends "residente/base_residente.html" %}
+
+{% block title %}Mis Tickets - SincroHome{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='residente/tickets.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="tickets-container">
+    <div class="tickets-header">
+        <h1><i class="fas fa-ticket-alt"></i> Mis Tickets de Soporte</h1>
+        <p>Gestiona tus solicitudes de mantenimiento y soporte</p>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="estadisticas-grid">
+        <div class="estadistica-card">
+            <div class="estadistica-icon total">
+                <i class="fas fa-ticket-alt"></i>
+            </div>
+            <div class="estadistica-info">
+                <h3>Total</h3>
+                <span class="estadistica-valor">{{ estadisticas.total }}</span>
+            </div>
+        </div>
+        <div class="estadistica-card">
+            <div class="estadistica-card">
+                <div class="estadistica-icon abiertos">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="estadistica-info">
+                    <h3>Abiertos</h3>
+                    <span class="estadistica-valor">{{ estadisticas.abiertos }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="estadistica-card">
+            <div class="estadistica-icon en-progreso">
+                <i class="fas fa-cog"></i>
+            </div>
+            <div class="estadistica-info">
+                <h3>En Progreso</h3>
+                <span class="estadistica-valor">{{ estadisticas.en_progreso }}</span>
+            </div>
+        </div>
+        <div class="estadistica-card">
+            <div class="estadistica-icon cerrados">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="estadistica-info">
+                <h3>Cerrados</h3>
+                <span class="estadistica-valor">{{ estadisticas.cerrados }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Tickets -->
+    <div class="tickets-list">
+        <div class="section-header">
+            <h2>Mis Solicitudes</h2>
+            <a href="{{ url_for('residentes.crear_ticket') }}" class="btn-nuevo-ticket">
+                <i class="fas fa-plus"></i> Nuevo Ticket
+            </a>
+        </div>
+
+        {% if tickets %}
+        <div class="tickets-grid">
+            {% for ticket in tickets %}
+            <div class="ticket-card">
+                <div class="ticket-header">
+                    <h3>Ticket #{{ ticket.id_ticket }}</h3>
+                    <span class="ticket-prioridad {{ ticket.prioridad }}">{{ ticket.prioridad }}</span>
+                </div>
+                <div class="ticket-content">
+                    <p class="ticket-descripcion">{{ ticket.descripcion }}</p>
+                    <div class="ticket-meta">
+                        <div class="meta-item">
+                            <i class="fas fa-calendar"></i>
+                            <span>{{ ticket.fecha_emision.strftime('%d/%m/%Y') }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-home"></i>
+                            <span>Piso {{ ticket.piso }} - Dpto {{ ticket.nro_departamento }}</span>
+                        </div>
+                        {% if ticket.area_nombre %}
+                        <div class="meta-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ ticket.area_nombre }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="ticket-footer">
+                    <span class="ticket-estado {{ ticket.estado }}">{{ ticket.estado }}</span>
+                    {% if ticket.empleado_nombre %}
+                    <span class="ticket-asignado">Asignado a: {{ ticket.empleado_nombre }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-tickets">
+            <i class="fas fa-ticket-alt"></i>
+            <h3>No tienes tickets creados</h3>
+            <p>Crea tu primer ticket de soporte para reportar un problema o solicitar mantenimiento.</p>
+            <a href="{{ url_for('residentes.crear_ticket') }}" class="btn-nuevo-ticket">
+                <i class="fas fa-plus"></i> Crear Primer Ticket
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
