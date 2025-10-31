@@ -561,19 +561,20 @@ async function eliminarTicket(idTicket) {
 }
 
 // Función para marcar ticket como resuelto
+// Función para marcar ticket como resuelto
 async function marcarComoResuelto(idTicket) {
     if (!confirm('¿Está seguro de que desea marcar este ticket como resuelto?')) {
         return;
     }
     
     try {
-        const response = await fetch(`/admin/ticket/${idTicket}/cambiar-estado`, {
+        const response = await fetch(`/admin/tickets/resolver`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                estado: 'resuelto'
+                id_ticket: idTicket
             })
         });
         
@@ -590,7 +591,6 @@ async function marcarComoResuelto(idTicket) {
         alert('Error al marcar el ticket como resuelto');
     }
 }
-
 // Función para reabrir ticket
 async function reabrirTicket(idTicket) {
     if (!confirm('¿Está seguro de que desea reabrir este ticket?')) {

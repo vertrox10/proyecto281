@@ -2827,8 +2827,6 @@ def obtener_ticket(id_ticket):
             conn.close()
 
 
-
-
 @admin_bp.route("/tickets/asignar", methods=["POST"])
 @login_required
 def asignar_ticket():
@@ -2849,34 +2847,22 @@ def asignar_ticket():
         tipo_asignacion = data.get('tipo_asignacion', 'interno')
         proveedor_externo = data.get('proveedor_externo')
         contacto_externo = data.get('contacto_externo')
+        accion = data.get('accion', 'asignar')  # Nuevo parámetro: 'asignar' o 'resolver'
         
         if not id_ticket:
             return jsonify({'error': 'ID de ticket requerido'}), 400
         
-        # Validaciones según el tipo de asignación
-        if tipo_asignacion == 'interno':
-            if not id_empleado:
-                return jsonify({'error': 'ID de empleado requerido para asignación interna'}), 400
-        elif tipo_asignacion == 'externo':
-            if not proveedor_externo:
-                return jsonify({'error': 'Nombre del proveedor externo requerido'}), 400
-        else:
-            return jsonify({'error': 'Tipo de asignación no válido'}), 400
-        
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        # Iniciar transacción
-        conn.autocommit = False
         
         # Primero, descubrir qué estados válidos existen en la BD
         cursor.execute("SELECT DISTINCT estado FROM ticket ORDER BY estado")
         estados_existentes = [row[0] for row in cursor.fetchall()]
         print(f"Estados existentes en BD: {estados_existentes}")
         
-        # Verificar que el ticket existe y está en estado asignable
+        # Verificar que el ticket existe
         cursor.execute("""
-            SELECT estado, id_departamento, id_area, descripcion
+            SELECT estado, id_departamento, id_area, descripcion, id_empleado
             FROM ticket WHERE id_ticket = %s
         """, (id_ticket,))
         
@@ -2884,168 +2870,280 @@ def asignar_ticket():
         if not ticket:
             raise Exception('Ticket no encontrado')
         
-        print(f"Estado actual del ticket: {ticket[0]}")
+        estado_actual = ticket[0]
+        print(f"Estado actual del ticket: {estado_actual}")
         
-        # Definir estados que permiten asignación basados en los existentes
-        estados_asignables = []
-        if 'pendiente' in estados_existentes:
-            estados_asignables.append('pendiente')
-        if 'abierto' in estados_existentes:
-            estados_asignables.append('abierto')
-        if 'nuevo' in estados_existentes:
-            estados_asignables.append('nuevo')
+        # Iniciar transacción
+        conn.autocommit = False
         
-        # Si no encontramos estados comunes, usar el primero disponible
-        if not estados_asignables and estados_existentes:
-            estados_asignables.append(estados_existentes[0])
+        # Lógica diferente según la acción
+        if accion == 'resolver':
+            # Lógica para resolver ticket
+            return resolver_ticket_logic(conn, cursor, id_ticket, ticket, current_user)
         
-        if ticket[0] not in estados_asignables:
-            raise Exception(f'No se puede asignar un ticket en estado "{ticket[0]}". Estados permitidos para asignación: {", ".join(estados_asignables)}')
-        
-        # Determinar el estado objetivo después de la asignación
-        # Buscar un estado que indique "en progreso" o similar
-        estado_objetivo = None
-        posibles_estados_progreso = ['en progreso', 'en_progreso', 'asignado', 'en proceso', 'procesando']
-        
-        for estado in estados_existentes:
-            if estado.lower() in posibles_estados_progreso:
-                estado_objetivo = estado
-                break
-        
-        # Si no encontramos un estado específico de "en progreso", usar el primero disponible que no sea los asignables
-        if not estado_objetivo:
-            for estado in estados_existentes:
-                if estado not in estados_asignables:
-                    estado_objetivo = estado
-                    break
-        
-        # Si todavía no tenemos estado objetivo, mantener el estado actual
-        if not estado_objetivo:
-            estado_objetivo = ticket[0]
-        
-        print(f"Estado objetivo después de asignación: {estado_objetivo}")
-        
-        # Procesar según el tipo de asignación
-        if tipo_asignacion == 'interno':
-            # Verificar que el empleado existe y está activo
-            cursor.execute("""
-                SELECT estado, id_usuario FROM empleado WHERE id_empleado = %s
-            """, (id_empleado,))
-            
-            empleado = cursor.fetchone()
-            if not empleado or empleado[0] != 'activo':
-                raise Exception('Empleado no disponible')
-            
-            # Actualizar ticket con empleado asignado
-            cursor.execute("""
-                UPDATE ticket 
-                SET id_empleado = %s, estado = %s
-                WHERE id_ticket = %s
-            """, (id_empleado, estado_objetivo, id_ticket))
-            
-            # Obtener información del empleado para el comentario
-            cursor.execute("""
-                SELECT 
-                    u.nombre, u.ap_paterno, u.ap_materno, e.puesto
-                FROM empleado e
-                JOIN usuario u ON e.id_usuario = u.id_usuario
-                WHERE e.id_empleado = %s
-            """, (id_empleado,))
-            
-            empleado_info = cursor.fetchone()
-            empleado_nombre = f"{empleado_info[0]} {empleado_info[1]} {empleado_info[2]}"
-            
-            # Texto para el comentario
-            comentario_texto = f"Ticket asignado a {empleado_nombre} ({empleado_info[3]})"
-            
-        else:  # Asignación externa
-            # Actualizar ticket
-            cursor.execute("""
-                UPDATE ticket 
-                SET estado = %s
-                WHERE id_ticket = %s
-            """, (estado_objetivo, id_ticket))
-            
-            comentario_texto = f"Ticket asignado a proveedor externo: {proveedor_externo}"
-            if contacto_externo:
-                comentario_texto += f" | Contacto: {contacto_externo}"
-        
-        # Agregar detalles adicionales al comentario
-        if instrucciones:
-            comentario_texto += f" | Instrucciones: {instrucciones}"
-        if fecha_estimada:
-            comentario_texto += f" | Fecha estimada: {fecha_estimada}"
-        
-        # Obtener el ID de usuario correcto del current_user
-        # Probamos diferentes atributos posibles
-        id_usuario_actual = None
-        if hasattr(current_user, 'id_usuario'):
-            id_usuario_actual = current_user.id_usuario
-        elif hasattr(current_user, 'id'):
-            id_usuario_actual = current_user.id
-        elif hasattr(current_user, 'get_id'):
-            id_usuario_actual = current_user.get_id()
-        
-        if not id_usuario_actual:
-            raise Exception('No se pudo obtener el ID del usuario actual')
-        
-        # Insertar comentario interno en comentario_ticket
-        cursor.execute("""
-            INSERT INTO comentario_ticket 
-            (id_ticket, id_usuario, mensaje, fecha_creacion, es_interno)
-            VALUES (%s, %s, %s, NOW(), true)
-        """, (id_ticket, id_usuario_actual, comentario_texto))
-        
-        # Crear notificación si es asignación interna
-        if tipo_asignacion == 'interno' and empleado:
-            cursor.execute("""
-                SELECT id_usuario FROM empleado WHERE id_empleado = %s
-            """, (id_empleado,))
-            
-            empleado_usuario = cursor.fetchone()
-            if empleado_usuario:
-                # Crear notificación para el empleado
-                cursor.execute("""
-                    INSERT INTO notificacion 
-                    (id_usuario, titulo, mensaje, tipo, leida, fecha_creacion, url_accion)
-                    VALUES (%s, %s, %s, %s, %s, NOW(), %s)
-                """, (
-                    empleado_usuario[0],
-                    'Nuevo Ticket Asignado',
-                    f'Se te ha asignado el ticket #{id_ticket}: {ticket[3][:100]}...',
-                    'asignacion_ticket',
-                    False,
-                    f'/empleado/tickets/{id_ticket}'
-                ))
-        
-        conn.commit()
-        
-        # Preparar respuesta
-        if tipo_asignacion == 'interno':
-            response_data = {
-                'success': True, 
-                'message': f'Ticket asignado a {empleado_nombre} ({empleado_info[3]}) y cambiado a estado: {estado_objetivo}',
-                'empleado_nombre': empleado_nombre,
-                'puesto': empleado_info[3],
-                'nuevo_estado': estado_objetivo,
-                'tipo_asignacion': 'interno'
-            }
+        elif accion == 'asignar':
+            # Lógica para asignar ticket (tu código actual)
+            return asignar_ticket_logic(conn, cursor, id_ticket, id_empleado, fecha_estimada, 
+                                      instrucciones, tipo_asignacion, proveedor_externo, 
+                                      contacto_externo, ticket, estados_existentes, current_user)
         else:
-            response_data = {
-                'success': True, 
-                'message': f'Ticket asignado a proveedor externo: {proveedor_externo} y cambiado a estado: {estado_objetivo}',
-                'proveedor_externo': proveedor_externo,
-                'contacto_externo': contacto_externo,
-                'nuevo_estado': estado_objetivo,
-                'tipo_asignacion': 'externo'
-            }
-        
-        return jsonify(response_data)
+            raise Exception('Acción no válida. Use "asignar" o "resolver"')
         
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error asignando ticket: {str(e)}")
+        print(f"Error en gestión de ticket: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+def resolver_ticket_logic(conn, cursor, id_ticket, ticket, current_user):
+    """Lógica para resolver un ticket"""
+    estado_actual = ticket[0]
+    
+    # Verificar si el ticket puede ser resuelto
+    estados_resolubles = ['pendiente', 'abierto', 'en progreso', 'asignado', 'en proceso']
+    if estado_actual not in estados_resolubles:
+        raise Exception(f'No se puede resolver un ticket en estado "{estado_actual}"')
+    
+    # Buscar un estado que indique "resuelto" o "completado"
+    cursor.execute("SELECT DISTINCT estado FROM ticket ORDER BY estado")
+    estados_existentes = [row[0] for row in cursor.fetchall()]
+    
+    estado_resuelto = None
+    posibles_estados_resueltos = ['resuelto', 'completado', 'terminado', 'cerrado', 'finalizado']
+    
+    for estado in estados_existentes:
+        if estado.lower() in posibles_estados_resueltos:
+            estado_resuelto = estado
+            break
+    
+    # Si no encontramos un estado específico, usar el primero disponible
+    if not estado_resuelto and estados_existentes:
+        estado_resuelto = estados_existentes[-1]  # Usar el último estado
+    
+    if not estado_resuelto:
+        raise Exception('No se pudo determinar un estado para marcar como resuelto')
+    
+    # Actualizar ticket como resuelto
+    cursor.execute("""
+        UPDATE ticket 
+        SET estado = %s, fecha_finalizacion = NOW()
+        WHERE id_ticket = %s
+    """, (estado_resuelto, id_ticket))
+    
+    # Agregar comentario de resolución
+    comentario_texto = f"Ticket marcado como {estado_resuelto}"
+    
+    # Obtener el ID de usuario
+    id_usuario_actual = getattr(current_user, 'id_usuario', getattr(current_user, 'id', None))
+    if not id_usuario_actual:
+        cursor.execute("SELECT id_usuario FROM administrador LIMIT 1")
+        admin_result = cursor.fetchone()
+        id_usuario_actual = admin_result[0] if admin_result else 1
+    
+    # Insertar comentario
+    cursor.execute("""
+        INSERT INTO comentario_ticket 
+        (id_ticket, id_usuario, mensaje, fecha_creacion, es_interno)
+        VALUES (%s, %s, %s, NOW(), false)
+    """, (id_ticket, id_usuario_actual, comentario_texto))
+    
+    conn.commit()
+    
+    return jsonify({
+        'success': True, 
+        'message': f'Ticket marcado como {estado_resuelto}',
+        'nuevo_estado': estado_resuelto,
+        'accion': 'resolver'
+    })
+
+def asignar_ticket_logic(conn, cursor, id_ticket, id_empleado, fecha_estimada, instrucciones, 
+                        tipo_asignacion, proveedor_externo, contacto_externo, ticket, estados_existentes, current_user):
+    """Lógica para asignar un ticket"""
+    
+    # Validaciones según el tipo de asignación
+    if tipo_asignacion == 'interno':
+        if not id_empleado:
+            raise Exception('ID de empleado requerido para asignación interna')
+    elif tipo_asignacion == 'externo':
+        if not proveedor_externo:
+            raise Exception('Nombre del proveedor externo requerido')
+    else:
+        raise Exception('Tipo de asignación no válido')
+    
+    estado_actual = ticket[0]
+    
+    # Definir estados que permiten asignación
+    estados_asignables = []
+    if 'pendiente' in estados_existentes:
+        estados_asignables.append('pendiente')
+    if 'abierto' in estados_existentes:
+        estados_asignables.append('abierto')
+    if 'nuevo' in estados_existentes:
+        estados_asignables.append('nuevo')
+    
+    if not estados_asignables:
+        estados_asignables = estados_existentes
+    
+    if estado_actual not in estados_asignables:
+        raise Exception(f'No se puede asignar un ticket en estado "{estado_actual}". Estados permitidos: {", ".join(estados_asignables)}')
+    
+    # Determinar estado objetivo para asignación
+    estado_objetivo = None
+    posibles_estados_progreso = ['en progreso', 'en_progreso', 'asignado', 'en proceso', 'procesando']
+    
+    for estado in estados_existentes:
+        if estado.lower() in posibles_estados_progreso:
+            estado_objetivo = estado
+            break
+    
+    if not estado_objetivo:
+        for estado in estados_existentes:
+            if estado not in estados_asignables:
+                estado_objetivo = estado
+                break
+    
+    if not estado_objetivo:
+        estado_objetivo = estado_actual
+    
+    # Procesar según el tipo de asignación
+    if tipo_asignacion == 'interno':
+        # Verificar que el empleado existe y está activo
+        cursor.execute("SELECT estado FROM empleado WHERE id_empleado = %s", (id_empleado,))
+        empleado = cursor.fetchone()
+        if not empleado or empleado[0] != 'activo':
+            raise Exception('Empleado no disponible')
+        
+        # Actualizar ticket
+        cursor.execute("""
+            UPDATE ticket 
+            SET id_empleado = %s, estado = %s
+            WHERE id_ticket = %s
+        """, (id_empleado, estado_objetivo, id_ticket))
+        
+        # Obtener información del empleado
+        cursor.execute("""
+            SELECT u.nombre, u.ap_paterno, u.ap_materno, e.puesto
+            FROM empleado e
+            JOIN usuario u ON e.id_usuario = u.id_usuario
+            WHERE e.id_empleado = %s
+        """, (id_empleado,))
+        
+        empleado_info = cursor.fetchone()
+        empleado_nombre = f"{empleado_info[0]} {empleado_info[1]} {empleado_info[2]}"
+        
+        comentario_texto = f"Ticket asignado a {empleado_nombre} ({empleado_info[3]})"
+        
+    else:  # Asignación externa
+        cursor.execute("""
+            UPDATE ticket 
+            SET estado = %s
+            WHERE id_ticket = %s
+        """, (estado_objetivo, id_ticket))
+        
+        comentario_texto = f"Ticket asignado a proveedor externo: {proveedor_externo}"
+        if contacto_externo:
+            comentario_texto += f" | Contacto: {contacto_externo}"
+    
+    # Agregar detalles al comentario
+    if instrucciones:
+        comentario_texto += f" | Instrucciones: {instrucciones}"
+    if fecha_estimada:
+        comentario_texto += f" | Fecha estimada: {fecha_estimada}"
+    
+    # Obtener ID de usuario
+    id_usuario_actual = getattr(current_user, 'id_usuario', getattr(current_user, 'id', None))
+    if not id_usuario_actual:
+        cursor.execute("SELECT id_usuario FROM administrador LIMIT 1")
+        admin_result = cursor.fetchone()
+        id_usuario_actual = admin_result[0] if admin_result else 1
+    
+    # Insertar comentario
+    cursor.execute("""
+        INSERT INTO comentario_ticket 
+        (id_ticket, id_usuario, mensaje, fecha_creacion, es_interno)
+        VALUES (%s, %s, %s, NOW(), true)
+    """, (id_ticket, id_usuario_actual, comentario_texto))
+    
+    # Crear notificación si es asignación interna
+    if tipo_asignacion == 'interno':
+        cursor.execute("SELECT id_usuario FROM empleado WHERE id_empleado = %s", (id_empleado,))
+        empleado_usuario = cursor.fetchone()
+        if empleado_usuario:
+            cursor.execute("""
+                INSERT INTO notificacion 
+                (id_usuario, titulo, mensaje, tipo, leida, fecha_creacion, url_accion)
+                VALUES (%s, %s, %s, %s, %s, NOW(), %s)
+            """, (
+                empleado_usuario[0],
+                'Nuevo Ticket Asignado',
+                f'Se te ha asignado el ticket #{id_ticket}: {ticket[3][:100]}...',
+                'asignacion_ticket',
+                False,
+                f'/empleado/tickets/{id_ticket}'
+            ))
+    
+    conn.commit()
+    
+    # Preparar respuesta
+    response_data = {
+        'success': True, 
+        'message': f'Ticket asignado exitosamente. Nuevo estado: {estado_objetivo}',
+        'nuevo_estado': estado_objetivo,
+        'accion': 'asignar',
+        'tipo_asignacion': tipo_asignacion
+    }
+    
+    if tipo_asignacion == 'interno':
+        response_data['empleado_nombre'] = empleado_nombre
+        response_data['puesto'] = empleado_info[3]
+    else:
+        response_data['proveedor_externo'] = proveedor_externo
+    
+    return jsonify(response_data)
+
+@admin_bp.route("/tickets/resolver", methods=["POST"])
+@login_required
+def resolver_ticket():
+    if current_user.id_rol != 1:
+        return jsonify({'error': 'Acceso no autorizado'}), 403
+    
+    conn = None
+    cursor = None
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No se recibieron datos JSON'}), 400
+            
+        id_ticket = data.get('id_ticket')
+        
+        if not id_ticket:
+            return jsonify({'error': 'ID de ticket requerido'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar que el ticket existe
+        cursor.execute("""
+            SELECT estado, id_departamento, id_area, descripcion, id_empleado
+            FROM ticket WHERE id_ticket = %s
+        """, (id_ticket,))
+        
+        ticket = cursor.fetchone()
+        if not ticket:
+            raise Exception('Ticket no encontrado')
+        
+        # Lógica para resolver ticket
+        return resolver_ticket_logic(conn, cursor, id_ticket, ticket, current_user)
+        
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"Error resolviendo ticket: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         if cursor:
