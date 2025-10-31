@@ -801,17 +801,12 @@
 // Variable global para la instancia del gráfico
 let pieChartInstance = null;
 
-// Colores para los tipos de consumo
-const consumoColors = {
-    'Energía Eléctrica': '#6366f1',
-    'Agua': '#10b981',
-    'Gas': '#06b6d4'
-};
-
 // Inicializar el dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    // Cargar datos iniciales
-    cargarDatosConsumo(30);
+    console.log('Dashboard inicializado - Cargando datos de consumo...');
+    
+    // Cargar datos iniciales para el gráfico de pastel
+    cargarDatosConsumoChart(30);
     
     // Animaciones de entrada
     const cards = document.querySelectorAll('.action-card, .stat-card');
@@ -827,27 +822,34 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Función para cargar datos de consumo
-async function cargarDatosConsumo(dias) {
+// Función para cargar datos del gráfico de pastel
+async function cargarDatosConsumoChart(dias) {
     try {
         // Mostrar loading
         mostrarEstadoCarga(true);
         
-        const response = await fetch(`/admin/dashboard/consumos?dias=${dias}`);
-        const data = await response.json();
+        // Usar los datos de consumos mensuales que ya vienen del servidor
+        const consumosData = {{ consumos_mensuales | tojson }};
         
-        if (response.ok && data.success) {
+        if (consumosData && consumosData.length > 0) {
             // Ocultar estados
             mostrarEstadoCarga(false);
             mostrarEstadoVacio(false);
             
+            // Preparar datos para el gráfico
+            const datosGrafico = {
+                consumos: consumosData,
+                total_general: consumosData.reduce((sum, item) => sum + item.total, 0),
+                periodo: "Este mes"
+            };
+            
             // Actualizar la interfaz con los datos
-            actualizarInterfazConsumos(data);
+            actualizarInterfazConsumos(datosGrafico);
             
             // Crear o actualizar el gráfico
-            crearActualizarGrafico(data.consumos);
+            crearActualizarGrafico(consumosData);
         } else {
-            throw new Error(data.error || 'Error al cargar datos');
+            throw new Error('No hay datos de consumo disponibles');
         }
     } catch (error) {
         console.error('Error:', error);
@@ -863,12 +865,12 @@ function mostrarEstadoCarga(mostrar) {
     
     if (mostrar) {
         loading.style.display = 'block';
-        canvas.style.display = 'none';
+        if (canvas) canvas.style.display = 'none';
         document.getElementById('chartLegend').style.display = 'none';
         document.getElementById('consumoSummary').style.display = 'none';
     } else {
         loading.style.display = 'none';
-        canvas.style.display = 'block';
+        if (canvas) canvas.style.display = 'block';
     }
 }
 
@@ -879,12 +881,12 @@ function mostrarEstadoVacio(mostrar) {
     
     if (mostrar) {
         empty.style.display = 'block';
-        canvas.style.display = 'none';
+        if (canvas) canvas.style.display = 'none';
         document.getElementById('chartLegend').style.display = 'none';
         document.getElementById('consumoSummary').style.display = 'none';
     } else {
         empty.style.display = 'none';
-        canvas.style.display = 'block';
+        if (canvas) canvas.style.display = 'block';
     }
 }
 
@@ -896,11 +898,7 @@ function actualizarInterfazConsumos(data) {
     
     // Calcular total en la unidad más apropiada
     const total = data.total_general;
-    let unidad = 'kWh';
-    
-    if (total >= 1000) {
-        // Podrías implementar conversiones si es necesario
-    }
+    let unidad = 'kWh'; // Unidad por defecto
     
     totalElement.textContent = `Total: ${total.toFixed(2)} ${unidad}`;
     periodoElement.textContent = data.periodo;
@@ -910,7 +908,7 @@ function actualizarInterfazConsumos(data) {
     document.getElementById('consumoSummary').style.display = 'block';
     
     // Actualizar consumo actual en la tarjeta de actividad reciente
-    const energiaData = data.consumos.find(c => c.tipo === 'Energía Eléctrica');
+    const energiaData = data.consumos.find(c => c.tipo === 'Luz');
     if (energiaData) {
         document.getElementById('currentEnergy').textContent = energiaData.total.toFixed(2);
     }
@@ -918,7 +916,13 @@ function actualizarInterfazConsumos(data) {
 
 // Función para crear o actualizar el gráfico de pastel
 function crearActualizarGrafico(consumos) {
-    const ctx = document.getElementById('pieChart').getContext('2d');
+    const ctx = document.getElementById('pieChart');
+    if (!ctx) {
+        console.error('No se encontró el elemento pieChart');
+        return;
+    }
+
+    const ctx2d = ctx.getContext('2d');
     
     // Destruir gráfico existente si existe
     if (pieChartInstance) {
@@ -936,11 +940,10 @@ function crearActualizarGrafico(consumos) {
     // Preparar datos para Chart.js
     const labels = consumosFiltrados.map(consumo => consumo.tipo);
     const data = consumosFiltrados.map(consumo => consumo.total);
-    const backgroundColors = consumosFiltrados.map(consumo => consumo.color);
-    const unidades = consumosFiltrados.map(consumo => consumo.unidad);
+    const backgroundColors = consumosFiltrados.map(consumo => consumo.color || '#6366f1');
     
     // Crear el gráfico
-    pieChartInstance = new Chart(ctx, {
+    pieChartInstance = new Chart(ctx2d, {
         type: 'pie',
         data: {
             labels: labels,
@@ -989,23 +992,30 @@ function crearActualizarGrafico(consumos) {
 // Función para actualizar la leyenda personalizada
 function actualizarLeyenda(consumos) {
     const legendContainer = document.getElementById('chartLegend');
+    if (!legendContainer) {
+        console.error('No se encontró chartLegend');
+        return;
+    }
+    
     legendContainer.innerHTML = '';
     
     consumos.forEach(consumo => {
         const legendItem = document.createElement('div');
         legendItem.className = 'legend-item';
         legendItem.innerHTML = `
-            <div class="legend-color" style="background-color: ${consumo.color};"></div>
+            <div class="legend-color" style="background-color: ${consumo.color || '#6366f1'};"></div>
             <span class="legend-text">${consumo.tipo}</span>
-            <span class="legend-value">${consumo.total.toFixed(2)} ${consumo.unidad}</span>
+            <span class="legend-value">${consumo.total.toFixed(2)} ${consumo.unidad || 'unidades'}</span>
         `;
         
         // Agregar evento click para resaltar segmento del gráfico
         legendItem.addEventListener('click', function() {
             if (pieChartInstance) {
                 const index = consumos.findIndex(c => c.tipo === consumo.tipo);
-                pieChartInstance.toggleDataVisibility(index);
-                pieChartInstance.update();
+                if (index !== -1) {
+                    pieChartInstance.toggleDataVisibility(index);
+                    pieChartInstance.update();
+                }
             }
         });
         
@@ -1015,13 +1025,38 @@ function actualizarLeyenda(consumos) {
 
 // Función para actualizar el gráfico cuando cambia el filtro de tiempo
 function actualizarGraficoConsumos(dias) {
-    cargarDatosConsumo(dias);
+    cargarDatosConsumoChart(dias);
 }
 
-// Función para exportar datos (opcional)
-function exportarDatosConsumo() {
-    // Implementar lógica de exportación si es necesario
-    console.log('Exportando datos de consumo...');
+// Función para cargar datos de consumo de línea (últimos 7 días)
+async function cargarDatosConsumoLinea() {
+    try {
+        console.log('Cargando datos de consumo últimos 7 días...');
+        
+        const response = await fetch('/admin/api/consumos', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Datos de consumo recibidos:', data);
+        
+        // Aquí puedes actualizar un gráfico de línea si lo necesitas
+        // actualizarGraficoLinea(data);
+        
+    } catch (error) {
+        console.error('Error cargando datos de consumo:', error);
+    }
 }
+
+// Llamar a la función de carga de datos de línea
+cargarDatosConsumoLinea();
 </script>
 {% endblock %}

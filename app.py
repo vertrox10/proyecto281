@@ -60,7 +60,7 @@ from routes.residentes import residentes_bp
 
 # Registrar blueprints
 app.register_blueprint(auth_bp)
-app.register_blueprint(admin_bp)
+app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(password_bp)
 app.register_blueprint(empleados_bp, url_prefix="/empleados")
 app.register_blueprint(residentes_bp, url_prefix="/residentes")

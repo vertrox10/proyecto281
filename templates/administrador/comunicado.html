@@ -8,7 +8,19 @@
 </div>
 
 <!-- Mensajes Flash -->
-
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'danger' else 'info' if category == 'info' else 'success' if category == 'success' else 'warning' }}" 
+                 style="max-width: 800px; margin: 20px auto; padding: 15px; border-radius: 5px; 
+                        background: {{ '#f8d7da' if category == 'danger' else '#d1ecf1' if category == 'info' else '#d4edda' if category == 'success' else '#fff3cd' }}; 
+                        color: {{ '#721c24' if category == 'danger' else '#0c5460' if category == 'info' else '#155724' if category == 'success' else '#856404' }}; 
+                        border: 1px solid {{ '#f5c6cb' if category == 'danger' else '#bee5eb' if category == 'info' else '#c3e6cb' if category == 'success' else '#ffeaa7' }};">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
 
 <!-- Formulario de Comunicado -->
 <div style="max-width: 800px; margin: 20px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
@@ -16,7 +28,7 @@
         Nuevo Comunicado por Email
     </h2>
     
-    <form method="POST" action="/comunicado">
+    <form method="POST" action="{{ url_for('admin.comunicado') }}">
         <!-- Título -->
         <div style="margin-bottom: 20px;">
             <label style="display: block; margin-bottom: 8px; font-weight: bold; color: #333;">
@@ -94,6 +106,10 @@ input:focus, textarea:focus {
     outline: none;
     border-color: #4caf50 !important;
     box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+}
+
+.alert {
+    transition: opacity 0.3s ease;
 }
 </style>
 {% endblock %}

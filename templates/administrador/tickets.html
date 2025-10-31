@@ -32,16 +32,8 @@
         <div style="color: #666; font-size: 0.9rem;">Pendientes</div>
     </div>
     <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
-        <div style="font-size: 2rem; color: #3498db; margin-bottom: 5px;">{{ en_proceso }}</div>
-        <div style="color: #666; font-size: 0.9rem;">En Proceso</div>
-    </div>
-    <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
         <div style="font-size: 2rem; color: #27ae60; margin-bottom: 5px;">{{ resueltos }}</div>
         <div style="color: #666; font-size: 0.9rem;">Resueltos</div>
-    </div>
-    <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
-        <div style="font-size: 2rem; color: #e74c3c; margin-bottom: 5px;">{{ cancelados }}</div>
-        <div style="color: #666; font-size: 0.9rem;">Cancelados</div>
     </div>
 </div>
 
@@ -52,10 +44,11 @@
             <label style="font-weight: bold;">Filtrar por:</label>
             <select id="filterEstado" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
                 <option value="all">Todos los estados</option>
+                <option value="abierto">Abierto</option>
                 <option value="pendiente">Pendiente</option>
-                <option value="en_proceso">En Proceso</option>
+                <option value="en progreso">En Progreso</option>
                 <option value="resuelto">Resuelto</option>
-                <option value="cancelado">Cancelado</option>
+                <option value="cerrado">Cerrado</option>
             </select>
             
             <select id="filterPrioridad" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
@@ -63,10 +56,12 @@
                 <option value="alta">Alta</option>
                 <option value="media">Media</option>
                 <option value="baja">Baja</option>
+                <option value="urgente">Urgente</option>
             </select>
         </div>
         
         <div style="margin-left: auto; display: flex; gap: 10px;">
+            <label for="searchTickets" style="display: none;">Buscar tickets</label>
             <input type="text" id="searchTickets" placeholder="Buscar tickets..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; min-width: 250px;">
             <button onclick="filtrarTickets()" style="background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Buscar</button>
         </div>
@@ -75,94 +70,112 @@
 
 <!-- Lista de Tickets -->
 <div class="tickets-container" style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
-    <div class="tickets-header" style="background: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 80px 1fr 100px 100px 120px 150px 120px 100px; gap: 15px; font-weight: bold;">
-        <div>ID</div>
-        <div>Descripción</div>
-        <div>Prioridad</div>
-        <div>Estado</div>
-        <div>Fecha</div>
-        <div>Ubicación</div>
-        <div>Asignado a</div>
-        <div>Acciones</div>
-    </div>
-    
-    <div class="tickets-list" id="ticketsList">
-        {% for ticket in tickets %}
-        <div class="ticket-item" data-estado="{{ ticket.estado }}" data-prioridad="{{ ticket.prioridad }}" 
-             data-tipo="{{ ticket.tipo_ubicacion }}"
-             style="padding: 15px 20px; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 80px 1fr 100px 100px 120px 150px 120px 100px; gap: 15px; align-items: center; transition: background-color 0.2s;">
-            <div style="font-weight: bold; color: #3498db;">#{{ ticket.id_ticket }}</div>
-            <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ ticket.descripcion }}">
-                {{ ticket.descripcion[:80] }}{% if ticket.descripcion|length > 80 %}...{% endif %}
-            </div>
-            <div>
-                <span class="priority-badge 
-                    {% if ticket.prioridad == 'alta' %}priority-high{% endif %}
-                    {% if ticket.prioridad == 'media' %}priority-medium{% endif %}
-                    {% if ticket.prioridad == 'baja' %}priority-low{% endif %}"
-                    style="padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">
-                    {{ ticket.prioridad }}
-                </span>
-            </div>
-            <div>
-                <span class="status-badge 
-                    {% if ticket.estado == 'pendiente' %}status-pending{% endif %}
-                    {% if ticket.estado == 'en_proceso' %}status-in-progress{% endif %}
-                    {% if ticket.estado == 'resuelto' %}status-resolved{% endif %}
-                    {% if ticket.estado == 'cancelado' %}status-cancelled{% endif %}"
-                    style="padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">
-                    {{ ticket.estado|replace('_', ' ')|title }}
-                </span>
-            </div>
-            <div style="font-size: 0.9rem; color: #666;">{{ ticket.fecha_emision.strftime('%d/%m/%Y') }}</div>
-            <div style="font-size: 0.9rem;">
-                {% if ticket.tipo_ubicacion == 'departamento' %}
-                    <i class="fas fa-building" style="color: #3498db; margin-right: 5px;"></i>
-                    Piso {{ ticket.piso }} - Dpto. {{ ticket.nro_departamento }}
-                {% elif ticket.tipo_ubicacion == 'area_comun' %}
-                    <i class="fas fa-users" style="color: #27ae60; margin-right: 5px;"></i>
-                    {{ ticket.area_nombre }}
-                {% else %}
-                    <i class="fas fa-question-circle" style="color: #95a5a6; margin-right: 5px;"></i>
-                    Sin ubicación
-                {% endif %}
-            </div>
-            <div style="font-size: 0.9rem;">{{ ticket.empleado_nombre }}</div>
-            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                <button onclick="verDetalleTicket({{ ticket.id_ticket }})" 
-                        style="background: #3498db; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                    Ver
-                </button>
-                {% if ticket.estado == 'pendiente' %}
-                <button onclick="asignarTicket({{ ticket.id_ticket }})" 
-                        style="background: #27ae60; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                    Asignar
-                </button>
-                {% elif ticket.estado == 'en_proceso' %}
-                <button onclick="cambiarEstadoTicket({{ ticket.id_ticket }}, 'resuelto')" 
-                        style="background: #27ae60; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                    Resolver
-                </button>
-                <button onclick="cambiarEstadoTicket({{ ticket.id_ticket }}, 'cancelado')" 
-                        style="background: #e74c3c; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
-                    Cancelar
-                </button>
-                {% endif %}
-            </div>
+    <div style="overflow-x: auto;">
+        <div class="tickets-header" style="background: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #eee; display: grid; grid-template-columns: minmax(60px, 80px) minmax(150px, 1fr) minmax(80px, 100px) minmax(80px, 100px) minmax(100px, 120px) minmax(120px, 150px) minmax(100px, 120px) minmax(80px, 100px); gap: 15px; font-weight: bold; min-width: 800px;">
+            <div>ID</div>
+            <div>Descripción</div>
+            <div>Prioridad</div>
+            <div>Estado</div>
+            <div>Fecha</div>
+            <div>Ubicación</div>
+            <div>Asignado a</div>
+            <div>Acciones</div>
         </div>
-        {% else %}
-        <div style="padding: 40px; text-align: center; color: #666;">
-            No hay tickets registrados
+        
+        <div class="tickets-list" id="ticketsList" style="min-width: 800px;">
+            {% for ticket in tickets %}
+            <div class="ticket-item" data-estado="{{ ticket.estado }}" data-prioridad="{{ ticket.prioridad }}" 
+                 data-tipo="{{ ticket.tipo_ubicacion }}"
+                 style="padding: 15px 20px; border-bottom: 1px solid #eee; display: grid; grid-template-columns: minmax(60px, 80px) minmax(150px, 1fr) minmax(80px, 100px) minmax(80px, 100px) minmax(100px, 120px) minmax(120px, 150px) minmax(100px, 120px) minmax(80px, 100px); gap: 15px; align-items: center; transition: background-color 0.2s;">
+                <div style="font-weight: bold; color: #3498db;">#{{ ticket.id_ticket }}</div>
+                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ ticket.descripcion }}">
+                    {{ ticket.descripcion[:80] }}{% if ticket.descripcion|length > 80 %}...{% endif %}
+                </div>
+                <div>
+                    <span class="priority-badge 
+                        {% if ticket.prioridad == 'alta' or ticket.prioridad == 'urgente' %}priority-high{% endif %}
+                        {% if ticket.prioridad == 'media' %}priority-medium{% endif %}
+                        {% if ticket.prioridad == 'baja' %}priority-low{% endif %}"
+                        style="padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">
+                        {{ ticket.prioridad }}
+                    </span>
+                </div>
+                <div>
+                    <span class="status-badge 
+                        {% if ticket.estado == 'pendiente' or ticket.estado == 'abierto' %}status-pending{% endif %}
+                        {% if ticket.estado == 'en progreso' %}status-progress{% endif %}
+                        {% if ticket.estado == 'resuelto' or ticket.estado == 'cerrado' %}status-resolved{% endif %}"
+                        style="padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">
+                        {{ ticket.estado|title }}
+                    </span>
+                </div>
+                <div style="font-size: 0.9rem; color: #666;">{{ ticket.fecha_emision.strftime('%d/%m/%Y') }}</div>
+                <div style="font-size: 0.9rem;">
+                    {% if ticket.tipo_ubicacion == 'departamento' %}
+                        <i class="fas fa-building" style="color: #3498db; margin-right: 5px;"></i>
+                        Piso {{ ticket.piso }} - Dpto. {{ ticket.nro_departamento }}
+                    {% elif ticket.tipo_ubicacion == 'area_comun' %}
+                        <i class="fas fa-users" style="color: #27ae60; margin-right: 5px;"></i>
+                        {{ ticket.area_nombre }}
+                    {% else %}
+                        <i class="fas fa-question-circle" style="color: #95a5a6; margin-right: 5px;"></i>
+                        Sin ubicación
+                    {% endif %}
+                </div>
+                <div style="font-size: 0.9rem;">{{ ticket.empleado_nombre }}</div>
+                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                    <button onclick="verDetalleTicket('{{ ticket.id_ticket }}')" 
+                            style="background: #3498db; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                        Ver
+                    </button>
+                    
+                    <!-- Estados donde se puede ASIGNAR: abierto, pendiente -->
+                    {% if ticket.estado in ['abierto', 'pendiente', 'nuevo'] %}
+                    <button onclick="asignarTicket('{{ ticket.id_ticket }}')" 
+                            style="background: #27ae60; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                        Asignar
+                    </button>
+                    {% endif %}
+                    
+                    <!-- Estados donde se puede RESOLVER: abierto, pendiente, en progreso -->
+                    {% if ticket.estado in ['abierto', 'pendiente', 'en progreso', 'asignado'] %}
+                    <button onclick="marcarComoResuelto('{{ ticket.id_ticket }}')" 
+                            style="background: #f39c12; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                        Resolver
+                    </button>
+                    {% endif %}
+                    
+                    <!-- Estados donde se puede REABRIR: resuelto, cerrado -->
+                    {% if ticket.estado in ['resuelto', 'cerrado'] %}
+                    <button onclick="reabrirTicket('{{ ticket.id_ticket }}')" 
+                            style="background: #9b59b6; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                        Reabrir
+                    </button>
+                    {% endif %}
+                    
+                    <!-- Estados donde se puede ELIMINAR: resuelto, cerrado -->
+                    {% if ticket.estado in ['resuelto', 'cerrado'] %}
+                    <button onclick="eliminarTicket('{{ ticket.id_ticket }}')" 
+                            style="background: #e74c3c; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                        Eliminar
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div style="padding: 40px; text-align: center; color: #666; min-width: 800px;">
+                No hay tickets registrados
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
     </div>
 </div>
 
 <!-- Modal Detalle Ticket -->
-<div id="ticketModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+<div id="ticketModal" role="dialog" aria-labelledby="modalTitle" aria-modal="true" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
     <div style="background: white; width: 90%; max-width: 800px; max-height: 90vh; border-radius: 8px; overflow: hidden;">
-        <div style="background: #3498db; color: white; padding: 20px; display: flex; justify-content: between; align-items: center;">
-            <h3 style="margin: 0;">Detalle del Ticket #<span id="modalTicketId"></span></h3>
+        <div style="background: #3498db; color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="modalTitle" style="margin: 0;">Detalle del Ticket #<span id="modalTicketId"></span></h3>
             <button onclick="cerrarModal()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;">×</button>
         </div>
         <div style="padding: 20px; max-height: 70vh; overflow-y: auto;">
@@ -204,7 +217,8 @@
                 </div>
                 
                 <div style="margin-top: 20px;">
-                    <textarea id="nuevoComentario" placeholder="Agregar un comentario..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+                    <label for="nuevoComentario" style="display: block; margin-bottom: 5px; font-weight: bold;">Agregar comentario:</label>
+                    <textarea id="nuevoComentario" placeholder="Escriba su comentario aquí..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
                     <div style="margin-top: 10px;">
                         <input type="checkbox" id="comentarioInterno">
                         <label for="comentarioInterno" style="font-size: 0.9rem;">Comentario interno (solo para administradores y empleados)</label>
@@ -217,10 +231,10 @@
 </div>
 
 <!-- Modal Asignar Ticket -->
-<div id="asignarModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+<div id="asignarModal" role="dialog" aria-labelledby="asignarTitle" aria-modal="true" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
     <div style="background: white; width: 90%; max-width: 600px; border-radius: 8px; overflow: hidden;">
         <div style="background: #27ae60; color: white; padding: 20px;">
-            <h3 style="margin: 0;">Asignar Ticket #<span id="asignarTicketId"></span></h3>
+            <h3 id="asignarTitle" style="margin: 0;">Asignar Ticket #<span id="asignarTicketId"></span></h3>
         </div>
         <div style="padding: 20px; max-height: 70vh; overflow-y: auto;">
             <!-- Información del Ticket -->
@@ -233,28 +247,48 @@
                 </div>
             </div>
             
-            <!-- Selector de Empleado -->
+            <!-- Tipo de Asignación -->
             <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Seleccionar Empleado *</label>
+                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Tipo de Asignación *</label>
+                <div style="display: flex; gap: 15px;">
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="tipoAsignacion" value="interno" checked onchange="toggleTipoAsignacion()">
+                        Empleado Interno
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="tipoAsignacion" value="externo" onchange="toggleTipoAsignacion()">
+                        Servicio Externo
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Selector de Empleado (Interno) -->
+            <div id="seccionInterno" style="margin-bottom: 20px;">
+                <label for="empleadoAsignado" style="display: block; margin-bottom: 8px; font-weight: bold;">Seleccionar Empleado *</label>
                 <select id="empleadoAsignado" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;">
                     <option value="">Cargando empleados...</option>
                 </select>
-                <div id="empleadoInfo" style="background: #e8f5e8; padding: 10px; border-radius: 4px; display: none;">
-                    <strong>Información del empleado:</strong>
-                    <div id="empleadoDetalles"></div>
-                </div>
+            </div>
+            
+            <!-- Servicio Externo -->
+            <div id="seccionExterno" style="margin-bottom: 20px; display: none;">
+                <label for="proveedorExterno" style="display: block; margin-bottom: 8px; font-weight: bold;">Proveedor Externo *</label>
+                <input type="text" id="proveedorExterno" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" placeholder="Nombre del proveedor o servicio externo">
+                
+                <label for="contactoExterno" style="display: block; margin-bottom: 8px; font-weight: bold; margin-top: 10px;">Contacto Externo</label>
+                <input type="text" id="contactoExterno" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" placeholder="Teléfono o email de contacto">
             </div>
             
             <!-- Fecha Estimada -->
             <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Fecha Estimada de Finalización *</label>
+                <label for="fechaEstimada" style="display: block; margin-bottom: 8px; font-weight: bold;">Fecha Estimada de Finalización *</label>
                 <input type="date" id="fechaEstimada" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;" min="{{ hoy }}">
             </div>
             
             <!-- Instrucciones -->
             <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Instrucciones Específicas</label>
-                <textarea id="instruccionesAsignacion" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;" rows="4" placeholder="Agregue instrucciones detalladas para el empleado..."></textarea>
+                <label for="instruccionesAsignacion" style="display: block; margin-bottom: 8px; font-weight: bold;">Instrucciones Específicas</label>
+                <textarea id="instruccionesAsignacion" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;" rows="4" placeholder="Agregue instrucciones detalladas..."></textarea>
             </div>
             
             <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -264,10 +298,6 @@
         </div>
     </div>
 </div>
-
-<style>
-
-</style>
 
 <script>
 // Variables globales
@@ -279,53 +309,61 @@ async function verDetalleTicket(idTicket) {
     ticketActual = idTicket;
     
     try {
-        const response = await fetch(`/admin/ticket/${idTicket}`);
-        const ticket = await response.json();
+        console.log('Solicitando ticket #' + idTicket);
         
-        if (response.ok) {
-            document.getElementById('modalTicketId').textContent = idTicket;
-            document.getElementById('modalUbicacion').textContent = ticket.ubicacion;
-            document.getElementById('modalFecha').textContent = ticket.fecha_emision;
-            document.getElementById('modalPrioridad').innerHTML = `<span class="priority-badge priority-${ticket.prioridad}">${ticket.prioridad}</span>`;
-            document.getElementById('modalEstado').innerHTML = `<span class="status-badge status-${ticket.estado}">${ticket.estado.replace('_', ' ')}</span>`;
-            document.getElementById('modalDescripcion').textContent = ticket.descripcion;
-            document.getElementById('modalAsignado').textContent = ticket.empleado_asignado;
-            document.getElementById('modalResidente').textContent = ticket.residente_nombre;
-            document.getElementById('modalContacto').textContent = ticket.residente_contacto;
-            
-            // Cargar comentarios
-            const comentariosContainer = document.getElementById('modalComentarios');
-            comentariosContainer.innerHTML = '';
-            
-            if (ticket.comentarios && ticket.comentarios.length > 0) {
-                ticket.comentarios.forEach(comentario => {
-                    const comentarioDiv = document.createElement('div');
-                    comentarioDiv.style.padding = '10px';
-                    comentarioDiv.style.borderBottom = '1px solid #eee';
-                    comentarioDiv.style.backgroundColor = comentario.es_interno ? '#fff3cd' : '#ffffff';
-                    
-                    comentarioDiv.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                            <strong>${comentario.usuario_nombre} (${comentario.rol_nombre})</strong>
-                            <small>${comentario.fecha_creacion}</small>
-                        </div>
-                        <p style="margin: 0;">${comentario.mensaje}</p>
-                        ${comentario.es_interno ? '<small style="color: #856404;">Comentario interno</small>' : ''}
-                    `;
-                    
-                    comentariosContainer.appendChild(comentarioDiv);
-                });
-            } else {
-                comentariosContainer.innerHTML = '<p style="text-align: center; color: #666;">No hay comentarios</p>';
-            }
-            
-            document.getElementById('ticketModal').style.display = 'flex';
-        } else {
-            alert('Error: ' + ticket.error);
+        const response = await fetch(`/admin/ticket/${idTicket}`);
+        
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
         }
+        
+        const ticket = await response.json();
+        console.log('Ticket recibido:', ticket);
+        
+        // Llenar el modal
+        document.getElementById('modalTicketId').textContent = idTicket;
+        document.getElementById('modalUbicacion').textContent = ticket.ubicacion || 'N/A';
+        document.getElementById('modalFecha').textContent = ticket.fecha_emision || 'N/A';
+        document.getElementById('modalPrioridad').innerHTML = `<span class="priority-badge priority-${ticket.prioridad}">${ticket.prioridad}</span>`;
+        document.getElementById('modalEstado').innerHTML = `<span class="status-badge status-${ticket.estado}">${ticket.estado}</span>`;
+        document.getElementById('modalDescripcion').textContent = ticket.descripcion || 'Sin descripción';
+        document.getElementById('modalAsignado').textContent = ticket.empleado_asignado || 'No asignado';
+        document.getElementById('modalResidente').textContent = ticket.residente_nombre || 'N/A';
+        document.getElementById('modalContacto').textContent = ticket.residente_contacto || 'N/A';
+        
+        // Cargar comentarios
+        const comentariosContainer = document.getElementById('modalComentarios');
+        comentariosContainer.innerHTML = '';
+        
+        if (ticket.comentarios && ticket.comentarios.length > 0) {
+            ticket.comentarios.forEach(comentario => {
+                const comentarioDiv = document.createElement('div');
+                comentarioDiv.style.padding = '10px';
+                comentarioDiv.style.borderBottom = '1px solid #eee';
+                comentarioDiv.style.backgroundColor = comentario.es_interno ? '#fff3cd' : '#ffffff';
+                comentarioDiv.style.marginBottom = '10px';
+                comentarioDiv.style.borderRadius = '4px';
+                
+                comentarioDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <strong>${comentario.usuario_nombre} (${comentario.rol_nombre})</strong>
+                        <small style="color: #666;">${comentario.fecha_creacion}</small>
+                    </div>
+                    <p style="margin: 0; color: #333;">${comentario.mensaje}</p>
+                    ${comentario.es_interno ? '<small style="color: #856404;">Comentario interno</small>' : ''}
+                `;
+                
+                comentariosContainer.appendChild(comentarioDiv);
+            });
+        } else {
+            comentariosContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No hay comentarios para este ticket</p>';
+        }
+        
+        document.getElementById('ticketModal').style.display = 'flex';
+        
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error al cargar el ticket');
+        console.error('Error cargando detalles del ticket:', error);
+        alert(`Error al cargar el ticket: ${error.message}`);
     }
 }
 
@@ -340,11 +378,6 @@ async function agregarComentario() {
     
     if (!mensaje.trim()) {
         alert('Por favor escriba un comentario');
-        return;
-    }
-    
-    if (mensaje.length > 1000) {
-        alert('El comentario no puede tener más de 1000 caracteres');
         return;
     }
     
@@ -365,7 +398,6 @@ async function agregarComentario() {
         if (response.ok) {
             alert('Comentario agregado correctamente');
             document.getElementById('nuevoComentario').value = '';
-            // Recargar los detalles del ticket para mostrar el nuevo comentario
             verDetalleTicket(ticketActual);
         } else {
             alert('Error: ' + result.error);
@@ -377,154 +409,110 @@ async function agregarComentario() {
 }
 
 // Funciones de asignación
-async function cargarEmpleadosDisponibles() {
-    try {
-        const response = await fetch('/admin/empleados/disponibles');
-        
-        if (response.ok) {
-            const empleados = await response.json();
-            empleadosDisponibles = empleados;
-            actualizarSelectEmpleados();
-        } else {
-            // Si hay error, usar empleados del template
-            usarEmpleadosDelTemplate();
-        }
-    } catch (error) {
-        console.error('Error cargando empleados:', error);
-        usarEmpleadosDelTemplate();
+function toggleTipoAsignacion() {
+    const tipo = document.querySelector('input[name="tipoAsignacion"]:checked').value;
+    const seccionInterno = document.getElementById('seccionInterno');
+    const seccionExterno = document.getElementById('seccionExterno');
+    
+    if (tipo === 'interno') {
+        seccionInterno.style.display = 'block';
+        seccionExterno.style.display = 'none';
+    } else {
+        seccionInterno.style.display = 'none';
+        seccionExterno.style.display = 'block';
     }
 }
 
-function usarEmpleadosDelTemplate() {
-    // Los empleados ya vienen en la variable 'empleados' del template
-    if (typeof empleados !== 'undefined' && empleados.length > 0) {
-        empleadosDisponibles = empleados;
-        actualizarSelectEmpleados();
-    } else {
-        const select = document.getElementById('empleadoAsignado');
-        select.innerHTML = '<option value="">No hay empleados disponibles</option>';
+async function cargarEmpleadosDisponibles() {
+    try {
+        const response = await fetch('/admin/empleados/disponibles');
+        const empleados = await response.json();
+        
+        if (response.ok) {
+            empleadosDisponibles = empleados;
+            actualizarSelectEmpleados();
+        } else {
+            console.error('Error cargando empleados:', empleados.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
     }
 }
 
 function actualizarSelectEmpleados() {
     const select = document.getElementById('empleadoAsignado');
-    
-    if (!empleadosDisponibles || empleadosDisponibles.length === 0) {
-        select.innerHTML = '<option value="">No hay empleados disponibles</option>';
-        return;
-    }
-    
     select.innerHTML = '<option value="">Seleccione un empleado...</option>';
     
     empleadosDisponibles.forEach(empleado => {
         const option = document.createElement('option');
         option.value = empleado.id_empleado;
-        
-        let texto = `${empleado.nombre_completo} - ${empleado.puesto}`;
-        if (empleado.turno) {
-            texto += ` (${empleado.turno})`;
-        }
-        if (empleado.tickets_activos !== undefined) {
-            texto += ` - Tickets activos: ${empleado.tickets_activos}`;
-        }
-        if (empleado.disponibilidad) {
-            texto += ` - ${empleado.disponibilidad}`;
-        }
-        
-        option.textContent = texto;
-        option.setAttribute('data-info', JSON.stringify(empleado));
+        option.textContent = `${empleado.nombre_completo} - ${empleado.puesto} (${empleado.turno})`;
         select.appendChild(option);
     });
 }
 
-// Mostrar información del empleado seleccionado
-document.getElementById('empleadoAsignado').addEventListener('change', function() {
-    const empleadoInfo = document.getElementById('empleadoInfo');
-    const empleadoDetalles = document.getElementById('empleadoDetalles');
-    
-    if (this.value) {
-        const empleado = empleadosDisponibles.find(e => e.id_empleado == this.value);
-        if (empleado) {
-            let detallesHTML = `
-                <div><strong>Nombre:</strong> ${empleado.nombre_completo}</div>
-                <div><strong>Puesto:</strong> ${empleado.puesto}</div>
-            `;
-            
-            if (empleado.turno) {
-                detallesHTML += `<div><strong>Turno:</strong> ${empleado.turno}</div>`;
-            }
-            if (empleado.tickets_activos !== undefined) {
-                detallesHTML += `<div><strong>Tickets activos:</strong> ${empleado.tickets_activos}</div>`;
-            }
-            if (empleado.disponibilidad) {
-                detallesHTML += `<div><strong>Disponibilidad:</strong> ${empleado.disponibilidad}</div>`;
-            }
-            
-            empleadoDetalles.innerHTML = detallesHTML;
-            empleadoInfo.style.display = 'block';
-        }
-    } else {
-        empleadoInfo.style.display = 'none';
-    }
-});
-
 async function asignarTicket(idTicket) {
     ticketActual = idTicket;
     
-    // Cargar información del ticket
-    const ticket = await obtenerTicket(idTicket);
-    if (ticket) {
-        document.getElementById('asignarTicketId').textContent = idTicket;
-        document.getElementById('ticketDescripcionAsignar').textContent = ticket.descripcion;
-        document.getElementById('ticketPrioridadAsignar').textContent = ticket.prioridad;
-        document.getElementById('ticketUbicacionAsignar').textContent = ticket.ubicacion;
-    }
-    
-    // Cargar empleados disponibles
     await cargarEmpleadosDisponibles();
+    document.getElementById('asignarTicketId').textContent = idTicket;
     
     // Resetear formulario
+    document.querySelector('input[name="tipoAsignacion"][value="interno"]').checked = true;
+    toggleTipoAsignacion();
+    document.getElementById('proveedorExterno').value = '';
+    document.getElementById('contactoExterno').value = '';
     document.getElementById('fechaEstimada').value = '';
     document.getElementById('instruccionesAsignacion').value = '';
-    document.getElementById('empleadoInfo').style.display = 'none';
     
     document.getElementById('asignarModal').style.display = 'flex';
 }
 
 async function confirmarAsignacion() {
+    const tipoAsignacion = document.querySelector('input[name="tipoAsignacion"]:checked').value;
     const empleadoId = document.getElementById('empleadoAsignado').value;
+    const proveedorExterno = document.getElementById('proveedorExterno').value;
+    const contactoExterno = document.getElementById('contactoExterno').value;
     const fechaEstimada = document.getElementById('fechaEstimada').value;
     const instrucciones = document.getElementById('instruccionesAsignacion').value;
     
-    if (!empleadoId) {
+    if (tipoAsignacion === 'interno' && !empleadoId) {
         alert('Por favor seleccione un empleado');
         return;
     }
     
-    if (!fechaEstimada) {
-        alert('Por favor seleccione una fecha estimada');
+    if (tipoAsignacion === 'externo' && !proveedorExterno) {
+        alert('Por favor ingrese el nombre del proveedor externo');
         return;
     }
     
-    // Validar fecha
-    const hoy = new Date().toISOString().split('T')[0];
-    if (fechaEstimada < hoy) {
-        alert('La fecha estimada no puede ser en el pasado');
+    if (!fechaEstimada) {
+        alert('Por favor ingrese una fecha estimada');
         return;
     }
     
     try {
+        const asignacionData = {
+            id_ticket: ticketActual,
+            fecha_estimada: fechaEstimada,
+            instrucciones: instrucciones
+        };
+        
+        if (tipoAsignacion === 'interno') {
+            asignacionData.id_empleado = empleadoId;
+            asignacionData.tipo_asignacion = 'interno';
+        } else {
+            asignacionData.proveedor_externo = proveedorExterno;
+            asignacionData.contacto_externo = contactoExterno;
+            asignacionData.tipo_asignacion = 'externo';
+        }
+        
         const response = await fetch('/admin/tickets/asignar', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                id_ticket: ticketActual,
-                id_empleado: empleadoId,
-                fecha_estimada: fechaEstimada,
-                instrucciones: instrucciones
-            })
+            body: JSON.stringify(asignacionData)
         });
         
         const result = await response.json();
@@ -547,14 +535,34 @@ function cerrarAsignarModal() {
     ticketActual = null;
 }
 
-// Funciones de cambio de estado
-async function cambiarEstadoTicket(idTicket, nuevoEstado) {
-    const mensajes = {
-        'resuelto': '¿Está seguro de que desea marcar este ticket como resuelto?',
-        'cancelado': '¿Está seguro de que desea cancelar este ticket?'
-    };
+// Función para eliminar ticket
+async function eliminarTicket(idTicket) {
+    if (!confirm('¿Está seguro de que desea eliminar este ticket?')) {
+        return;
+    }
     
-    if (!confirm(mensajes[nuevoEstado])) {
+    try {
+        const response = await fetch(`/admin/ticket/${idTicket}/eliminar`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al eliminar el ticket');
+    }
+}
+
+// Función para marcar ticket como resuelto
+async function marcarComoResuelto(idTicket) {
+    if (!confirm('¿Está seguro de que desea marcar este ticket como resuelto?')) {
         return;
     }
     
@@ -565,7 +573,7 @@ async function cambiarEstadoTicket(idTicket, nuevoEstado) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                estado: nuevoEstado
+                estado: 'resuelto'
             })
         });
         
@@ -579,21 +587,39 @@ async function cambiarEstadoTicket(idTicket, nuevoEstado) {
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Error al cambiar el estado del ticket');
+        alert('Error al marcar el ticket como resuelto');
     }
 }
 
-// Funciones auxiliares
-async function obtenerTicket(idTicket) {
+// Función para reabrir ticket
+async function reabrirTicket(idTicket) {
+    if (!confirm('¿Está seguro de que desea reabrir este ticket?')) {
+        return;
+    }
+    
     try {
-        const response = await fetch(`/admin/ticket/${idTicket}`);
+        const response = await fetch(`/admin/ticket/${idTicket}/cambiar-estado`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                estado: 'abierto'
+            })
+        });
+        
+        const result = await response.json();
+        
         if (response.ok) {
-            return await response.json();
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
         }
     } catch (error) {
-        console.error('Error obteniendo ticket:', error);
+        console.error('Error:', error);
+        alert('Error al reabrir el ticket');
     }
-    return null;
 }
 
 // Filtrado de tickets
@@ -634,6 +660,18 @@ document.getElementById('ticketModal').addEventListener('click', function(e) {
 
 document.getElementById('asignarModal').addEventListener('click', function(e) {
     if (e.target === this) cerrarAsignarModal();
+});
+
+// Mejoras de accesibilidad - manejar tecla Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (document.getElementById('ticketModal').style.display === 'flex') {
+            cerrarModal();
+        }
+        if (document.getElementById('asignarModal').style.display === 'flex') {
+            cerrarAsignarModal();
+        }
+    }
 });
 </script>
 {% endblock %}

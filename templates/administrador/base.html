@@ -18,8 +18,8 @@
       </div>
     </div>
     <ul>
-      <li><a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i> <span class="sidebar-text">Dashboard</span></a></li>
-  <li><a href="{{ url_for('admin.finanzas') }}"><i class="fas fa-chart-line"></i> <span class="sidebar-text">Dashboard Finanzas</span></a></li>
+      <li><a href="{{ url_for('admin.panel_admin') }}"><i class="fas fa-home"></i> <span class="sidebar-text">Dashboard</span></a></li>
+  <li><a href="{{ url_for('admin.dashboard_f') }}"><i class="fas fa-chart-line"></i> <span class="sidebar-text">Dashboard Finanzas</span></a></li>
       <li class="nav-item">
         <a href="#" class="nav-link" onclick="toggleSubmenu('finanzas-submenu')">
           <i class="fas fa-money-check-alt"></i> <span class="sidebar-text">Pago</span>
@@ -30,7 +30,7 @@
           <li><a href="{{ url_for('admin.reporte_deudas') }}">Reportes</a></li>
         </ul>
       </li>
-  <li><a href="{{ url_for('admin.panel_admin') }}"><i class="fas fa-bolt"></i> <span class="sidebar-text">Consumos</span></a></li>
+  <li><a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-bolt"></i> <span class="sidebar-text">Consumos</span></a></li>
       <li><a href="{{ url_for('admin.reservas') }}"><i class="fas fa-calendar-alt"></i> <span class="sidebar-text">Reservas</span></a></li>
       <li><a href="{{ url_for('admin.tickets') }}"><i class="fas fa-ticket-alt"></i> <span class="sidebar-text">Tickets</span></a></li>
       <li><a href="{{ url_for('admin.usuarios') }}"><i class="fas fa-users"></i> <span class="sidebar-text">Usuarios</span></a></li>
