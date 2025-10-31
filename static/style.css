@@ -1,0 +1,201 @@
+/* Estilos generales */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #EDE6E0; /* Beige Suave */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+/* Contenedor principal del login */
+.login-container {
+    background-color: #F5F5F5; /* Gris Claro */
+    width: 100%;
+    max-width: 450px;
+    padding: 40px 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(38, 70, 83, 0.1); /* Azul Profundo con transparencia */
+    border: 1px solid #A3C8D6; /* Celeste Claro */
+}
+
+.login-container h1 {
+    color: #264653; /* Azul Profundo */
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 28px;
+    font-weight: 600;
+}
+
+/* Alertas */
+.alert {
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.alert-success {
+    background-color: rgba(122, 140, 110, 0.2); /* Verde Oliva con transparencia */
+    color: #2F241F; /* Marrón Oscuro */
+    border: 1px solid #7A8C6E; /* Verde Oliva */
+}
+
+.alert-error {
+    background-color: rgba(227, 167, 140, 0.2); /* Durazno Suave con transparencia */
+    color: #2F241F; /* Marrón Oscuro */
+    border: 1px solid #E3A78C; /* Durazno Suave */
+}
+
+/* Grupos de entrada */
+.input-group {
+    margin-bottom: 25px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #2F241F; /* Marrón Oscuro */
+    font-weight: 500;
+    font-size: 15px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 14px 15px;
+    border: 1px solid #A3C8D6; /* Celeste Claro */
+    border-radius: 8px;
+    font-size: 15px;
+    background-color: #FFFFFF;
+    transition: all 0.3s ease;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #264653; /* Azul Profundo */
+    box-shadow: 0 0 0 3px rgba(38, 70, 83, 0.1); /* Azul Profundo con transparencia */
+}
+
+/* Grupo de CAPTCHA */
+.captcha-group {
+    margin-top: 30px;
+}
+
+.captcha-text {
+    font-size: 24px;
+    font-weight: bold;
+    background: #EDE6E0; /* Beige Suave */
+    padding: 15px;
+    text-align: center;
+    letter-spacing: 8px;
+    border: 2px dashed #A3C8D6; /* Celeste Claro */
+    border-radius: 8px;
+    margin: 10px 0;
+    font-family: "Courier New", monospace;
+    color: #264653; /* Azul Profundo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.captcha-refresh {
+    background: #264653; /* Azul Profundo */
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: all 0.3s ease;
+    font-size: 16px;
+}
+
+.captcha-refresh:hover {
+    background: #2F241F; /* Marrón Oscuro */
+    transform: scale(1.05);
+}
+
+.captcha-box {
+    margin-top: 10px;
+}
+
+/* Estados de validación */
+.valid {
+    color: #7A8C6E; /* Verde Oliva */
+    font-weight: bold;
+    font-size: 14px;
+    margin-top: 5px;
+    display: block;
+}
+
+.invalid {
+    color: #E3A78C; /* Durazno Suave - como color de advertencia */
+    font-weight: bold;
+    font-size: 14px;
+    margin-top: 5px;
+    display: block;
+}
+
+/* Botón de envío */
+button[type="submit"] {
+    width: 100%;
+    padding: 15px;
+    background-color: #264653; /* Azul Profundo */
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+}
+
+button[type="submit"]:hover {
+    background-color: #2F241F; /* Marrón Oscuro */
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(38, 70, 83, 0.2); /* Azul Profundo con transparencia */
+}
+
+/* Texto de registro */
+.register-text {
+    margin-top: 25px;
+    text-align: center;
+    color: #2F241F; /* Marrón Oscuro */
+    font-size: 14px;
+}
+
+.register-text p {
+    margin-bottom: 12px;
+}
+
+.register-text a {
+    color: #264653; /* Azul Profundo */
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.register-text a:hover {
+    color: #2F241F; /* Marrón Oscuro */
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .login-container {
+        padding: 30px 20px;
+    }
+    
+    .captcha-text {
+        font-size: 20px;
+        letter-spacing: 6px;
+    }
+}

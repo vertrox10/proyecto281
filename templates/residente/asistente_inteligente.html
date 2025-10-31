@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistente Residente - Edificio Inteligente</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='residente/asistente_inteligente.css') }}">
+</head>
+
+<body>
+    <div class="chat-container">
+        <!-- Header del Chat -->
+        <div class="chat-header">
+            <div class="agent-info">
+                <div class="agent-avatar">🏠</div>
+                <div class="agent-details">
+                    <h2>Asistente del Residente</h2>
+                    <span id="agentStatus">Especializado en servicios del edificio</span>
+                </div>
+            </div>
+            <div class="user-info">
+                <span>{{ nombre_usuario }} - {{ departamento }}</span>
+                <button class="logout-btn" onclick="logout()">Salir</button>
+            </div>
+        </div>
+
+        <!-- Área de Mensajes -->
+        <div id="chatMessages" class="chat-messages">
+            <div class="message agent">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <p>¡Hola {{ nombre_usuario }}! Soy tu asistente especializado en:</p>
+                    <div class="services-grid">
+                        <div class="service-item">📊 Consulta de consumos</div>
+                        <div class="service-item">📅 Reservas de áreas comunes</div>
+                        <div class="service-item">🎫 Creación de tickets</div>
+                        <div class="service-item">💳 Sistema de pagos</div>
+                    </div>
+                    <p>¿En qué servicio necesitas ayuda?</p>
+                    <span class="message-time">{{ hora_actual }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input de Mensaje -->
+        <div class="chat-input-container">
+            <div class="quick-actions">
+                <button class="quick-btn" onclick="sugerirAccion('Quiero consultar mi consumo de agua')">💧 Consumo
+                    Agua</button>
+                <button class="quick-btn" onclick="sugerirAccion('Consultar consumo de luz')">⚡ Consumo Luz</button>
+                <button class="quick-btn" onclick="sugerirAccion('Reservar sala de reuniones')">📅 Reservar
+                    Sala</button>
+                <button class="quick-btn" onclick="sugerirAccion('Crear ticket por mantenimiento')">🛠️ Nuevo
+                    Ticket</button>
+                <button class="quick-btn" onclick="sugerirAccion('Pagar mantenimiento')">💳 Pagar Servicios</button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="userInput"
+                    placeholder="Escribe tu consulta sobre consumos, reservas, tickets o pagos..."
+                    onkeypress="handleKeyPress(event)">
+                <button onclick="sendMessage()" id="sendButton">
+                    <span>Enviar</span>
+                    <div class="send-icon">➤</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const usuarioId = "{{ usuario_id }}";
+        const usuarioNombre = "{{ nombre_usuario }}";
+        const departamento = "{{ departamento }}";
+    </script>
+    <script src="{{ url_for('static', filename='residente/asistente_inteligente.js') }}"></script>
+</body>
+
+</html>

@@ -1,0 +1,33 @@
+.priority-high {
+    background: #e74c3c;
+    color: white;
+}
+
+.priority-medium {
+    background: #f39c12;
+    color: white;
+}
+
+.priority-low {
+    background: #27ae60;
+    color: white;
+}
+
+.status-pending {
+    background: #f39c12;
+    color: white;
+}
+
+.status-in-progress {
+    background: #3498db;
+    color: white;
+}
+
+.status-resolved {
+    background: #27ae60;
+    color: white;
+}
+
+.ticket-item:hover {
+    background-color: #f8f9fa;
+}

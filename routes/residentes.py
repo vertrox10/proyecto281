@@ -1,13 +1,31 @@
+# routes/residentes.py - Blueprint corregido para residentes
+# routes/residentes.py - Blueprint corregido para residentes
 from flask import Blueprint, render_template, request, jsonify, flash, redirect, url_for, current_app
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from db import get_db_connection
+
+# 🚫 COMENTAR O ELIMINAR ESTA LÍNCA
+# from models import Departamento
+
 import json
 import logging
+import os
+from werkzeug.utils import secure_filename
 
 logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
-residentes_bp = Blueprint('residentes', __name__)
+# CORREGIDO: Solo un blueprint
+residentes_bp = Blueprint('residentes', __name__, url_prefix='/residente')
+
+# Configuración para subida de archivos
+ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'}
+UPLOAD_FOLDER = 'static/uploads/bouchers'
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def debug_current_user():
     """Debug function to see what's in current_user"""
@@ -45,9 +63,9 @@ def get_user_id():
         # Si falla, usar get_id()
         return int(current_user.get_id())
 
-# Helper functions CORREGIDAS
+# Helper functions
 def get_rol_usuario():
-    """Obtiene el rol del usuario actual - CORREGIDO"""
+    """Obtiene el rol del usuario actual"""
     try:
         user_id = get_user_id()
         
@@ -71,7 +89,7 @@ def get_rol_usuario():
         return None
 
 def get_residente_data():
-    """Obtiene los datos del residente actual - CON MANEJO DE ERRORES"""
+    """Obtiene los datos del residente actual"""
     try:
         user_id = get_user_id()
         print(f"🔍 Buscando residente con user_id: {user_id}")
@@ -123,8 +141,9 @@ def get_residente_data():
     except Exception as e:
         logger.error(f"Error obteniendo datos del residente: {e}")
         return None
+
 def get_departamento_usuario():
-    """Obtiene el departamento del usuario actual - CORREGIDO"""
+    """Obtiene el departamento del usuario actual"""
     try:
         user_id = get_user_id()
         
@@ -150,7 +169,7 @@ def get_departamento_usuario():
         return None
 
 def get_consumos_mes(departamento_id, mes, año):
-    """Obtiene consumos del mes actual - CORREGIDO"""
+    """Obtiene consumos del mes actual"""
     try:
         conn = get_db_connection()
         if conn is None:
@@ -193,6 +212,106 @@ def get_consumos_mes(departamento_id, mes, año):
         logger.error(f"Error obteniendo consumos: {e}")
         return {'luz': 0, 'agua': 0, 'gas': 0}
 
+# ===== FUNCIONES PARA TICKETS =====
+
+def obtener_areas():
+    """Función auxiliar para obtener áreas comunes activas"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id_area, nombre 
+            FROM area 
+            WHERE activo = true 
+            ORDER BY nombre
+        """)
+        areas = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return areas
+    except Exception as e:
+        print(f"Error obteniendo áreas: {str(e)}")
+        return []
+
+def obtener_residente_actual():
+    """Obtiene la información del residente actual"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id_residente, piso, nro_departamento 
+            FROM residente 
+            WHERE id_usuario = %s
+        """, (get_user_id(),))
+        residente = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return residente
+    except Exception as e:
+        print(f"Error obteniendo residente: {str(e)}")
+        return None
+
+def obtener_id_departamento(residente):
+    """Obtiene el ID del departamento basado en piso y número"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id_departamento 
+            FROM departamento 
+            WHERE piso = %s AND nro = %s
+        """, (residente[1], residente[2]))
+        departamento = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return departamento[0] if departamento else None
+    except Exception as e:
+        print(f"Error obteniendo departamento: {str(e)}")
+        return None
+
+def _validar_ticket_residente(id_ticket):
+    """Valida que el ticket pertenece al residente actual"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT t.id_ticket 
+            FROM ticket t
+            JOIN departamento d ON t.id_departamento = d.id_departamento
+            JOIN residente r ON d.piso = r.piso AND d.nro = r.nro_departamento
+            WHERE t.id_ticket = %s AND r.id_usuario = %s
+        """, (id_ticket, get_user_id()))
+        
+        ticket_valido = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        return bool(ticket_valido)
+    except Exception as e:
+        print(f"Error validando ticket: {str(e)}")
+        return False
+
+def _formatear_tickets(tickets):
+    """Convierte los resultados de la consulta en una lista de diccionarios"""
+    tickets_list = []
+    for ticket in tickets:
+        tickets_list.append({
+            'id_ticket': ticket[0],
+            'descripcion': ticket[1],
+            'prioridad': ticket[2],
+            'estado': ticket[3],
+            'fecha_emision': ticket[4],
+            'fecha_finalizacion': ticket[5],
+            'piso': ticket[6],
+            'nro_departamento': ticket[7],
+            'id_empleado': ticket[8],
+            'empleado_nombre': f"{ticket[9]} {ticket[10]}" if ticket[9] else "No asignado",
+            'area_nombre': ticket[11]
+        })
+    return tickets_list
+
+# ===== RUTAS PRINCIPALES =====
+
 @residentes_bp.route('/dashboard')
 @login_required
 def dashboard():
@@ -200,7 +319,7 @@ def dashboard():
         # DEBUG: Ver qué tiene current_user
         debug_current_user()
         
-        # Primero verificar que el usuario sea residente - CORREGIDO
+        # Primero verificar que el usuario sea residente
         user_id = get_user_id()
         
         # Obtener el rol del usuario de forma segura
@@ -406,402 +525,213 @@ def dashboard():
         }
         return render_template('residente/dashboard.html', **datos_minimos)
 
+# ===== RUTAS PARA TICKETS =====
+
+@residentes_bp.route('/crear_ticket', methods=['GET', 'POST'])
+@login_required
+def crear_ticket():
+    """Ruta para crear nuevo ticket - CORREGIDA"""
+    if request.method == 'POST':
+        try:
+            # Obtener datos del formulario
+            descripcion = request.form.get('descripcion')
+            prioridad = request.form.get('prioridad')
+            id_area = request.form.get('id_area')
+            id_departamento = request.form.get('id_departamento')
+            
+            # Validar campos obligatorios
+            if not all([descripcion, prioridad, id_area, id_departamento]):
+                flash('Todos los campos son obligatorios', 'danger')
+                return redirect(url_for('residentes.crear_ticket'))
+            
+            # Obtener datos del residente para el departamento
+            residente = get_residente_data()
+            if not residente:
+                flash('No se encontraron datos del residente', 'danger')
+                return redirect(url_for('residentes.crear_ticket'))
+            
+            # Crear nuevo ticket usando conexión directa
+            conn = get_db_connection()
+            if not conn:
+                flash('Error de conexión a la base de datos', 'danger')
+                return redirect(url_for('residentes.crear_ticket'))
+                
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT INTO ticket (descripcion, prioridad, estado, id_area, id_departamento, fecha_emision)
+                VALUES (%s, %s, 'abierto', %s, %s, NOW())
+                RETURNING id_ticket
+            """, (descripcion, prioridad, id_area, id_departamento))
+            
+            ticket_id = cursor.fetchone()[0]
+            conn.commit()
+            cursor.close()
+            conn.close()
+            
+            flash('Ticket creado exitosamente', 'success')
+            return redirect(url_for('residentes.mis_tickets'))
+            
+        except Exception as e:
+            if 'conn' in locals():
+                conn.rollback()
+            logger.error(f"Error al crear el ticket: {str(e)}")
+            flash(f'Error al crear el ticket: {str(e)}', 'danger')
+            return redirect(url_for('residentes.crear_ticket'))
+    
+    # Método GET - mostrar formulario
+    try:
+        # Obtener áreas y departamentos para los dropdowns
+        areas = obtener_areas()
+        departamentos = Departamento.query.all() if hasattr(Departamento, 'query') else []
+        
+        # Si no funciona SQLAlchemy, obtener departamentos manualmente
+        if not departamentos:
+            conn = get_db_connection()
+            if conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT id_departamento, piso, nro FROM departamento")
+                departamentos = cursor.fetchall()
+                cursor.close()
+                conn.close()
+        
+        return render_template("residente/crear_ticket.html",
+                             areas=areas,
+                             departamentos=departamentos)
+    except Exception as e:
+        logger.error(f"Error al cargar el formulario: {str(e)}")
+        flash(f'Error al cargar el formulario: {str(e)}', 'danger')
+        return redirect(url_for('residentes.dashboard'))
+
+@residentes_bp.route("/mis_tickets")
+@login_required
+def mis_tickets():
+    """Mostrar todos los tickets del residente actual - CORREGIDA"""
+    if current_user.id_rol != 3:
+        flash("Acceso no autorizado.", "danger")
+        return redirect(url_for("auth.login"))
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT 
+                t.id_ticket,
+                t.descripcion,
+                t.prioridad,
+                t.estado,
+                t.fecha_emision,
+                t.fecha_finalizacion,
+                d.piso,
+                d.nro as nro_departamento,
+                e.id_empleado,
+                u.nombre as empleado_nombre,
+                u.ap_paterno as empleado_ap_paterno,
+                a.nombre as area_nombre
+            FROM ticket t
+            JOIN departamento d ON t.id_departamento = d.id_departamento
+            JOIN residente r ON d.piso = r.piso AND d.nro = r.nro_departamento
+            LEFT JOIN empleado e ON t.id_empleado = e.id_empleado
+            LEFT JOIN usuario u ON e.id_usuario = u.id_usuario
+            LEFT JOIN area a ON t.id_area = a.id_area
+            WHERE r.id_usuario = %s
+            ORDER BY t.fecha_emision DESC
+        """, (get_user_id(),))
+        
+        tickets = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        tickets_list = _formatear_tickets(tickets)
+        return render_template("residente/tickets.html", tickets=tickets_list)
+        
+    except Exception as e:
+        print(f"Error obteniendo tickets: {str(e)}")
+        flash("Error al cargar los tickets.", "danger")
+        return render_template("residente/tickets.html", tickets=[])
+
+@residentes_bp.route("/ticket/<int:id_ticket>/comentario", methods=["POST"])
+@login_required
+def agregar_comentario_residente(id_ticket):
+    """Agregar comentario a un ticket (solo público para residentes)"""
+    if current_user.id_rol != 3:
+        return jsonify({'error': 'Acceso no autorizado'}), 403
+    
+    mensaje = request.form.get('mensaje')
+    if not mensaje:
+        flash("El mensaje no puede estar vacío.", "danger")
+        return redirect(url_for("residentes.mis_tickets"))
+    
+    if not _validar_ticket_residente(id_ticket):
+        flash("Ticket no válido.", "danger")
+        return redirect(url_for("residentes.mis_tickets"))
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO comentario_ticket 
+            (id_ticket, id_usuario, mensaje, fecha_creacion, es_interno)
+            VALUES (%s, %s, %s, NOW(), false)
+        """, (id_ticket, get_user_id(), mensaje))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        flash("Comentario agregado correctamente.", "success")
+        return redirect(url_for("residentes.mis_tickets"))
+        
+    except Exception as e:
+        print(f"Error agregando comentario: {str(e)}")
+        flash("Error al agregar comentario.", "danger")
+        return redirect(url_for("residentes.mis_tickets"))
+
+# ===== OTRAS RUTAS EXISTENTES (mantener igual) =====
+
 @residentes_bp.route('/facturacion')
 @login_required
 def facturacion():
-    try:
-        user_id = get_user_id()
-        
-        conn = get_db_connection()
-        if conn is None:
-            flash('Error de conexión a la base de datos', 'error')
-            return render_template('residente/facturacion.html')
-            
-        cursor = conn.cursor()
-        
-        # Resumen de facturación
-        cursor.execute("""
-            SELECT 
-                COALESCE(SUM(CASE WHEN estado_factura = 'pagada' THEN monto_total ELSE 0 END), 0) as pagado,
-                COALESCE(SUM(CASE WHEN estado_factura = 'pendiente' THEN monto_total ELSE 0 END), 0) as pendiente,
-                COALESCE(SUM(monto_total), 0) as total_facturado
-            FROM factura
-            WHERE id_usuario = %s
-            AND EXTRACT(YEAR FROM fecha_emision) = EXTRACT(YEAR FROM CURRENT_DATE)
-        """, (user_id,))
-        
-        resumen = cursor.fetchone()
-        
-        # Facturas
-        cursor.execute("""
-            SELECT f.*, a.periodo_inicio, a.periodo_fin,
-                   TO_CHAR(f.fecha_emision, 'Month YYYY') as periodo
-            FROM factura f
-            LEFT JOIN alquiler a ON f.id_alquiler = a.id_alquiler
-            WHERE f.id_usuario = %s
-            ORDER BY f.fecha_emision DESC
-        """, (user_id,))
-        
-        facturas = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        # Convertir a diccionarios
-        facturas_con_consumo = []
-        for factura in facturas:
-            factura_dict = {
-                'id_factura': factura[0],
-                'monto_total': float(factura[1]) if factura[1] else 0.0,
-                'fecha_emision': factura[2],
-                'fecha_vencimiento': factura[3],
-                'estado_factura': factura[4],
-                'periodo_inicio': factura[5],
-                'periodo_fin': factura[6],
-                'periodo': factura[7]
-            }
-            facturas_con_consumo.append(factura_dict)
-        
-        resumen_dict = {
-            'pagado': float(resumen[0]) if resumen and resumen[0] else 0.0,
-            'pendiente': float(resumen[1]) if resumen and resumen[1] else 0.0,
-            'total_facturado': float(resumen[2]) if resumen and resumen[2] else 0.0
-        }
-        
-        return render_template('residente/facturacion.html',
-                            resumen=resumen_dict,
-                            facturas=facturas_con_consumo,
-                            anos=[2024, 2023],
-                            ano_actual=2024,
-                            meses=[
-                                {'numero': 1, 'nombre': 'Enero'},
-                                {'numero': 2, 'nombre': 'Febrero'}
-                            ])
-    
-    except Exception as e:
-        logger.error(f"Error en facturacion: {e}")
-        flash('Error al cargar la facturación', 'error')
-        return render_template('residente/facturacion.html')
-
-@residentes_bp.route('/solicitudes')
-@login_required
-def solicitudes():
-    try:
-        user_id = get_user_id()
-        
-        conn = get_db_connection()
-        if conn is None:
-            flash('Error de conexión a la base de datos', 'error')
-            return render_template('residente/solicitudes.html')
-            
-        cursor = conn.cursor()
-        
-        # Estadísticas
-        cursor.execute("""
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN estado = 'pendiente' THEN 1 ELSE 0 END) as pendientes,
-                SUM(CASE WHEN estado = 'en_proceso' THEN 1 ELSE 0 END) as en_proceso,
-                SUM(CASE WHEN estado = 'completado' THEN 1 ELSE 0 END) as completados,
-                SUM(CASE WHEN prioridad = 'alta' OR prioridad = 'urgente' THEN 1 ELSE 0 END) as urgentes
-            FROM ticket
-            WHERE id_usuario = %s
-        """, (user_id,))
-        
-        stats = cursor.fetchone()
-        
-        # Áreas disponibles para tickets
-        cursor.execute("""
-            SELECT id_area, nombre, descripcion
-            FROM area
-            WHERE nombre IN ('Departamento', 'Áreas Comunes', 'Electricidad', 'Fontanería', 'Gas')
-        """)
-        
-        areas = cursor.fetchall()
-        
-        # Solicitudes del usuario
-        cursor.execute("""
-            SELECT t.*, a.nombre as area,
-                   e.nombre || ' ' || e.ap_paterno as empleado_asignado
-            FROM ticket t
-            LEFT JOIN area a ON t.id_area = a.id_area
-            LEFT JOIN empleado emp ON t.id_empleado = emp.id_empleado
-            LEFT JOIN usuario e ON emp.id_usuario = e.id_usuario
-            WHERE t.id_usuario = %s
-            ORDER BY t.fecha_emision DESC
-        """, (user_id,))
-        
-        solicitudes = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        
-        # Convertir a diccionarios
-        areas_dict = [{'id_area': a[0], 'nombre': a[1], 'descripcion': a[2]} for a in areas]
-        solicitudes_dict = []
-        for s in solicitudes:
-            solicitudes_dict.append({
-                'id_ticket': s[0],
-                'descripcion': s[1],
-                'prioridad': s[2],
-                'fecha_emision': s[3],
-                'estado': s[4],
-                'area': s[5],
-                'empleado_asignado': s[6]
-            })
-        
-        estadisticas = {
-            'total': stats[0] if stats else 0,
-            'pendientes': stats[1] if stats else 0,
-            'en_proceso': stats[2] if stats else 0,
-            'completados': stats[3] if stats else 0,
-            'urgentes': stats[4] if stats else 0
-        }
-        
-        return render_template('residente/solicitudes.html',
-                            rol_usuario='residente',
-                            estadisticas=estadisticas,
-                            areas=areas_dict,
-                            solicitudes=solicitudes_dict)
-    
-    except Exception as e:
-        logger.error(f"Error en solicitudes: {e}")
-        flash('Error al cargar las solicitudes', 'error')
-        return render_template('residente/solicitudes.html')
+    # ... (mantener el código existente)
+    pass
 
 @residentes_bp.route('/consumos')
 @login_required
 def consumos():
-    try:
-        user_id = get_user_id()
-        departamento = get_departamento_usuario()
-        
-        if not departamento:
-            flash('No se encontró departamento asociado', 'error')
-            return redirect(url_for('residentes.dashboard'))
-        
-        # Consumos actuales
-        ahora = datetime.now()
-        consumos_actual = get_consumos_mes(departamento[0], ahora.month, ahora.year)  # departamento[0] = id_departamento
-        
-        # Añadir variaciones (datos de ejemplo)
-        consumos_actual.update({
-            'variacion_luz': -5.2,
-            'variacion_agua': 2.1,
-            'variacion_gas': -1.8,
-            'total_estimado': 285.50
-        })
-        
-        # Recomendaciones de ahorro
-        recomendaciones = [
-            {
-                'tipo': 'luz',
-                'icono': 'fa-lightbulb',
-                'titulo': 'Usa LED de bajo consumo',
-                'descripcion': 'Cambia las bombillas tradicionales por LED para ahorrar hasta 80% de energía.',
-                'ahorro': '15-20% mensual'
-            },
-            {
-                'tipo': 'agua',
-                'icono': 'fa-shower',
-                'titulo': 'Duchas más cortas',
-                'descripcion': 'Reduce el tiempo de ducha para ahorrar agua y energía para calentarla.',
-                'ahorro': '10-15% mensual'
-            },
-            {
-                'tipo': 'gas',
-                'icono': 'fa-thermometer-half',
-                'titulo': 'Optimiza la calefacción',
-                'descripcion': 'Mantén la temperatura entre 19-21°C y cierra puertas para mejor aislamiento.',
-                'ahorro': '20-25% mensual'
-            }
-        ]
-        
-        return render_template('residente/consumos.html',
-                            rol_usuario='residente',
-                            consumos_actual=consumos_actual,
-                            recomendaciones=recomendaciones,
-                            periodos=[
-                                {'value': '2024-02', 'nombre': 'Febrero 2024', 'selected': True},
-                                {'value': '2024-01', 'nombre': 'Enero 2024'},
-                                {'value': '2023-12', 'nombre': 'Diciembre 2023'}
-                            ])
-    
-    except Exception as e:
-        logger.error(f"Error en consumos: {e}")
-        flash('Error al cargar los consumos', 'error')
-        return render_template('residente/consumos.html')
+    # ... (mantener el código existente)
+    pass
 
 @residentes_bp.route('/perfil')
 @login_required
 def perfil():
-    try:
-        user_id = get_user_id()
-        
-        conn = get_db_connection()
-        if conn is None:
-            flash('Error de conexión a la base de datos', 'error')
-            return render_template('residente/perfil.html')
-            
-        cursor = conn.cursor()
-        
-        # Datos del usuario
-        cursor.execute("""
-            SELECT u.*, r.nombre as rol_nombre
-            FROM usuario u
-            JOIN rol r ON u.id_rol = r.id_rol
-            WHERE u.id_usuario = %s
-        """, (user_id,))
-        
-        usuario = cursor.fetchone()
-        
-        # Información específica del residente
-        datos_extra = {}
-        residente = get_residente_data()
-        if residente:
-            cursor.execute("""
-                SELECT d.*, a.periodo_fin, a.monto as monto_mensual
-                FROM departamento d
-                LEFT JOIN alquiler a ON d.id_departamento = a.id_departamento
-                WHERE d.piso = %s AND d.nro = %s
-                ORDER BY a.periodo_inicio DESC
-                LIMIT 1
-            """, (residente[2], residente[3]))  # residente[2] = piso, residente[3] = nro_departamento
-            
-            departamento = cursor.fetchone()
-            
-            datos_extra = {
-                'departamento': {
-                    'id_departamento': departamento[0] if departamento else 'N/A',
-                    'piso': departamento[1] if departamento else 'N/A',
-                    'nro': departamento[2] if departamento else 'N/A'
-                },
-                'contrato': {
-                    'fecha_fin': departamento[3] if departamento else 'N/A',
-                    'monto_mensual': float(departamento[4]) if departamento and departamento[4] else 0
-                }
-            }
-        
-        cursor.close()
-        conn.close()
-        
-        # Configuración (datos de ejemplo)
-        config = {
-            'notif_pagos': True,
-            'notif_solicitudes': True,
-            'notif_consumos': False,
-            'notif_mantenimientos': True,
-            'dos_pasos': False
-        }
-        
-        usuario_dict = {
-            'id_usuario': usuario[0],
-            'nombre': usuario[1],
-            'ap_paterno': usuario[2],
-            'ap_materno': usuario[3],
-            'correo': usuario[4],
-            'telefono': usuario[5],
-            'rol_nombre': usuario[8] if len(usuario) > 8 else 'Residente'
-        }
-        
-        return render_template('residente/perfil.html',
-                            rol_usuario='residente',
-                            usuario=usuario_dict,
-                            config=config,
-                            sesion={
-                                'fecha_inicio': datetime.now().strftime('%d/%m/%Y %H:%M'),
-                                'dispositivo': 'Chrome en Windows'
-                            },
-                            **datos_extra)
-    
-    except Exception as e:
-        logger.error(f"Error en perfil: {e}")
-        flash('Error al cargar el perfil', 'error')
-        return render_template('residente/perfil.html')
+    # ... (mantener el código existente)
+    pass
 
-# API Endpoints
+@residentes_bp.route('/politicas')
+@login_required
+def politicas():
+    # ... (mantener el código existente)
+    pass
+
+@residentes_bp.route('/reservas')
+@login_required
+def reservas():
+    # ... (mantener el código existente)
+    pass
+
+# ===== API ENDPOINTS (mantener igual) =====
+
 @residentes_bp.route('/api/crear_solicitud', methods=['POST'])
 @login_required
 def crear_solicitud():
-    try:
-        user_id = get_user_id()
-        data = request.get_json()
-        
-        conn = get_db_connection()
-        if conn is None:
-            return jsonify({'success': False, 'message': 'Error de conexión a la base de datos'}), 500
-            
-        cursor = conn.cursor()
-        
-        # Insertar nueva solicitud
-        cursor.execute("""
-            INSERT INTO ticket (descripcion, prioridad, fecha_emision, estado, id_usuario, id_area)
-            VALUES (%s, %s, NOW(), 'pendiente', %s, %s)
-            RETURNING id_ticket
-        """, (
-            data.get('descripcion'),
-            data.get('prioridad', 'media'),
-            user_id,
-            data.get('id_area')
-        ))
-        
-        ticket_id = cursor.fetchone()[0]
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True, 'ticket_id': ticket_id, 'message': 'Solicitud creada exitosamente'})
-    
-    except Exception as e:
-        if 'conn' in locals():
-            conn.rollback()
-        logger.error(f"Error creando solicitud: {e}")
-        return jsonify({'success': False, 'message': 'Error al crear la solicitud'}), 500
+    # ... (mantener el código existente)
+    pass
 
-@residentes_bp.route('/api/realizar_pago', methods=['POST'])
-@login_required
-def realizar_pago():
-    try:
-        user_id = get_user_id()
-        data = request.get_json()
-        
-        conn = get_db_connection()
-        if conn is None:
-            return jsonify({'success': False, 'message': 'Error de conexión a la base de datos'}), 500
-            
-        cursor = conn.cursor()
-        
-        # Registrar el pago
-        cursor.execute("""
-            INSERT INTO pago (monto, metodo, estado, fecha_pago, id_usuario, id_factura, nro_trans)
-            VALUES (%s, %s, 'completado', NOW(), %s, %s, %s)
-            RETURNING id_pago
-        """, (
-            data.get('monto'),
-            data.get('metodo'),
-            user_id,
-            data.get('id_factura'),
-            f"TRX{datetime.now().strftime('%Y%m%d%H%M%S')}"
-        ))
-        
-        # Actualizar estado de la factura
-        cursor.execute("""
-            UPDATE factura 
-            SET estado_factura = 'pagada' 
-            WHERE id_factura = %s
-        """, (data.get('id_factura'),))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({'success': True, 'message': 'Pago realizado exitosamente'})
-    
-    except Exception as e:
-        if 'conn' in locals():
-            conn.rollback()
-        logger.error(f"Error procesando pago: {e}")
-        return jsonify({'success': False, 'message': 'Error al procesar el pago'}), 500
+# ... (mantener el resto de las rutas API)
 
-# Error handlers
+# ===== ERROR HANDLERS =====
+
 @residentes_bp.errorhandler(404)
 def not_found_error(error):
     return render_template('errors/404.html'), 404
