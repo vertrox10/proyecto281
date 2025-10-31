@@ -1,110 +1,220 @@
 {% extends "residente/base_residente.html" %}
 
-{% block title %}Políticas del Edificio{% endblock %}
+{% block title %}Mi Perfil - SincroHome{% endblock %}
 
 {% block extra_css %}
-<style>
-    .politicas-header {
-        margin-bottom: 30px;
-        text-align: center;
-    }
-
-    .politicas-header h1 {
-        color: var(--azul-profundo);
-        margin-bottom: 10px;
-    }
-
-    .politicas-header p {
-        color: var(--marron-oscuro);
-        opacity: 0.8;
-        font-size: 1.1rem;
-    }
-
-    .politica-card {
-        background: white;
-        border-radius: 12px;
-        padding: 25px;
-        margin-bottom: 20px;
-        box-shadow: var(--sombra-suave);
-        display: flex;
-        align-items: flex-start;
-        gap: 20px;
-        transition: var(--transicion-rapida);
-    }
-
-    .politica-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-    }
-
-    .politica-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--celeste-claro), #8bb4c6);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        flex-shrink: 0;
-    }
-
-    .politica-content h3 {
-        color: var(--azul-profundo);
-        margin-bottom: 10px;
-        font-size: 1.2rem;
-    }
-
-    .politica-content p {
-        color: var(--marron-oscuro);
-        line-height: 1.6;
-        margin: 0;
-    }
-
-    .nota-importante {
-        background: linear-gradient(135deg, var(--verde-oliva), #687a5d);
-        color: white;
-        border-radius: 12px;
-        padding: 25px;
-        margin-top: 30px;
-        text-align: center;
-    }
-
-    .nota-importante h4 {
-        margin-bottom: 10px;
-        font-size: 1.1rem;
-    }
-
-    .nota-importante p {
-        margin: 0;
-        opacity: 0.9;
-    }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='residente/perfil.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="politicas-header">
-    <h1><i class="fas fa-file-contract"></i> {{ politicas.titulo }}</h1>
-    <p>Conozca las normas y políticas establecidas para la convivencia armónica en nuestro edificio</p>
-</div>
+<div class="perfil-container">
+    <!-- Encabezado -->
+    <div class="perfil-header">
+        <h1><i class="fas fa-user-circle"></i> Mi Perfil</h1>
+        <p>Gestiona tu información personal y preferencias</p>
+    </div>
 
-<div class="politicas-content">
-    {% for politica in politicas.politicas %}
-    <div class="politica-card">
-        <div class="politica-icon">
-            <i class="fas {{ politica.icono }}"></i>
+    <!-- Grid Principal -->
+    <div class="perfil-grid">
+        <!-- Columna Izquierda -->
+        <div class="left-column">
+            <!-- Información Personal -->
+            <div class="perfil-card">
+                <h2><i class="fas fa-user"></i> Información Personal</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Nombre Completo</label>
+                        <div class="info-value">{{ usuario.nombre }} {{ usuario.ap_paterno or '' }} {{
+                            usuario.ap_materno or '' }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Correo Electrónico</label>
+                        <div class="info-value">{{ usuario.correo }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Teléfono</label>
+                        <div class="info-value">{{ usuario.telefono or 'No especificado' }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Cédula de Identidad</label>
+                        <div class="info-value">{{ usuario.ci or 'No especificado' }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Rol</label>
+                        <div class="info-value">{{ usuario.rol_nombre or 'Residente' }}</div>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="perfil-actions">
+                    <button class="btn-editar" onclick="abrirModalEditar()">
+                        <i class="fas fa-edit"></i> Editar Información
+                    </button>
+                    <button class="btn-cambiar-pass" onclick="abrirModalCambiarPassword()">
+                        <i class="fas fa-key"></i> Cambiar Contraseña
+                    </button>
+                </div>
+            </div>
+
+            <!-- Información del Departamento -->
+            <div class="perfil-card">
+                <h2><i class="fas fa-home"></i> Mi Departamento</h2>
+
+                {% if departamento %}
+                <div class="departamento-info">
+                    <h3>Datos de Residencia</h3>
+                    <div class="depto-details">
+                        <div class="depto-detail">
+                            <i class="fas fa-building"></i>
+                            <span>Piso {{ departamento.piso }}</span>
+                        </div>
+                        <div class="depto-detail">
+                            <i class="fas fa-door-open"></i>
+                            <span>Departamento {{ departamento.nro }}</span>
+                        </div>
+                        <div class="depto-detail">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Ingreso: {{ residente.fecha_ingreso or 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="no-data">
+                    <i class="fas fa-home"></i>
+                    <p>No hay información de departamento disponible</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        <div class="politica-content">
-            <h3>{{ politica.titulo }}</h3>
-            <p>{{ politica.descripcion }}</p>
+
+        <!-- Columna Derecha -->
+        <div class="right-column">
+            <!-- Configuración de Notificaciones -->
+            <div class="perfil-card">
+                <h2><i class="fas fa-bell"></i> Preferencias de Notificación</h2>
+                <div class="config-list">
+                    <div class="config-item">
+                        <div class="config-info">
+                            <h4>Notificaciones de Pagos</h4>
+                            <p>Alertas sobre facturas y vencimientos</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="notifPagos" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="config-item">
+                        <div class="config-info">
+                            <h4>Notificaciones de Tickets</h4>
+                            <p>Actualizaciones de mis solicitudes</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="notifTickets" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="config-item">
+                        <div class="config-info">
+                            <h4>Notificaciones de Reservas</h4>
+                            <p>Recordatorios y confirmaciones</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="notifReservas" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sesión Actual -->
+            <div class="perfil-card">
+                <h2><i class="fas fa-shield-alt"></i> Seguridad</h2>
+                <div class="sesion-activa">
+                    <div class="sesion-info">
+                        <div class="sesion-details">
+                            <p><strong>Sesión activa</strong></p>
+                            <p>Iniciada: {{ now.strftime('%d/%m/%Y %H:%M') }}</p>
+                            <p>Dispositivo: Navegador Web</p>
+                        </div>
+                        <button class="btn-cerrar-sesion" onclick="cerrarSesionesOtrosDispositivos()">
+                            <i class="fas fa-sign-out-alt"></i> Cerrar Otras Sesiones
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    {% endfor %}
+</div>
 
-    <div class="nota-importante">
-        <h4><i class="fas fa-info-circle"></i> Nota Importante</h4>
-        <p>{{ politicas.nota_importante }}</p>
+<!-- Modal Editar Información -->
+<div id="modalEditar" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Editar Información Personal</h3>
+            <span class="close" onclick="cerrarModalEditar()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="formEditar">
+                <div class="form-group">
+                    <label for="editNombre">Nombre</label>
+                    <input type="text" id="editNombre" value="{{ usuario.nombre }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editApPaterno">Apellido Paterno</label>
+                    <input type="text" id="editApPaterno" value="{{ usuario.ap_paterno or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="editApMaterno">Apellido Materno</label>
+                    <input type="text" id="editApMaterno" value="{{ usuario.ap_materno or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="editTelefono">Teléfono</label>
+                    <input type="tel" id="editTelefono" value="{{ usuario.telefono or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="editCI">Cédula de Identidad</label>
+                    <input type="text" id="editCI" value="{{ usuario.ci or '' }}">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancelar" onclick="cerrarModalEditar()">Cancelar</button>
+                    <button type="submit" class="btn-guardar">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
+
+<!-- Modal Cambiar Contraseña -->
+<div id="modalPassword" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Cambiar Contraseña</h3>
+            <span class="close" onclick="cerrarModalPassword()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="formPassword">
+                <div class="form-group">
+                    <label for="currentPassword">Contraseña Actual</label>
+                    <input type="password" id="currentPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">Nueva Contraseña</label>
+                    <input type="password" id="newPassword" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirmar Nueva Contraseña</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancelar" onclick="cerrarModalPassword()">Cancelar</button>
+                    <button type="submit" class="btn-guardar">Cambiar Contraseña</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='residente/perfil.js') }}"></script>
 {% endblock %}

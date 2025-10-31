@@ -1,0 +1,1008 @@
+/* tickets.css - Estilos para la gestión de tickets del residente */
+:root {
+    --beige-suave: #EDE6E0;
+    --azul-profundo: #264653;
+    --gris-claro: #F5F5F5;
+    --marron-oscuro: #2F241F;
+    --durazno-suave: #E3A78C;
+    --celeste-claro: #A3C8D6;
+    --verde-oliva: #7A8C6E;
+    
+    /* Estados de tickets */
+    --color-pendiente: #E3A78C;
+    --color-en-proceso: #A3C8D6;
+    --color-completado: #7A8C6E;
+    --color-cancelado: #B0B0B0;
+    
+    /* Prioridades */
+    --color-baja: #7A8C6E;
+    --color-media: #A3C8D6;
+    --color-alta: #E3A78C;
+    --color-urgente: #D9534F;
+}
+
+/* Header de Tickets */
+.tickets-header {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(38, 70, 83, 0.1);
+    margin-bottom: 2rem;
+    border-left: 4px solid var(--azul-profundo);
+}
+
+.tickets-header h1 {
+    color: var(--azul-profundo);
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+}
+
+.tickets-header p {
+    color: var(--marron-oscuro);
+    opacity: 0.8;
+    margin-bottom: 1.5rem;
+}
+
+/* Header de Solicitudes (NUEVO - Compatibilidad con HTML) */
+.solicitudes-header {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(38, 70, 83, 0.1);
+    margin-bottom: 2rem;
+    border-left: 4px solid var(--azul-profundo);
+}
+
+.solicitudes-header h1 {
+    color: var(--azul-profundo);
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+}
+
+.solicitudes-header p {
+    color: var(--marron-oscuro);
+    opacity: 0.8;
+    margin-bottom: 1.5rem;
+}
+
+.solicitudes-content {
+    /* contenido principal */
+}
+
+/* Grid de Estadísticas */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(38, 70, 83, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--azul-profundo);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(38, 70, 83, 0.15);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--beige-suave);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--azul-profundo);
+}
+
+.stat-icon.en-proceso {
+    background: var(--celeste-claro);
+    color: var(--azul-profundo);
+}
+
+.stat-icon.completado {
+    background: var(--verde-oliva);
+    color: white;
+}
+
+.stat-icon.urgente {
+    background: var(--durazno-suave);
+    color: var(--marron-oscuro);
+}
+
+.stat-info {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--azul-profundo);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    color: var(--marron-oscuro);
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+/* Lista de Tickets */
+.tickets-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.ticket-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(38, 70, 83, 0.1);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--azul-profundo);
+    animation: fadeIn 0.5s ease-out;
+}
+
+.ticket-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(38, 70, 83, 0.15);
+}
+
+/* Estados de tickets con colores en el borde */
+.ticket-card.pendiente {
+    border-left-color: var(--color-pendiente);
+}
+
+.ticket-card.en_proceso {
+    border-left-color: var(--color-en-proceso);
+}
+
+.ticket-card.completado {
+    border-left-color: var(--color-completado);
+}
+
+.ticket-card.cancelado {
+    border-left-color: var(--color-cancelado);
+}
+
+/* Header del Ticket */
+.ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.ticket-info h3 {
+    color: var(--azul-profundo);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.ticket-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.ticket-fecha,
+.ticket-area {
+    color: var(--marron-oscuro);
+    opacity: 0.7;
+    font-size: 0.9rem;
+}
+
+/* Estados y Prioridades */
+.ticket-estados {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.prioridad,
+.estado {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Colores de prioridad */
+.prioridad-baja {
+    background: var(--color-baja);
+    color: white;
+}
+
+.prioridad-media {
+    background: var(--color-media);
+    color: var(--azul-profundo);
+}
+
+.prioridad-alta {
+    background: var(--color-alta);
+    color: var(--marron-oscuro);
+}
+
+.prioridad-urgente {
+    background: var(--color-urgente);
+    color: white;
+}
+
+/* Colores de estado */
+.estado-pendiente {
+    background: var(--color-pendiente);
+    color: var(--marron-oscuro);
+}
+
+.estado-en_proceso {
+    background: var(--color-en-proceso);
+    color: var(--azul-profundo);
+}
+
+.estado-completado {
+    background: var(--color-completado);
+    color: white;
+}
+
+.estado-cancelado {
+    background: var(--color-cancelado);
+    color: white;
+}
+
+/* NUEVOS ESTADOS para compatibilidad con HTML */
+.estado-abierto {
+    background: var(--color-pendiente);
+    color: var(--marron-oscuro);
+}
+
+.estado-en_progreso {
+    background: var(--color-en-proceso);
+    color: var(--azul-profundo);
+}
+
+.estado-cerrado {
+    background: var(--color-completado);
+    color: white;
+}
+
+.estado-cancelado {
+    background: var(--color-cancelado);
+    color: white;
+}
+
+/* Descripción del Ticket */
+.ticket-descripcion {
+    margin-bottom: 1rem;
+}
+
+.ticket-descripcion p {
+    color: var(--marron-oscuro);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Información de asignación */
+.ticket-asignado {
+    background: var(--beige-suave);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--marron-oscuro);
+}
+
+.ticket-asignado i {
+    color: var(--azul-profundo);
+}
+
+/* Acciones del Ticket */
+.ticket-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* Estado vacío */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(38, 70, 83, 0.1);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--celeste-claro);
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+    color: var(--azul-profundo);
+    margin-bottom: 1rem;
+}
+
+.empty-state p {
+    color: var(--marron-oscuro);
+    opacity: 0.8;
+    margin-bottom: 2rem;
+}
+
+/* Botones */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.btn-primary {
+    background: var(--azul-profundo);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1d3641;
+    transform: translateY(-2px);
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--azul-profundo);
+    border: 2px solid var(--azul-profundo);
+}
+
+.btn-outline:hover {
+    background: var(--azul-profundo);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: var(--gris-claro);
+    color: var(--marron-oscuro);
+    border: 2px solid var(--gris-claro);
+}
+
+.btn-secondary:hover {
+    background: #e0e0e0;
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: var(--color-urgente);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #c9302c;
+    transform: translateY(-2px);
+}
+
+/* ===== LISTA DE SOLICITUDES (NUEVO - Compatibilidad con HTML) ===== */
+.solicitudes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.solicitud-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(38, 70, 83, 0.1);
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    border-left: 4px solid var(--azul-profundo);
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.solicitud-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(38, 70, 83, 0.15);
+}
+
+/* Estados de solicitudes con colores en el borde */
+.solicitud-card.abierto {
+    border-left-color: var(--color-pendiente);
+}
+
+.solicitud-card.en_progreso {
+    border-left-color: var(--color-en-proceso);
+}
+
+.solicitud-card.cerrado {
+    border-left-color: var(--color-completado);
+}
+
+.solicitud-card.cancelado {
+    border-left-color: var(--color-cancelado);
+}
+
+/* Prioridades para solicitudes */
+.solicitud-card.baja {
+    border-left-color: var(--color-baja);
+}
+
+.solicitud-card.media {
+    border-left-color: var(--color-media);
+}
+
+.solicitud-card.alta {
+    border-left-color: var(--color-alta);
+}
+
+.solicitud-card.urgente {
+    border-left-color: var(--color-urgente);
+}
+
+.solicitud-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.solicitud-info h3 {
+    color: var(--azul-profundo);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.solicitud-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.solicitud-nro,
+.solicitud-fecha,
+.solicitud-area {
+    color: var(--marron-oscuro);
+    opacity: 0.7;
+    font-size: 0.9rem;
+}
+
+.solicitud-nro {
+    font-weight: 600;
+    color: var(--azul-profundo);
+}
+
+.solicitud-estados {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.solicitud-detalles {
+    margin-bottom: 1.5rem;
+}
+
+.solicitud-detalles p {
+    color: var(--marron-oscuro);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.empleado-asignado,
+.fecha-programada {
+    background: var(--beige-suave);
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--marron-oscuro);
+}
+
+.empleado-asignado i,
+.fecha-programada i {
+    color: var(--azul-profundo);
+}
+
+.solicitud-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.solicitud-comentarios {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--beige-suave);
+}
+
+.solicitud-comentarios h4 {
+    color: var(--azul-profundo);
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+.comentario {
+    background: var(--gris-claro);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.comentario-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.comentario-header strong {
+    color: var(--azul-profundo);
+}
+
+.comentario-fecha {
+    color: var(--marron-oscuro);
+    opacity: 0.7;
+    font-size: 0.8rem;
+}
+
+.comentario p {
+    color: var(--marron-oscuro);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ===== MODAL NUEVA SOLICITUD ===== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(38, 70, 83, 0.8);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 2% auto;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(38, 70, 83, 0.3);
+    animation: modalSlideIn 0.3s ease-out;
+    max-width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content.large {
+    width: 90%;
+    max-width: 800px;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    background: var(--azul-profundo);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    padding: 1.5rem 2rem;
+    background: var(--beige-suave);
+    border-radius: 0 0 12px 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+/* ===== FORMULARIO NUEVA SOLICITUD ===== */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--azul-profundo);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.form-control {
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--beige-suave);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--azul-profundo);
+    box-shadow: 0 0 0 3px rgba(38, 70, 83, 0.1);
+}
+
+.form-control::placeholder {
+    color: var(--marron-oscuro);
+    opacity: 0.5;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 120px;
+    font-family: inherit;
+}
+
+/* ===== UPLOAD DE ARCHIVOS ===== */
+.file-upload {
+    margin-top: 0.5rem;
+}
+
+.file-input {
+    display: none;
+}
+
+.file-upload-area {
+    border: 2px dashed var(--celeste-claro);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(163, 200, 214, 0.05);
+}
+
+.file-upload-area:hover {
+    border-color: var(--azul-profundo);
+    background: rgba(163, 200, 214, 0.1);
+}
+
+.file-upload-area i {
+    font-size: 2rem;
+    color: var(--celeste-claro);
+    margin-bottom: 1rem;
+}
+
+.file-upload-area p {
+    color: var(--azul-profundo);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.file-upload-area span {
+    color: var(--marron-oscuro);
+    opacity: 0.7;
+    font-size: 0.9rem;
+}
+
+.file-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.file-preview-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(38, 70, 83, 0.1);
+}
+
+.file-preview-item img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+    display: block;
+}
+
+.file-preview-item .remove {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: var(--color-urgente);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.file-preview-item .remove:hover {
+    background: #c9302c;
+    transform: scale(1.1);
+}
+
+/* ===== FILTROS ===== */
+.filtros-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(38, 70, 83, 0.1);
+    margin-bottom: 2rem;
+}
+
+.filtros-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.filtros-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .tickets-header,
+    .solicitudes-header {
+        padding: 1.5rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    
+    .ticket-header,
+    .solicitud-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .ticket-estados,
+    .solicitud-estados {
+        justify-content: flex-start;
+    }
+    
+    .ticket-actions,
+    .solicitud-actions {
+        justify-content: center;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .modal-content.large {
+        width: 95%;
+        margin: 1% auto;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-header {
+        padding: 1rem 1.5rem;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        flex-direction: column;
+    }
+    
+    .filtros-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .filtros-actions {
+        justify-content: stretch;
+    }
+    
+    .filtros-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .ticket-meta,
+    .solicitud-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .ticket-actions,
+    .solicitud-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .file-preview {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ===== ANIMACIONES ===== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ticket-card {
+    animation: fadeIn 0.5s ease-out;
+}
+
+.solicitud-card {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+/* Efectos de carga */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--celeste-claro);
+    border-top: 2px solid var(--azul-profundo);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Estados de carga para el formulario */
+.form-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.form-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 3px solid var(--celeste-claro);
+    border-top: 3px solid var(--azul-profundo);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 1;
+}

@@ -1,0 +1,247 @@
+{% extends "residente/base_residente.html" %}
+
+{% block title %}Mis Solicitudes{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='residente/tickets.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="solicitudes-header">
+    <h1><i class="fas fa-ticket-alt"></i> Mis Tickets</h1>
+    <p>Gestiona tus solicitudes de Tickets</p>
+    <button class="btn btn-primary" id="nuevaSolicitudBtn">
+        <i class="fas fa-plus"></i> Nuevo ticket
+    </button>
+</div>
+
+<div class="solicitudes-content">
+    <!-- Estadísticas Rápidas -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">{{ estadisticas.abiertos }}</div>
+                <div class="stat-label">Abiertos</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon en-proceso">
+                <i class="fas fa-tools"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">{{ estadisticas.en_progreso }}</div>
+                <div class="stat-label">En Progreso</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon completado">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">{{ estadisticas.cerrados }}</div>
+                <div class="stat-label">Cerrados</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon urgente">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">{{ estadisticas.urgentes }}</div>
+                <div class="stat-label">Urgentes</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filtros-section">
+        <div class="filtros-grid">
+            <div class="form-group">
+                <label class="form-label">Estado</label>
+                <select id="filtroEstado" class="form-control">
+                    <option value="">Todos los estados</option>
+                    <option value="abierto">Abierto</option>
+                    <option value="en_progreso">En Progreso</option>
+                    <option value="cerrado">Cerrado</option>
+                    <option value="cancelado">Cancelado</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Prioridad</label>
+                <select id="filtroPrioridad" class="form-control">
+                    <option value="">Todas las prioridades</option>
+                    <option value="baja">Baja</option>
+                    <option value="media">Media</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Fecha Desde</label>
+                <input type="date" id="filtroFechaDesde" class="form-control">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Fecha Hasta</label>
+                <input type="date" id="filtroFechaHasta" class="form-control">
+            </div>
+        </div>
+        <div class="filtros-actions">
+            <button class="btn btn-secondary" id="limpiarFiltrosBtn">
+                <i class="fas fa-eraser"></i> Limpiar
+            </button>
+            <button class="btn btn-primary" id="aplicarFiltrosBtn">
+                <i class="fas fa-filter"></i> Aplicar Filtros
+            </button>
+        </div>
+    </div>
+
+    <!-- Lista de Solicitudes -->
+    <div class="solicitudes-list">
+        {% if tickets %}
+        {% for ticket in tickets %}
+        <div class="solicitud-card {{ ticket.prioridad }} {{ ticket.estado }}" data-ticket-id="{{ ticket.id_ticket }}">
+            <div class="solicitud-header">
+                <div class="solicitud-info">
+                    <h3>{{ ticket.descripcion[:50] }}{% if ticket.descripcion|length > 50 %}...{% endif %}</h3>
+                    <div class="solicitud-meta">
+                        <span class="solicitud-nro">#{{ ticket.id_ticket }}</span>
+                        <span class="solicitud-fecha">Creada: {{ ticket.fecha_emision.strftime('%d/%m/%Y %H:%M') if
+                            ticket.fecha_emision else 'N/A' }}</span>
+                        <span class="solicitud-area">Área: {{ ticket.area_nombre or 'General' }}</span>
+                    </div>
+                </div>
+                <div class="solicitud-estados">
+                    <span class="prioridad prioridad-{{ ticket.prioridad }}">
+                        {{ ticket.prioridad }}
+                    </span>
+                    <span class="estado estado-{{ ticket.estado }}">
+                        {% if ticket.estado == 'abierto' %}Abierto{% endif %}
+                        {% if ticket.estado == 'en_progreso' %}En Progreso{% endif %}
+                        {% if ticket.estado == 'cerrado' %}Cerrado{% endif %}
+                        {% if ticket.estado == 'cancelado' %}Cancelado{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <div class="solicitud-detalles">
+                <p>{{ ticket.descripcion }}</p>
+
+                {% if ticket.empleado_nombre %}
+                <div class="empleado-asignado">
+                    <i class="fas fa-user-hard-hat"></i>
+                    <strong>Empleado asignado:</strong> {{ ticket.empleado_nombre }}
+                </div>
+                {% endif %}
+
+                {% if ticket.fecha_finalizacion %}
+                <div class="fecha-programada">
+                    <i class="fas fa-calendar-alt"></i>
+                    <strong>Finalizado:</strong> {{ ticket.fecha_finalizacion.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="solicitud-actions">
+                {% if ticket.estado in ['abierto', 'en_progreso'] %}
+                <button class="btn btn-outline actualizar-solicitud-btn" data-id="{{ ticket.id_ticket }}">
+                    <i class="fas fa-edit"></i> Actualizar
+                </button>
+                {% endif %}
+
+                <button class="btn btn-outline ver-detalles-btn" data-id="{{ ticket.id_ticket }}">
+                    <i class="fas fa-eye"></i> Ver Detalles
+                </button>
+
+                {% if ticket.estado == 'abierto' %}
+                <button class="btn btn-danger cancelar-solicitud-btn" data-id="{{ ticket.id_ticket }}">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- Los comentarios se cargarán dinámicamente -->
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-ticket-alt"></i>
+            <h3>No hay tickets</h3>
+            <p>No has creado ningún ticket aún.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal Nueva Solicitud -->
+<div id="modalNuevaSolicitud" class="modal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3>Nueva Solicitud de Ticket</h3>
+            <button class="btn-icon" id="cerrarNuevaSolicitudBtn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="formNuevaSolicitud">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label class="form-label">Descripción Detallada *</label>
+                        <textarea name="descripcion" class="form-control" rows="5" required
+                            placeholder="Describa el problema en detalle..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Área *</label>
+                        <select name="id_area" class="form-control" required>
+                            <option value="">Seleccionar área</option>
+                            {% for area in areas %}
+                            <option value="{{ area.id_area }}">{{ area.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Prioridad *</label>
+                        <select name="prioridad" class="form-control" required>
+                            <option value="baja">Baja</option>
+                            <option value="media" selected>Media</option>
+                            <option value="alta">Alta</option>
+                            <option value="urgente">Urgente</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label class="form-label">Adjuntar Imágenes (Opcional)</label>
+                        <div class="file-upload">
+                            <input type="file" name="imagenes" multiple accept="image/*" class="file-input"
+                                id="fileInput">
+                            <div class="file-upload-area" id="fileUploadArea">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Arrastra imágenes aquí o haz clic para seleccionar</p>
+                                <span>Máximo 5 imágenes</span>
+                            </div>
+                        </div>
+                        <div class="file-preview" id="filePreview"></div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelarSolicitudBtn">Cancelar</button>
+            <button class="btn btn-primary" id="enviarSolicitudBtn">
+                <i class="fas fa-paper-plane"></i> Enviar Solicitud
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='residente/tickets.js') }}"></script>
+{% endblock %}
