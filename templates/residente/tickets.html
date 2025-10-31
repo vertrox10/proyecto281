@@ -243,5 +243,286 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='residente/tickets.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Event listeners principales
+        document.getElementById('nuevaSolicitudBtn').addEventListener('click', mostrarModalNuevaSolicitud);
+        document.getElementById('cerrarNuevaSolicitudBtn').addEventListener('click', cerrarModalNuevaSolicitud);
+        document.getElementById('cancelarSolicitudBtn').addEventListener('click', cerrarModalNuevaSolicitud);
+        document.getElementById('enviarSolicitudBtn').addEventListener('click', crearSolicitud);
+
+        // Event listeners para filtros
+        document.getElementById('limpiarFiltrosBtn').addEventListener('click', limpiarFiltros);
+        document.getElementById('aplicarFiltrosBtn').addEventListener('click', aplicarFiltros);
+
+        // Event listeners para acciones de tickets
+        document.querySelectorAll('.actualizar-solicitud-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                actualizarSolicitud(id);
+            });
+        });
+
+        document.querySelectorAll('.ver-detalles-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                verDetalles(id);
+            });
+        });
+
+        document.querySelectorAll('.cancelar-solicitud-btn').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const id = this.getAttribute('data-id');
+                cancelarSolicitud(id);
+            });
+        });
+
+        // Event listeners para upload de archivos
+        const fileInput = document.getElementById('fileInput');
+        const fileUploadArea = document.getElementById('fileUploadArea');
+
+        if (fileInput && fileUploadArea) {
+            fileUploadArea.addEventListener('click', function () {
+                fileInput.click();
+            });
+
+            fileUploadArea.addEventListener('dragover', function (e) {
+                e.preventDefault();
+                this.style.borderColor = '#264653';
+                this.style.background = 'rgba(163, 200, 214, 0.1)';
+            });
+
+            fileUploadArea.addEventListener('dragleave', function () {
+                this.style.borderColor = '#A3C8D6';
+                this.style.background = '';
+            });
+
+            fileUploadArea.addEventListener('drop', function (e) {
+                e.preventDefault();
+                this.style.borderColor = '#A3C8D6';
+                this.style.background = '';
+
+                if (e.dataTransfer.files.length > 0) {
+                    fileInput.files = e.dataTransfer.files;
+                    mostrarPrevisualizacionArchivos(e.dataTransfer.files);
+                }
+            });
+
+            fileInput.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    mostrarPrevisualizacionArchivos(this.files);
+                }
+            });
+        }
+
+        // Cerrar modales al hacer clic fuera
+        document.getElementById('modalNuevaSolicitud').addEventListener('click', function (event) {
+            if (event.target === this) {
+                cerrarModalNuevaSolicitud();
+            }
+        });
+    });
+
+    function mostrarModalNuevaSolicitud() {
+        document.getElementById('modalNuevaSolicitud').style.display = 'flex';
+    }
+
+    function cerrarModalNuevaSolicitud() {
+        document.getElementById('modalNuevaSolicitud').style.display = 'none';
+        document.getElementById('formNuevaSolicitud').reset();
+        document.getElementById('filePreview').innerHTML = '';
+    }
+
+    function crearSolicitud() {
+        const formData = new FormData(document.getElementById('formNuevaSolicitud'));
+
+        // Crear objeto con los datos - usar descripcion como campo principal
+        const data = {
+            descripcion: formData.get('descripcion'),
+            prioridad: formData.get('prioridad'),
+            id_area: formData.get('id_area')
+        };
+
+        console.log("📤 Enviando datos:", data);
+
+        // Validaciones básicas
+        if (!data.descripcion || !data.id_area) {
+            alert('Por favor complete todos los campos obligatorios');
+            return;
+        }
+
+        if (confirm('¿Está seguro de enviar esta solicitud?')) {
+            fetch('/residentes/api/crear_solicitud', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => {
+                    console.log("📥 Respuesta recibida:", response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("📥 Datos de respuesta:", data);
+                    if (data.success) {
+                        alert('Solicitud creada exitosamente');
+                        cerrarModalNuevaSolicitud();
+                        location.reload();
+                    } else {
+                        alert('Error al crear la solicitud: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error en fetch:', error);
+                    alert('Error al crear la solicitud');
+                });
+        }
+    }
+
+    function mostrarPrevisualizacionArchivos(files) {
+        const preview = document.getElementById('filePreview');
+        preview.innerHTML = '';
+
+        Array.from(files).slice(0, 5).forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'file-preview-item';
+                    previewItem.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <button class="remove" type="button">&times;</button>
+                    `;
+
+                    previewItem.querySelector('.remove').addEventListener('click', function () {
+                        previewItem.remove();
+                    });
+
+                    preview.appendChild(previewItem);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    function actualizarSolicitud(id) {
+        if (!id) {
+            alert('Error: ID de solicitud no válido');
+            return;
+        }
+
+        const nuevaDescripcion = prompt('Ingrese la actualización de la solicitud:');
+        if (nuevaDescripcion) {
+            fetch('/residentes/api/actualizar_solicitud/' + id, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    descripcion: nuevaDescripcion
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Solicitud actualizada exitosamente');
+                        location.reload();
+                    } else {
+                        alert('Error al actualizar la solicitud: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al actualizar la solicitud');
+                });
+        }
+    }
+
+    function verDetalles(id) {
+        if (!id) {
+            alert('Error: ID de solicitud no válido');
+            return;
+        }
+
+        alert('Mostrando detalles de la solicitud ' + id);
+        // En implementación real, redirigir a página de detalles
+        // window.location.href = '/residentes/solicitudes/' + id;
+    }
+
+    function cancelarSolicitud(id) {
+        if (!id) {
+            alert('Error: ID de solicitud no válido');
+            return;
+        }
+
+        if (confirm('¿Está seguro de cancelar esta solicitud?')) {
+            fetch('/residentes/api/cancelar_solicitud/' + id, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    estado: 'cancelado'
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Solicitud cancelada exitosamente');
+                        location.reload();
+                    } else {
+                        alert('Error al cancelar la solicitud: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cancelar la solicitud');
+                });
+        }
+    }
+
+    function limpiarFiltros() {
+        document.getElementById('filtroEstado').value = '';
+        document.getElementById('filtroPrioridad').value = '';
+        document.getElementById('filtroFechaDesde').value = '';
+        document.getElementById('filtroFechaHasta').value = '';
+        aplicarFiltros();
+    }
+
+    function aplicarFiltros() {
+        const estado = document.getElementById('filtroEstado').value;
+        const prioridad = document.getElementById('filtroPrioridad').value;
+        const fechaDesde = document.getElementById('filtroFechaDesde').value;
+        const fechaHasta = document.getElementById('filtroFechaHasta').value;
+
+        console.log('Aplicando filtros:', { estado, prioridad, fechaDesde, fechaHasta });
+
+        const solicitudes = document.querySelectorAll('.solicitud-card');
+        let solicitudesVisibles = 0;
+
+        solicitudes.forEach(solicitud => {
+            let mostrar = true;
+
+            if (estado && !solicitud.classList.contains(estado)) {
+                mostrar = false;
+            }
+
+            if (prioridad && !solicitud.classList.contains(prioridad)) {
+                mostrar = false;
+            }
+
+            if (mostrar) {
+                solicitud.style.display = 'block';
+                solicitudesVisibles++;
+            } else {
+                solicitud.style.display = 'none';
+            }
+        });
+
+        if (solicitudesVisibles === 0) {
+            alert('No hay solicitudes que coincidan con los filtros aplicados');
+        }
+    }
+</script>
 {% endblock %}
