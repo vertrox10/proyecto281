@@ -9,7 +9,7 @@
 {% block content %}
 <div class="dashboard-header">
     <h1>Dashboard Residente</h1>
-    <p>Bienvenido de vuelta, {{ current_user.nombre }}</p>
+    <p>Bienvenido de vuelta, {{ usuario_nombre }}</p>
 </div>
 
 <div class="metrics-grid">
@@ -22,38 +22,14 @@
             <h3>Estado de Pagos</h3>
             <div class="metric-value">{{ estado_pagos.estado }}</div>
             <div class="metric-detail">
-                <span class="amount">${{ estado_pagos.monto_pendiente }}</span>
+                <span class="amount">${{ "%.2f"|format(estado_pagos.monto_pendiente) }}</span>
                 <span class="date">Vence: {{ estado_pagos.fecha_vencimiento }}</span>
             </div>
         </div>
     </div>
 
-    <!-- Consumo Actual -->
-    <div class="metric-card consumption">
-        <div class="metric-icon">
-            <i class="fas fa-bolt"></i>
-        </div>
-        <div class="metric-info">
-            <h3>Consumo Este Mes</h3>
-            <div class="consumption-details">
-                <div class="consumption-item">
-                    <span>Luz:</span>
-                    <strong>{{ consumos.luz }} kWh</strong>
-                </div>
-                <div class="consumption-item">
-                    <span>Agua:</span>
-                    <strong>{{ consumos.agua }} m³</strong>
-                </div>
-                <div class="consumption-item">
-                    <span>Gas:</span>
-                    <strong>{{ consumos.gas }} m³</strong>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Solicitudes Activas -->
-    <div class="metric-card tickets">
+    <div class="metric-card solicitudes">
         <div class="metric-icon">
             <i class="fas fa-ticket-alt"></i>
         </div>
@@ -61,53 +37,45 @@
             <h3>Solicitudes Activas</h3>
             <div class="metric-value">{{ solicitudes_activas }}</div>
             <div class="metric-detail">
-                <span class="priority-high">{{ solicitudes_prioridad_alta }} alta prioridad</span>
+                <span>{{ solicitudes_prioridad_alta }} de prioridad alta</span>
             </div>
         </div>
     </div>
 
-    <!-- Próximo Mantenimiento -->
-    <div class="metric-card maintenance">
+    <!-- Información del Departamento -->
+    <div class="metric-card departamento">
+        <div class="metric-icon">
+            <i class="fas fa-home"></i>
+        </div>
+        <div class="metric-info">
+            <h3>Mi Departamento</h3>
+            <div class="metric-value">Piso {{ residente_data.piso }}</div>
+            <div class="metric-detail">
+                <span>Dpto: {{ residente_data.departamento }}</span>
+                <span>Ingreso: {{ residente_data.fecha_ingreso }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anuncio de Mantenimiento -->
+    <div class="metric-card mantenimiento">
         <div class="metric-icon">
             <i class="fas fa-tools"></i>
         </div>
         <div class="metric-info">
-            <h3>Próximo Mantenimiento</h3>
-            {% if proximo_mantenimiento %}
-            <div class="metric-value">{{ proximo_mantenimiento.fecha }}</div>
+            <h3>Anuncio de Mantenimiento</h3>
+            {% if anuncio_mantenimiento %}
+            <div class="metric-value">{{ anuncio_mantenimiento.titulo }}</div>
             <div class="metric-detail">
-                <span>{{ proximo_mantenimiento.descripcion }}</span>
+                <span>{{ anuncio_mantenimiento.descripcion }}</span>
+                <span class="date">{{ anuncio_mantenimiento.fecha }}</span>
             </div>
             {% else %}
-            <div class="metric-value">No programado</div>
+            <div class="metric-value">Sin anuncios</div>
+            <div class="metric-detail">
+                <span>No hay mantenimientos programados</span>
+            </div>
             {% endif %}
-        </div>
-    </div>
-</div>
-
-<div class="charts-grid">
-    <!-- Gráfico de Consumos -->
-    <div class="chart-card">
-        <div class="card-header">
-            <h3>Consumos Mensuales</h3>
-            <select id="consumoPeriodo" class="form-control">
-                <option value="3">Últimos 3 meses</option>
-                <option value="6">Últimos 6 meses</option>
-                <option value="12">Último año</option>
-            </select>
-        </div>
-        <div class="chart-container">
-            <canvas id="consumoChart"></canvas>
-        </div>
-    </div>
-
-    <!-- Historial de Pagos -->
-    <div class="chart-card">
-        <div class="card-header">
-            <h3>Historial de Pagos</h3>
-        </div>
-        <div class="chart-container">
-            <canvas id="pagosChart"></canvas>
         </div>
     </div>
 </div>
@@ -128,6 +96,16 @@
                     <span class="activity-time">{{ actividad.fecha }}</span>
                 </div>
             </div>
+            {% else %}
+            <div class="activity-item">
+                <div class="activity-icon">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="activity-content">
+                    <p class="activity-text">No hay actividades recientes</p>
+                    <span class="activity-time">Hoy</span>
+                </div>
+            </div>
             {% endfor %}
         </div>
     </div>
@@ -135,6 +113,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('static', filename='residente/dashboard.js') }}"></script>
 {% endblock %}

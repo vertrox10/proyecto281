@@ -1,8 +1,8 @@
-// facturacion.js - Gestión de facturación del residente
+// facturacion.js - Gestión de facturación del residente - VERSIÓN CORREGIDA
 document.addEventListener('DOMContentLoaded', function() {
     inicializarFacturacion();
     inicializarFiltros();
-    inicializarGraficosFacturacion();
+    // NOTA: Eliminada la llamada a gráficos de consumo
 });
 
 function inicializarFacturacion() {
@@ -29,8 +29,6 @@ function aplicarFiltrosFacturas() {
     
     console.log('Aplicando filtros:', { anio, mes, estado, tipo });
     
-    // Aquí iría la lógica para filtrar las facturas
-    // Por ahora simulamos el filtrado
     const facturas = document.querySelectorAll('.factura-card');
     
     facturas.forEach(factura => {
@@ -337,73 +335,6 @@ function descargarTodasFacturas() {
         
         mostrarAlertaFactura('Todas las facturas han sido descargadas', 'success');
     }, 2000);
-}
-
-function inicializarGraficosFacturacion() {
-    // Solo inicializar gráficos si existen los canvas
-    if (document.getElementById('consumoChart') && typeof Chart !== 'undefined') {
-        inicializarGraficoConsumos();
-    }
-    if (document.getElementById('pagosChart') && typeof Chart !== 'undefined') {
-        inicializarGraficoPagos();
-    }
-}
-
-function inicializarGraficoConsumos() {
-    const ctx = document.getElementById('consumoChart').getContext('2d');
-    
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ['Ene', 'Feb', 'Mar', 'Abr'],
-            datasets: [{
-                label: 'Consumo Luz (kWh)',
-                data: [142, 149, 153, 150],
-                backgroundColor: '#FFD700'
-            }, {
-                label: 'Consumo Agua (m³)',
-                data: [11, 12, 13, 13],
-                backgroundColor: '#A3C8D6'
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Evolución de Consumos'
-                }
-            }
-        }
-    });
-}
-
-function inicializarGraficoPagos() {
-    const ctx = document.getElementById('pagosChart').getContext('2d');
-    
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['Ene', 'Feb', 'Mar', 'Abr'],
-            datasets: [{
-                label: 'Monto Pagado ($)',
-                data: [850, 865, 872, 880],
-                borderColor: '#7A8C6E',
-                backgroundColor: 'rgba(122, 140, 110, 0.1)',
-                fill: true,
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Evolución de Pagos'
-                }
-            }
-        }
-    });
 }
 
 // Sistema de alertas para facturación

@@ -1,234 +1,185 @@
 {% extends "residente/base_residente.html" %}
 
-{% block title %}Mi Perfil{% endblock %}
+{% block title %}Mi Perfil - SincroHome{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='residente/perfil.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="perfil-header">
-    <h1><i class="fas fa-user"></i> Mi Perfil</h1>
-    <p>Gestiona tu información personal y preferencias</p>
-</div>
+<div class="perfil-container">
+    <!-- Encabezado -->
+    <div class="perfil-header">
+        <h1><i class="fas fa-user-circle"></i> Mi Perfil</h1>
+        <p>Gestiona tu información personal y preferencias</p>
+    </div>
 
-<div class="perfil-content">
+    <!-- Grid Principal -->
     <div class="perfil-grid">
-        <!-- Información Personal -->
-        <div class="perfil-section">
-            <div class="section-header">
-                <h2>Información Personal</h2>
-                <button class="btn btn-outline" id="editarPerfilBtn">
-                    <i class="fas fa-edit"></i> Editar
-                </button>
-            </div>
-
+        <!-- Columna Izquierda -->
+        <div class="left-column">
+            <!-- Información Personal -->
             <div class="perfil-card">
-                <div class="perfil-avatar">
-                    <div class="avatar-placeholder">
-                        <i class="fas fa-user"></i>
+                <h2><i class="fas fa-user"></i> Información Personal</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Nombre Completo</label>
+                        <div class="info-value">{{ usuario.nombre }} {{ usuario.ap_paterno or '' }} {{
+                            usuario.ap_materno or '' }}</div>
                     </div>
-                    <div class="avatar-actions">
-                        <button class="btn-icon" id="cambiarAvatarBtn">
-                            <i class="fas fa-camera"></i>
-                        </button>
+                    <div class="info-item">
+                        <label>Correo Electrónico</label>
+                        <div class="info-value">{{ usuario.correo }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Teléfono</label>
+                        <div class="info-value">{{ usuario.telefono or 'No especificado' }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Cédula de Identidad</label>
+                        <div class="info-value">{{ usuario.ci or 'No especificado' }}</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Rol</label>
+                        <div class="info-value">{{ usuario.rol_nombre or 'Residente' }}</div>
                     </div>
                 </div>
 
-                <div class="perfil-info">
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <label>Nombre Completo</label>
-                            <p id="nombreCompleto">{{ usuario.nombre }} {{ usuario.ap_paterno }} {{ usuario.ap_materno
-                                }}</p>
-                        </div>
-                        <div class="info-item">
-                            <label>Correo Electrónico</label>
-                            <p id="correoElectronico">{{ usuario.correo }}</p>
-                        </div>
-                        <div class="info-item">
-                            <label>Teléfono</label>
-                            <p id="telefono">{{ usuario.telefono or 'No especificado' }}</p>
-                        </div>
-                        <div class="info-item">
-                            <label>Fecha de Registro</label>
-                            <p id="fechaRegistro">{{ residente.fecha_ingreso }}</p>
-                        </div>
-                    </div>
+                <!-- Botones de Acción -->
+                <div class="perfil-actions">
+                    <button class="btn-editar" onclick="abrirModalEditar()">
+                        <i class="fas fa-edit"></i> Editar Información
+                    </button>
+                    <button class="btn-cambiar-pass" onclick="abrirModalCambiarPassword()">
+                        <i class="fas fa-key"></i> Cambiar Contraseña
+                    </button>
                 </div>
             </div>
-        </div>
 
-        <!-- Información de Departamento -->
-        <div class="perfil-section">
-            <div class="section-header">
-                <h2>Mi Departamento</h2>
-            </div>
+            <!-- Información del Departamento -->
+            <div class="perfil-card">
+                <h2><i class="fas fa-home"></i> Mi Departamento</h2>
 
-            <div class="departamento-card">
-                <div class="depto-icon">
-                    <i class="fas fa-home"></i>
-                </div>
-                <div class="depto-info">
-                    <h3>Departamento {{ departamento.piso }}-{{ departamento.nro }}</h3>
-                    <div class="depto-detalles">
-                        <div class="detalle-item">
-                            <i class="fas fa-layer-group"></i>
-                            <span>Piso: {{ departamento.piso }}</span>
+                {% if departamento %}
+                <div class="departamento-info">
+                    <h3>Datos de Residencia</h3>
+                    <div class="depto-details">
+                        <div class="depto-detail">
+                            <i class="fas fa-building"></i>
+                            <span>Piso {{ departamento.piso }}</span>
                         </div>
-                        <div class="detalle-item">
+                        <div class="depto-detail">
                             <i class="fas fa-door-open"></i>
-                            <span>Número: {{ departamento.nro }}</span>
+                            <span>Departamento {{ departamento.nro }}</span>
                         </div>
-                        <div class="detalle-item">
+                        <div class="depto-detail">
                             <i class="fas fa-calendar-alt"></i>
-                            <span>Contrato hasta: {{ contrato.fecha_fin }}</span>
-                        </div>
-                        <div class="detalle-item">
-                            <i class="fas fa-money-bill-wave"></i>
-                            <span>Alquiler: ${{ contrato.monto_mensual }}</span>
+                            <span>Ingreso: {{ residente.fecha_ingreso or 'N/A' }}</span>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Configuración de Notificaciones -->
-        <div class="perfil-section">
-            <div class="section-header">
-                <h2>Preferencias de Notificación</h2>
-            </div>
-
-            <div class="config-card">
-                <div class="config-item">
-                    <div class="config-info">
-                        <h4>Recordatorios de Pago</h4>
-                        <p>Recibir recordatorios antes del vencimiento</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="notifPagos" {% if config.notif_pagos %}checked{% endif %}>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="config-item">
-                    <div class="config-info">
-                        <h4>Actualizaciones de Solicitudes</h4>
-                        <p>Notificaciones sobre el estado de mis solicitudes</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="notifSolicitudes" {% if config.notif_solicitudes %}checked{% endif
-                            %}>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="config-item">
-                    <div class="config-info">
-                        <h4>Alertas de Consumo</h4>
-                        <p>Notificaciones cuando el consumo sea inusual</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="notifConsumos" {% if config.notif_consumos %}checked{% endif %}>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-
-                <div class="config-item">
-                    <div class="config-info">
-                        <h4>Mantenimientos Programados</h4>
-                        <p>Avisos sobre mantenimientos en el edificio</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="notifMantenimientos" {% if config.notif_mantenimientos %}checked{%
-                            endif %}>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Seguridad -->
-        <div class="perfil-section">
-            <div class="section-header">
-                <h2>Seguridad</h2>
-            </div>
-
-            <div class="seguridad-card">
-                <div class="seguridad-item">
-                    <div class="seguridad-info">
-                        <h4>Cambiar Contraseña</h4>
-                        <p>Actualiza tu contraseña regularmente</p>
-                    </div>
-                    <button class="btn btn-outline" id="cambiarPasswordBtn">
-                        Cambiar
-                    </button>
-                </div>
-
-                <div class="seguridad-item">
-                    <div class="seguridad-info">
-                        <h4>Sesión Actual</h4>
-                        <p>Iniciada el {{ sesion.fecha_inicio }} desde {{ sesion.dispositivo }}</p>
-                    </div>
-                    <button class="btn btn-outline" id="verSesionesBtn">
-                        Ver Todas
-                    </button>
-                </div>
-
-                <div class="seguridad-item">
-                    <div class="seguridad-info">
-                        <h4>Verificación en Dos Pasos</h4>
-                        <p>Protege tu cuenta con verificación adicional</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="dosPasos" {% if config.dos_pasos %}checked{% endif %}>
-                        <span class="slider"></span>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Métodos de Pago -->
-        <div class="perfil-section full-width">
-            <div class="section-header">
-                <h2>Métodos de Pago Guardados</h2>
-                <button class="btn btn-primary" id="agregarMetodoPagoBtn">
-                    <i class="fas fa-plus"></i> Agregar Método
-                </button>
-            </div>
-
-            <div class="metodos-grid">
-                {% if metodos_pago %}
-                {% for metodo in metodos_pago %}
-                <div class="metodo-card">
-                    <div class="metodo-header">
-                        <div class="metodo-icon">
-                            <i class="fas {{ metodo.icono }}"></i>
-                        </div>
-                        <div class="metodo-info">
-                            <h4>{{ metodo.nombre }}</h4>
-                            <span class="metodo-desc">{{ metodo.descripcion }}</span>
-                        </div>
-                    </div>
-                    <div class="metodo-actions">
-                        <button class="btn-icon editar-metodo-perfil-btn" data-id="{{ metodo.id_metodo_pago }}">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-icon btn-danger eliminar-metodo-perfil-btn"
-                            data-id="{{ metodo.id_metodo_pago }}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                {% endfor %}
                 {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-credit-card"></i>
-                    <h3>No hay métodos de pago</h3>
-                    <p>No tienes métodos de pago guardados.</p>
+                <div class="no-data">
+                    <i class="fas fa-home"></i>
+                    <p>No hay información de departamento disponible</p>
                 </div>
                 {% endif %}
             </div>
+        </div>
+
+        <!-- Columna Derecha -->
+        <div class="right-column">
+            <!-- Configuración de Notificaciones -->
+            <div class="perfil-card">
+                <h2><i class="fas fa-bell"></i> Preferencias de Notificación</h2>
+                <div class="config-list">
+                    <div class="config-item">
+                        <div class="config-info">
+                            <h4>Notificaciones de Pagos</h4>
+                            <p>Alertas sobre facturas y vencimientos</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="notifPagos" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="config-item">
+                        <div class="config-info">
+                            <h4>Notificaciones de Tickets</h4>
+                            <p>Actualizaciones de mis solicitudes</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="notifTickets" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="config-item">
+                        <div class="config-info">
+                            <h4>Notificaciones de Reservas</h4>
+                            <p>Recordatorios y confirmaciones</p>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="notifReservas" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sesión Actual -->
+            <div class="perfil-card">
+                <h2><i class="fas fa-shield-alt"></i> Seguridad</h2>
+                <div class="sesion-activa">
+                    <div class="sesion-info">
+                        <div class="sesion-details">
+                            <p><strong>Sesión activa</strong></p>
+                            <p>Iniciada: {{ now.strftime('%d/%m/%Y %H:%M') }}</p>
+                            <p>Dispositivo: Navegador Web</p>
+                        </div>
+                        <button class="btn-cerrar-sesion" onclick="cerrarSesionesOtrosDispositivos()">
+                            <i class="fas fa-sign-out-alt"></i> Cerrar Otras Sesiones
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Información -->
+<div id="modalEditar" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Editar Información Personal</h3>
+            <span class="close" onclick="cerrarModalEditar()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="formEditar">
+                <div class="form-group">
+                    <label for="editNombre">Nombre</label>
+                    <input type="text" id="editNombre" value="{{ usuario.nombre }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editApPaterno">Apellido Paterno</label>
+                    <input type="text" id="editApPaterno" value="{{ usuario.ap_paterno or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="editApMaterno">Apellido Materno</label>
+                    <input type="text" id="editApMaterno" value="{{ usuario.ap_materno or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="editTelefono">Teléfono</label>
+                    <input type="tel" id="editTelefono" value="{{ usuario.telefono or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="editCI">Cédula de Identidad</label>
+                    <input type="text" id="editCI" value="{{ usuario.ci or '' }}">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancelar" onclick="cerrarModalEditar()">Cancelar</button>
+                    <button type="submit" class="btn-guardar">Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -238,410 +189,32 @@
     <div class="modal-content">
         <div class="modal-header">
             <h3>Cambiar Contraseña</h3>
-            <button class="btn-icon" id="cerrarPasswordBtn">
-                <i class="fas fa-times"></i>
-            </button>
+            <span class="close" onclick="cerrarModalPassword()">&times;</span>
         </div>
         <div class="modal-body">
             <form id="formPassword">
                 <div class="form-group">
-                    <label class="form-label">Contraseña Actual</label>
-                    <input type="password" name="password_actual" class="form-control" required>
+                    <label for="currentPassword">Contraseña Actual</label>
+                    <input type="password" id="currentPassword" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Nueva Contraseña</label>
-                    <input type="password" name="password_nueva" class="form-control" required pattern=".{8,}"
-                        title="Mínimo 8 caracteres" id="nuevaPasswordInput">
+                    <label for="newPassword">Nueva Contraseña</label>
+                    <input type="password" id="newPassword" required minlength="6">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Confirmar Nueva Contraseña</label>
-                    <input type="password" name="password_confirm" class="form-control" required
-                        id="confirmarPasswordInput">
+                    <label for="confirmPassword">Confirmar Nueva Contraseña</label>
+                    <input type="password" id="confirmPassword" required>
                 </div>
-                <div class="password-strength">
-                    <div class="strength-bar">
-                        <div class="strength-fill" id="strengthFill"></div>
-                    </div>
-                    <span class="strength-text" id="strengthText">Seguridad de la contraseña</span>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancelar" onclick="cerrarModalPassword()">Cancelar</button>
+                    <button type="submit" class="btn-guardar">Cambiar Contraseña</button>
                 </div>
             </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelarPasswordBtn">Cancelar</button>
-            <button class="btn btn-primary" id="actualizarPasswordBtn">Actualizar Contraseña</button>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Event listeners principales
-        document.getElementById('editarPerfilBtn').addEventListener('click', editarPerfil);
-        document.getElementById('cambiarAvatarBtn').addEventListener('click', cambiarAvatar);
-        document.getElementById('cambiarPasswordBtn').addEventListener('click', mostrarModalPassword);
-        document.getElementById('verSesionesBtn').addEventListener('click', verSesiones);
-        document.getElementById('agregarMetodoPagoBtn').addEventListener('click', agregarMetodoPago);
-
-        // Event listeners para métodos de pago
-        document.querySelectorAll('.editar-metodo-perfil-btn').forEach(function (button) {
-            button.addEventListener('click', function () {
-                const id = this.getAttribute('data-id');
-                editarMetodoPerfil(id);
-            });
-        });
-
-        document.querySelectorAll('.eliminar-metodo-perfil-btn').forEach(function (button) {
-            button.addEventListener('click', function () {
-                const id = this.getAttribute('data-id');
-                eliminarMetodoPerfil(id);
-            });
-        });
-
-        // Event listeners para modal de contraseña
-        document.getElementById('cerrarPasswordBtn').addEventListener('click', cerrarModalPassword);
-        document.getElementById('cancelarPasswordBtn').addEventListener('click', cerrarModalPassword);
-        document.getElementById('actualizarPasswordBtn').addEventListener('click', cambiarPassword);
-
-        // Event listeners para switches de configuración
-        document.getElementById('notifPagos').addEventListener('change', function () {
-            actualizarConfig('notif_pagos', this.checked);
-        });
-
-        document.getElementById('notifSolicitudes').addEventListener('change', function () {
-            actualizarConfig('notif_solicitudes', this.checked);
-        });
-
-        document.getElementById('notifConsumos').addEventListener('change', function () {
-            actualizarConfig('notif_consumos', this.checked);
-        });
-
-        document.getElementById('notifMantenimientos').addEventListener('change', function () {
-            actualizarConfig('notif_mantenimientos', this.checked);
-        });
-
-        document.getElementById('dosPasos').addEventListener('change', function () {
-            actualizarConfig('dos_pasos', this.checked);
-        });
-
-        // Event listeners para fuerza de contraseña
-        document.getElementById('nuevaPasswordInput').addEventListener('input', verificarFuerzaPassword);
-        document.getElementById('confirmarPasswordInput').addEventListener('input', verificarCoincidenciaPassword);
-
-        // Cerrar modales al hacer clic fuera
-        document.getElementById('modalPassword').addEventListener('click', function (event) {
-            if (event.target === this) {
-                cerrarModalPassword();
-            }
-        });
-    });
-
-    function editarPerfil() {
-        const campos = document.querySelectorAll('.perfil-info p');
-        const boton = document.getElementById('editarPerfilBtn');
-
-        campos.forEach(campo => {
-            const valor = campo.textContent.trim();
-            const label = campo.previousElementSibling.textContent.toLowerCase();
-            let tipoInput = 'text';
-
-            if (label.includes('correo')) {
-                tipoInput = 'email';
-            } else if (label.includes('teléfono')) {
-                tipoInput = 'tel';
-            }
-
-            campo.innerHTML = `
-                <input type="${tipoInput}" class="form-control edit-input" value="${valor}" 
-                       data-field="${getFieldName(label)}"
-                       ${label.includes('correo') ? 'readonly' : ''}>
-            `;
-        });
-
-        boton.innerHTML = `
-            <button class="btn btn-primary" id="guardarPerfilBtn">
-                <i class="fas fa-save"></i> Guardar
-            </button>
-            <button class="btn btn-secondary" id="cancelarEdicionBtn">
-                <i class="fas fa-times"></i> Cancelar
-            </button>
-        `;
-
-        document.getElementById('guardarPerfilBtn').addEventListener('click', guardarPerfil);
-        document.getElementById('cancelarEdicionBtn').addEventListener('click', cancelarEdicion);
-    }
-
-    function getFieldName(label) {
-        const mapping = {
-            'nombre completo': 'nombre_completo',
-            'correo electrónico': 'correo',
-            'teléfono': 'telefono',
-            'fecha de registro': 'fecha_registro'
-        };
-        return mapping[label] || label.replace(' ', '_');
-    }
-
-    function cancelarEdicion() {
-        location.reload();
-    }
-
-    function guardarPerfil() {
-        const inputs = document.querySelectorAll('.edit-input');
-        const datos = {};
-
-        inputs.forEach(input => {
-            const field = input.getAttribute('data-field');
-            datos[field] = input.value;
-        });
-
-        if (datos.telefono && !validarTelefono(datos.telefono)) {
-            alert('Por favor ingrese un número de teléfono válido');
-            return;
-        }
-
-        fetch('/residentes/api/actualizar_perfil', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(datos)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Perfil actualizado exitosamente');
-                    location.reload();
-                } else {
-                    alert('Error al actualizar el perfil: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al actualizar el perfil');
-            });
-    }
-
-    function cambiarAvatar() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = function (e) {
-            const file = e.target.files[0];
-            if (file) {
-                if (!file.type.startsWith('image/')) {
-                    alert('Por favor seleccione una imagen válida');
-                    return;
-                }
-
-                if (file.size > 5 * 1024 * 1024) {
-                    alert('La imagen no debe superar los 5MB');
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const avatar = document.querySelector('.avatar-placeholder');
-                    avatar.innerHTML = `<img src="${e.target.result}" alt="Avatar" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
-                };
-                reader.readAsDataURL(file);
-
-                alert('Avatar actualizado exitosamente');
-            }
-        };
-        input.click();
-    }
-
-    function mostrarModalPassword() {
-        document.getElementById('modalPassword').style.display = 'flex';
-        actualizarFuerzaPassword(0, 'Seguridad de la contraseña');
-    }
-
-    function cerrarModalPassword() {
-        document.getElementById('modalPassword').style.display = 'none';
-        document.getElementById('formPassword').reset();
-        actualizarFuerzaPassword(0, 'Seguridad de la contraseña');
-    }
-
-    function verificarFuerzaPassword() {
-        const password = document.getElementById('nuevaPasswordInput').value;
-        const fuerza = calcularFuerzaPassword(password);
-        actualizarFuerzaPassword(fuerza.puntaje, fuerza.mensaje);
-    }
-
-    function calcularFuerzaPassword(password) {
-        let puntaje = 0;
-        let mensaje = '';
-
-        if (password.length >= 8) puntaje += 25;
-        if (password.length >= 12) puntaje += 15;
-
-        if (/[a-z]/.test(password)) puntaje += 10;
-        if (/[A-Z]/.test(password)) puntaje += 15;
-        if (/[0-9]/.test(password)) puntaje += 15;
-        if (/[^a-zA-Z0-9]/.test(password)) puntaje += 20;
-
-        if (/(.)\1{2,}/.test(password)) puntaje -= 10;
-        if (/123|abc|password/i.test(password)) puntaje -= 20;
-
-        if (puntaje >= 80) {
-            mensaje = 'Muy segura';
-        } else if (puntaje >= 60) {
-            mensaje = 'Segura';
-        } else if (puntaje >= 40) {
-            mensaje = 'Moderada';
-        } else if (puntaje >= 20) {
-            mensaje = 'Débil';
-        } else {
-            mensaje = 'Muy débil';
-        }
-
-        return { puntaje, mensaje };
-    }
-
-    function actualizarFuerzaPassword(puntaje, mensaje) {
-        const fill = document.getElementById('strengthFill');
-        const text = document.getElementById('strengthText');
-
-        fill.style.width = `${puntaje}%`;
-        text.textContent = mensaje;
-
-        if (puntaje >= 80) {
-            fill.style.background = '#7A8C6E';
-        } else if (puntaje >= 60) {
-            fill.style.background = '#A3C8D6';
-        } else if (puntaje >= 40) {
-            fill.style.background = '#E3A78C';
-        } else {
-            fill.style.background = '#dc3545';
-        }
-    }
-
-    function verificarCoincidenciaPassword() {
-        const password = document.getElementById('nuevaPasswordInput').value;
-        const confirm = document.getElementById('confirmarPasswordInput').value;
-        const confirmInput = document.getElementById('confirmarPasswordInput');
-
-        if (confirm && password !== confirm) {
-            confirmInput.style.borderColor = '#dc3545';
-        } else if (confirm) {
-            confirmInput.style.borderColor = '#7A8C6E';
-        } else {
-            confirmInput.style.borderColor = '';
-        }
-    }
-
-    function cambiarPassword() {
-        const formData = new FormData(document.getElementById('formPassword'));
-        const datos = Object.fromEntries(formData);
-
-        if (!datos.password_actual) {
-            alert('Por favor ingrese su contraseña actual');
-            return;
-        }
-
-        if (!datos.password_nueva) {
-            alert('Por favor ingrese la nueva contraseña');
-            return;
-        }
-
-        if (datos.password_nueva.length < 8) {
-            alert('La nueva contraseña debe tener al menos 8 caracteres');
-            return;
-        }
-
-        if (datos.password_nueva !== datos.password_confirm) {
-            alert('Las contraseñas no coinciden');
-            return;
-        }
-
-        fetch('/residentes/api/cambiar_password', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(datos)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Contraseña cambiada exitosamente');
-                    cerrarModalPassword();
-                } else {
-                    alert('Error al cambiar la contraseña: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al cambiar la contraseña');
-            });
-    }
-
-    function actualizarConfig(clave, valor) {
-        fetch('/residentes/api/actualizar_config', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                clave: clave,
-                valor: valor
-            })
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (!data.success) {
-                    const checkbox = document.getElementById(clave);
-                    if (checkbox) {
-                        checkbox.checked = !valor;
-                    }
-                    alert('Error al actualizar la configuración: ' + data.message);
-                } else {
-                    alert('Configuración actualizada');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al actualizar la configuración');
-            });
-    }
-
-    function verSesiones() {
-        alert('Mostrando sesiones activas');
-    }
-
-    function agregarMetodoPago() {
-        window.location.href = '/residentes/mis_pagos#agregar-metodo';
-    }
-
-    function editarMetodoPerfil(id) {
-        alert('Editando método de pago ' + id);
-    }
-
-    function eliminarMetodoPerfil(id) {
-        if (confirm('¿Está seguro de eliminar este método de pago?')) {
-            fetch('/residentes/api/eliminar_metodo_pago/' + id, {
-                method: 'DELETE'
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('Método de pago eliminado exitosamente');
-                        location.reload();
-                    } else {
-                        alert('Error al eliminar método de pago: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error al eliminar método de pago');
-                });
-        }
-    }
-
-    function validarTelefono(telefono) {
-        const regex = /^[\+]?[591]{0,3}?[0-9\s\-\(\)]{7,15}$/;
-        return regex.test(telefono);
-    }
-</script>
+<script src="{{ url_for('static', filename='residente/perfil.js') }}"></script>
 {% endblock %}

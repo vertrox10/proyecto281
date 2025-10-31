@@ -1,5 +1,8 @@
 {% extends 'administrador/base.html' %}
 {% block title %}Gestión de Tickets{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='administrador/tickets.css') }}">
+{% endblock %}
 {% block content %}
 <div class="header" style="display: flex; align-items: center; gap: 18px;">
     <h1 style="margin:0;">Gestión de Tickets</h1>
@@ -36,6 +39,10 @@
         <div style="font-size: 2rem; color: #27ae60; margin-bottom: 5px;">{{ resueltos }}</div>
         <div style="color: #666; font-size: 0.9rem;">Resueltos</div>
     </div>
+    <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center;">
+        <div style="font-size: 2rem; color: #e74c3c; margin-bottom: 5px;">{{ cancelados }}</div>
+        <div style="color: #666; font-size: 0.9rem;">Cancelados</div>
+    </div>
 </div>
 
 <!-- Filtros y Búsqueda -->
@@ -48,6 +55,7 @@
                 <option value="pendiente">Pendiente</option>
                 <option value="en_proceso">En Proceso</option>
                 <option value="resuelto">Resuelto</option>
+                <option value="cancelado">Cancelado</option>
             </select>
             
             <select id="filterPrioridad" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
@@ -73,7 +81,7 @@
         <div>Prioridad</div>
         <div>Estado</div>
         <div>Fecha</div>
-        <div>Departamento</div>
+        <div>Ubicación</div>
         <div>Asignado a</div>
         <div>Acciones</div>
     </div>
@@ -81,6 +89,7 @@
     <div class="tickets-list" id="ticketsList">
         {% for ticket in tickets %}
         <div class="ticket-item" data-estado="{{ ticket.estado }}" data-prioridad="{{ ticket.prioridad }}" 
+             data-tipo="{{ ticket.tipo_ubicacion }}"
              style="padding: 15px 20px; border-bottom: 1px solid #eee; display: grid; grid-template-columns: 80px 1fr 100px 100px 120px 150px 120px 100px; gap: 15px; align-items: center; transition: background-color 0.2s;">
             <div style="font-weight: bold; color: #3498db;">#{{ ticket.id_ticket }}</div>
             <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ ticket.descripcion }}">
@@ -99,13 +108,25 @@
                 <span class="status-badge 
                     {% if ticket.estado == 'pendiente' %}status-pending{% endif %}
                     {% if ticket.estado == 'en_proceso' %}status-in-progress{% endif %}
-                    {% if ticket.estado == 'resuelto' %}status-resolved{% endif %}"
+                    {% if ticket.estado == 'resuelto' %}status-resolved{% endif %}
+                    {% if ticket.estado == 'cancelado' %}status-cancelled{% endif %}"
                     style="padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold;">
                     {{ ticket.estado|replace('_', ' ')|title }}
                 </span>
             </div>
             <div style="font-size: 0.9rem; color: #666;">{{ ticket.fecha_emision.strftime('%d/%m/%Y') }}</div>
-            <div style="font-size: 0.9rem;">Piso {{ ticket.piso }} - Depto. {{ ticket.nro_departamento }}</div>
+            <div style="font-size: 0.9rem;">
+                {% if ticket.tipo_ubicacion == 'departamento' %}
+                    <i class="fas fa-building" style="color: #3498db; margin-right: 5px;"></i>
+                    Piso {{ ticket.piso }} - Dpto. {{ ticket.nro_departamento }}
+                {% elif ticket.tipo_ubicacion == 'area_comun' %}
+                    <i class="fas fa-users" style="color: #27ae60; margin-right: 5px;"></i>
+                    {{ ticket.area_nombre }}
+                {% else %}
+                    <i class="fas fa-question-circle" style="color: #95a5a6; margin-right: 5px;"></i>
+                    Sin ubicación
+                {% endif %}
+            </div>
             <div style="font-size: 0.9rem;">{{ ticket.empleado_nombre }}</div>
             <div style="display: flex; gap: 5px; flex-wrap: wrap;">
                 <button onclick="verDetalleTicket({{ ticket.id_ticket }})" 
@@ -121,6 +142,10 @@
                 <button onclick="cambiarEstadoTicket({{ ticket.id_ticket }}, 'resuelto')" 
                         style="background: #27ae60; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
                     Resolver
+                </button>
+                <button onclick="cambiarEstadoTicket({{ ticket.id_ticket }}, 'cancelado')" 
+                        style="background: #e74c3c; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                    Cancelar
                 </button>
                 {% endif %}
             </div>
@@ -143,7 +168,7 @@
         <div style="padding: 20px; max-height: 70vh; overflow-y: auto;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                 <div>
-                    <strong>Departamento:</strong> <span id="modalDepto"></span>
+                    <strong>Ubicación:</strong> <span id="modalUbicacion"></span>
                 </div>
                 <div>
                     <strong>Fecha de Emisión:</strong> <span id="modalFecha"></span>
@@ -155,7 +180,7 @@
                     <strong>Estado:</strong> <span id="modalEstado"></span>
                 </div>
                 <div>
-                    <strong>Residente:</strong> <span id="modalResidente"></span>
+                    <strong>Responsable:</strong> <span id="modalResidente"></span>
                 </div>
                 <div>
                     <strong>Contacto:</strong> <span id="modalContacto"></span>
@@ -204,7 +229,7 @@
                 <p id="ticketDescripcionAsignar" style="margin: 0; font-style: italic;"></p>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
                     <div><strong>Prioridad:</strong> <span id="ticketPrioridadAsignar"></span></div>
-                    <div><strong>Departamento:</strong> <span id="ticketDeptoAsignar"></span></div>
+                    <div><strong>Ubicación:</strong> <span id="ticketUbicacionAsignar"></span></div>
                 </div>
             </div>
             
@@ -241,39 +266,7 @@
 </div>
 
 <style>
-.priority-high {
-    background: #e74c3c;
-    color: white;
-}
 
-.priority-medium {
-    background: #f39c12;
-    color: white;
-}
-
-.priority-low {
-    background: #27ae60;
-    color: white;
-}
-
-.status-pending {
-    background: #f39c12;
-    color: white;
-}
-
-.status-in-progress {
-    background: #3498db;
-    color: white;
-}
-
-.status-resolved {
-    background: #27ae60;
-    color: white;
-}
-
-.ticket-item:hover {
-    background-color: #f8f9fa;
-}
 </style>
 
 <script>
@@ -291,7 +284,7 @@ async function verDetalleTicket(idTicket) {
         
         if (response.ok) {
             document.getElementById('modalTicketId').textContent = idTicket;
-            document.getElementById('modalDepto').textContent = `Piso ${ticket.piso} - Depto. ${ticket.nro_departamento}`;
+            document.getElementById('modalUbicacion').textContent = ticket.ubicacion;
             document.getElementById('modalFecha').textContent = ticket.fecha_emision;
             document.getElementById('modalPrioridad').innerHTML = `<span class="priority-badge priority-${ticket.prioridad}">${ticket.prioridad}</span>`;
             document.getElementById('modalEstado').innerHTML = `<span class="status-badge status-${ticket.estado}">${ticket.estado.replace('_', ' ')}</span>`;
@@ -312,12 +305,12 @@ async function verDetalleTicket(idTicket) {
                     comentarioDiv.style.backgroundColor = comentario.es_interno ? '#fff3cd' : '#ffffff';
                     
                     comentarioDiv.innerHTML = `
-                        <div style="display: flex; justify-content: between; margin-bottom: 5px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                             <strong>${comentario.usuario_nombre} (${comentario.rol_nombre})</strong>
                             <small>${comentario.fecha_creacion}</small>
                         </div>
                         <p style="margin: 0;">${comentario.mensaje}</p>
-                        ${comentario.es_interno ? '<small style="color: #856404;"><i class="fas fa-lock"></i> Comentario interno</small>' : ''}
+                        ${comentario.es_interno ? '<small style="color: #856404;">Comentario interno</small>' : ''}
                     `;
                     
                     comentariosContainer.appendChild(comentarioDiv);
@@ -347,6 +340,11 @@ async function agregarComentario() {
     
     if (!mensaje.trim()) {
         alert('Por favor escriba un comentario');
+        return;
+    }
+    
+    if (mensaje.length > 1000) {
+        alert('El comentario no puede tener más de 1000 caracteres');
         return;
     }
     
@@ -382,27 +380,58 @@ async function agregarComentario() {
 async function cargarEmpleadosDisponibles() {
     try {
         const response = await fetch('/admin/empleados/disponibles');
-        const empleados = await response.json();
         
         if (response.ok) {
+            const empleados = await response.json();
             empleadosDisponibles = empleados;
             actualizarSelectEmpleados();
         } else {
-            console.error('Error cargando empleados:', empleados.error);
+            // Si hay error, usar empleados del template
+            usarEmpleadosDelTemplate();
         }
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error cargando empleados:', error);
+        usarEmpleadosDelTemplate();
+    }
+}
+
+function usarEmpleadosDelTemplate() {
+    // Los empleados ya vienen en la variable 'empleados' del template
+    if (typeof empleados !== 'undefined' && empleados.length > 0) {
+        empleadosDisponibles = empleados;
+        actualizarSelectEmpleados();
+    } else {
+        const select = document.getElementById('empleadoAsignado');
+        select.innerHTML = '<option value="">No hay empleados disponibles</option>';
     }
 }
 
 function actualizarSelectEmpleados() {
     const select = document.getElementById('empleadoAsignado');
+    
+    if (!empleadosDisponibles || empleadosDisponibles.length === 0) {
+        select.innerHTML = '<option value="">No hay empleados disponibles</option>';
+        return;
+    }
+    
     select.innerHTML = '<option value="">Seleccione un empleado...</option>';
     
     empleadosDisponibles.forEach(empleado => {
         const option = document.createElement('option');
         option.value = empleado.id_empleado;
-        option.textContent = `${empleado.nombre_completo} - ${empleado.puesto} (${empleado.turno}) - Tickets: ${empleado.tickets_activos} - ${empleado.disponibilidad}`;
+        
+        let texto = `${empleado.nombre_completo} - ${empleado.puesto}`;
+        if (empleado.turno) {
+            texto += ` (${empleado.turno})`;
+        }
+        if (empleado.tickets_activos !== undefined) {
+            texto += ` - Tickets activos: ${empleado.tickets_activos}`;
+        }
+        if (empleado.disponibilidad) {
+            texto += ` - ${empleado.disponibilidad}`;
+        }
+        
+        option.textContent = texto;
         option.setAttribute('data-info', JSON.stringify(empleado));
         select.appendChild(option);
     });
@@ -416,13 +445,22 @@ document.getElementById('empleadoAsignado').addEventListener('change', function(
     if (this.value) {
         const empleado = empleadosDisponibles.find(e => e.id_empleado == this.value);
         if (empleado) {
-            empleadoDetalles.innerHTML = `
-                <div>Nombre: ${empleado.nombre_completo}</div>
-                <div>Puesto: ${empleado.puesto}</div>
-                <div>Turno: ${empleado.turno}</div>
-                <div>Tickets activos: ${empleado.tickets_activos}</div>
-                <div>Disponibilidad: ${empleado.disponibilidad}</div>
+            let detallesHTML = `
+                <div><strong>Nombre:</strong> ${empleado.nombre_completo}</div>
+                <div><strong>Puesto:</strong> ${empleado.puesto}</div>
             `;
+            
+            if (empleado.turno) {
+                detallesHTML += `<div><strong>Turno:</strong> ${empleado.turno}</div>`;
+            }
+            if (empleado.tickets_activos !== undefined) {
+                detallesHTML += `<div><strong>Tickets activos:</strong> ${empleado.tickets_activos}</div>`;
+            }
+            if (empleado.disponibilidad) {
+                detallesHTML += `<div><strong>Disponibilidad:</strong> ${empleado.disponibilidad}</div>`;
+            }
+            
+            empleadoDetalles.innerHTML = detallesHTML;
             empleadoInfo.style.display = 'block';
         }
     } else {
@@ -439,7 +477,7 @@ async function asignarTicket(idTicket) {
         document.getElementById('asignarTicketId').textContent = idTicket;
         document.getElementById('ticketDescripcionAsignar').textContent = ticket.descripcion;
         document.getElementById('ticketPrioridadAsignar').textContent = ticket.prioridad;
-        document.getElementById('ticketDeptoAsignar').textContent = `Piso ${ticket.piso} - Depto. ${ticket.nro_departamento}`;
+        document.getElementById('ticketUbicacionAsignar').textContent = ticket.ubicacion;
     }
     
     // Cargar empleados disponibles
@@ -468,6 +506,13 @@ async function confirmarAsignacion() {
         return;
     }
     
+    // Validar fecha
+    const hoy = new Date().toISOString().split('T')[0];
+    if (fechaEstimada < hoy) {
+        alert('La fecha estimada no puede ser en el pasado');
+        return;
+    }
+    
     try {
         const response = await fetch('/admin/tickets/asignar', {
             method: 'POST',
@@ -487,7 +532,7 @@ async function confirmarAsignacion() {
         if (response.ok) {
             alert(result.message);
             cerrarAsignarModal();
-            location.reload(); // Recargar para ver los cambios
+            location.reload();
         } else {
             alert('Error: ' + result.error);
         }
@@ -504,7 +549,12 @@ function cerrarAsignarModal() {
 
 // Funciones de cambio de estado
 async function cambiarEstadoTicket(idTicket, nuevoEstado) {
-    if (!confirm(`¿Está seguro de que desea marcar este ticket como ${nuevoEstado}?`)) {
+    const mensajes = {
+        'resuelto': '¿Está seguro de que desea marcar este ticket como resuelto?',
+        'cancelado': '¿Está seguro de que desea cancelar este ticket?'
+    };
+    
+    if (!confirm(mensajes[nuevoEstado])) {
         return;
     }
     

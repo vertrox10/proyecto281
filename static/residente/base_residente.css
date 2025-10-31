@@ -1,7 +1,7 @@
 /* base_residente.css */
 :root {
     --beige-suave: #EDE6E0;
-    --azul-profundo: #264653;
+    --azul-profundo: #1E2E57;
     --gris-claro: #F5F5F5;
     --marron-oscuro: #2F241F;
     --durazno-suave: #E3A78C;
@@ -29,7 +29,8 @@ body {
 /* Sidebar */
 .sidebar {
     width: 280px;
-    background: linear-gradient(135deg, var(--azul-profundo) 0%, #1a3340 100%);
+    background: linear-gradient(135deg, var(--azul-profundo) 0%, #1E2E57
+ 100%);
     color: white;
     padding: 0;
     position: fixed;
@@ -44,7 +45,8 @@ body {
     padding: 25px 20px;
     text-align: center;
     border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-    background-color: rgba(38, 70, 83, 0.9);
+    background-color:#1E2E57
+;
 }
 
 .sidebar .logo img {

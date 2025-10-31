@@ -4,9 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Panel Residente{% endblock %}</title>
+    <title>{% block title %}Panel Residente - SincroHome{% endblock %}</title>
+
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- CSS Base -->
     <link rel="stylesheet" href="{{ url_for('static', filename='residente/base_residente.css') }}">
+
+    <!-- CSS Específico por Página -->
     {% block extra_css %}{% endblock %}
 </head>
 
@@ -15,44 +21,46 @@
         <div class="logo">
             <img src="{{ url_for('static', filename='LogoP.png') }}" alt="Logo Edificio"
                 onerror="this.style.display='none'">
-            <h2>Panel Residente</h2>
+            <h2>SincroHome Residente</h2>
         </div>
         <ul class="menu">
             <li><a href="{{ url_for('residentes.dashboard') }}"
                     class="{% if request.endpoint == 'residentes.dashboard' %}active{% endif %}">
                     <i class="fas fa-home"></i> Dashboard
                 </a></li>
-            {# <li><a href="{{ url_for('residentes.mis_pagos') }}"
-                    class="{% if request.endpoint == 'residentes.mis_pagos' %}active{% endif %}">
-                    <i class="fas fa-money-bill-wave"></i> Mis Pagos
-                </a></li> #}
-            <li><a href="{{ url_for('residentes.facturacion') }}"
-                    class="{% if request.endpoint == 'residentes.facturacion' %}active{% endif %}">
-                    <i class="fas fa-file-invoice-dollar"></i> Facturación
+            <li><a href="{{ url_for('residentes.reservas') }}"
+                    class="{% if request.endpoint == 'residentes.reservas' %}active{% endif %}">
+                    <i class="fas fa-calendar-check"></i> Mis Reservas
                 </a></li>
-            <li><a href="{{ url_for('residentes.solicitudes') }}"
-                    class="{% if request.endpoint == 'residentes.solicitudes' %}active{% endif %}">
-                    <i class="fas fa-ticket-alt"></i> Mis Solicitudes
+            <li><a href="{{ url_for('residentes.mis_tickets') }}"
+                    class="{% if request.endpoint == 'residentes.mis_tickets' %}active{% endif %}">
+                    <i class="fas fa-ticket-alt"></i> Mis Tickets
                 </a></li>
-            <li><a href="{{ url_for('residentes.consumos') }}"
-                    class="{% if request.endpoint == 'residentes.consumos' %}active{% endif %}">
-                    <i class="fas fa-chart-line"></i> Mis Consumos
+            <li><a href="{{ url_for('residentes.politicas') }}"
+                    class="{% if request.endpoint == 'residentes.politicas' %}active{% endif %}">
+                    <i class="fas fa-file-contract"></i> Políticas
                 </a></li>
-            <li><a href="{{ url_for('residentes.perfil') }}"
-                    class="{% if request.endpoint == 'residentes.perfil' %}active{% endif %}">
-                    <i class="fas fa-user"></i> Mi Perfil
+            <li><a href="{{ url_for('residentes.perfil')  }}"
+                    class="{% if request.endpoint == 'residentes.mi_perfil' %}active{% endif %}">
+                    <i class="fas fa-user-circle"></i> Mi perfil
                 </a></li>
         </ul>
-        <a href="{{ url_for('auth.logout') }}" class="logout">
-            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-        </a>
+        <div class="user-section">
+
+            <a href="{{ url_for('auth.logout') }}" class="logout">
+                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+            </a>
+        </div>
     </div>
 
     <div class="main-content">
-        {% with messages = get_flashed_messages() %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-success">{{ message }}</div>
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+            <i class="fas fa-{% if category == 'success' %}check-circle{% else %}exclamation-triangle{% endif %}"></i>
+            {{ message }}
+        </div>
         {% endfor %}
         {% endif %}
         {% endwith %}
@@ -60,6 +68,8 @@
         {% block content %}{% endblock %}
     </div>
 
+    <!-- Incluir jsPDF para exportar PDF -->
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
     <script src="{{ url_for('static', filename='residente/residente.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
