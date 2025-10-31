@@ -40,13 +40,12 @@
                     class="{% if request.endpoint == 'residentes.politicas' %}active{% endif %}">
                     <i class="fas fa-file-contract"></i> Políticas
                 </a></li>
-            <li><a href="{{ url_for('residentes.perfil')  }}"
-                    class="{% if request.endpoint == 'residentes.mi_perfil' %}active{% endif %}">
-                    <i class="fas fa-user-circle"></i> Mi perfil
+            <li><a href="{{ url_for('residentes.perfil') }}"
+                    class="{% if request.endpoint == 'residentes.perfil' %}active{% endif %}">
+                    <i class="fas fa-user-circle"></i> Mi Perfil
                 </a></li>
         </ul>
         <div class="user-section">
-
             <a href="{{ url_for('auth.logout') }}" class="logout">
                 <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
             </a>

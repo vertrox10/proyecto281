@@ -932,30 +932,45 @@ def perfil():
         
         usuario = cursor.fetchone()
         
-        # Información del residente
+        # Información específica del residente
+        datos_extra = {}
         residente = get_residente_data()
-        departamento = None
-        residente_dict = None
-        
         if residente:
-            # Obtener información del departamento
             cursor.execute("""
-                SELECT d.id_departamento, d.piso, d.nro
+                SELECT d.*, a.periodo_fin, a.monto as monto_mensual
                 FROM departamento d
+                LEFT JOIN alquiler a ON d.id_departamento = a.id_departamento
                 WHERE d.piso = %s AND d.nro = %s
-            """, (f"Piso {residente[2]}", residente[3]))
+                ORDER BY a.periodo_inicio DESC
+                LIMIT 1
+            """, (str(residente[2]), residente[3]))  # Convertir piso a string
             
             departamento = cursor.fetchone()
             
-            # Preparar datos del residente
-            residente_dict = {
-                'fecha_ingreso': residente[4].strftime('%d/%m/%Y') if residente[4] else 'N/A'
+            datos_extra = {
+                'departamento': {
+                    'id_departamento': departamento[0] if departamento else 'N/A',
+                    'piso': departamento[1] if departamento else 'N/A',
+                    'nro': departamento[2] if departamento else 'N/A'
+                },
+                'contrato': {
+                    'fecha_fin': departamento[3].strftime('%d/%m/%Y') if departamento and departamento[3] else 'N/A',
+                    'monto_mensual': float(departamento[4]) if departamento and departamento[4] else 0
+                }
             }
         
         cursor.close()
         conn.close()
         
-        # Preparar datos para el template
+        # Configuración (datos de ejemplo)
+        config = {
+            'notif_pagos': True,
+            'notif_solicitudes': True,
+            'notif_consumos': False,
+            'notif_mantenimientos': True,
+            'dos_pasos': False
+        }
+        
         usuario_dict = {
             'id_usuario': usuario[0],
             'nombre': usuario[1],
@@ -963,23 +978,18 @@ def perfil():
             'ap_materno': usuario[3],
             'correo': usuario[4],
             'telefono': usuario[5],
-            'ci': usuario[9] if len(usuario) > 9 else None,
             'rol_nombre': usuario[8] if len(usuario) > 8 else 'Residente'
         }
         
-        departamento_dict = None
-        if departamento:
-            departamento_dict = {
-                'id_departamento': departamento[0],
-                'piso': departamento[1],
-                'nro': departamento[2]
-            }
-        
         return render_template('residente/perfil.html',
+                            rol_usuario='residente',
                             usuario=usuario_dict,
-                            departamento=departamento_dict,
-                            residente=residente_dict,
-                            now=datetime.now())
+                            config=config,
+                            sesion={
+                                'fecha_inicio': datetime.now().strftime('%d/%m/%Y %H:%M'),
+                                'dispositivo': 'Chrome en Windows'
+                            },
+                            **datos_extra)
     
     except Exception as e:
         logger.error(f"Error en perfil: {e}")
@@ -1954,138 +1964,3 @@ def api_cancelar_ticket(ticket_id):
             conn.rollback()
         print(f"❌ Error cancelando ticket: {str(e)}")
         return jsonify({'success': False, 'message': 'Error al cancelar el ticket'}), 500
-    
-# ===== API PARA GESTIÓN DE PERFIL =====
-
-@residentes_bp.route('/api/actualizar_perfil', methods=['POST'])
-@login_required
-def api_actualizar_perfil():
-    """API para actualizar información del perfil"""
-    try:
-        user_id = get_user_id()
-        data = request.get_json()
-        
-        # Validar datos requeridos
-        if not data.get('nombre'):
-            return jsonify({'success': False, 'message': 'El nombre es obligatorio'}), 400
-        
-        conn = get_db_connection()
-        if conn is None:
-            return jsonify({'success': False, 'message': 'Error de conexión a la base de datos'}), 500
-            
-        cursor = conn.cursor()
-        
-        # Actualizar información del usuario
-        cursor.execute("""
-            UPDATE usuario 
-            SET nombre = %s, ap_paterno = %s, ap_materno = %s, telefono = %s, ci = %s
-            WHERE id_usuario = %s
-        """, (
-            data.get('nombre'),
-            data.get('ap_paterno'),
-            data.get('ap_materno'),
-            data.get('telefono'),
-            data.get('ci'),
-            user_id
-        ))
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({
-            'success': True, 
-            'message': 'Perfil actualizado correctamente'
-        })
-        
-    except Exception as e:
-        if 'conn' in locals():
-            conn.rollback()
-        logger.error(f"Error actualizando perfil: {e}")
-        return jsonify({'success': False, 'message': 'Error al actualizar el perfil'}), 500
-
-@residentes_bp.route('/api/cambiar_password', methods=['POST'])
-@login_required
-def api_cambiar_password():
-    """API para cambiar contraseña"""
-    try:
-        user_id = get_user_id()
-        data = request.get_json()
-        
-        current_password = data.get('current_password')
-        new_password = data.get('new_password')
-        
-        # Validaciones básicas
-        if not current_password or not new_password:
-            return jsonify({'success': False, 'message': 'Todos los campos son obligatorios'}), 400
-        
-        if len(new_password) < 6:
-            return jsonify({'success': False, 'message': 'La nueva contraseña debe tener al menos 6 caracteres'}), 400
-        
-        conn = get_db_connection()
-        if conn is None:
-            return jsonify({'success': False, 'message': 'Error de conexión a la base de datos'}), 500
-            
-        cursor = conn.cursor()
-        
-        # Verificar contraseña actual
-        cursor.execute("SELECT contrasena FROM usuario WHERE id_usuario = %s", (user_id,))
-        usuario = cursor.fetchone()
-        
-        if not usuario:
-            return jsonify({'success': False, 'message': 'Usuario no encontrado'}), 404
-        
-        # Aquí deberías implementar la verificación real de contraseña
-        # Por ahora simulamos que siempre es correcta
-        contraseña_correcta = True  # Esto debería ser: check_password_hash(usuario[0], current_password)
-        
-        if not contraseña_correcta:
-            return jsonify({'success': False, 'message': 'La contraseña actual es incorrecta'}), 400
-        
-        # Aquí deberías encriptar la nueva contraseña
-        # nueva_contraseña_hash = generate_password_hash(new_password)
-        
-        # Actualizar contraseña (simulado)
-        cursor.execute("""
-            UPDATE usuario 
-            SET contrasena = %s
-            WHERE id_usuario = %s
-        """, (new_password, user_id))  # En producción usar: nueva_contraseña_hash
-        
-        conn.commit()
-        cursor.close()
-        conn.close()
-        
-        return jsonify({
-            'success': True, 
-            'message': 'Contraseña cambiada correctamente'
-        })
-        
-    except Exception as e:
-        if 'conn' in locals():
-            conn.rollback()
-        logger.error(f"Error cambiando contraseña: {e}")
-        return jsonify({'success': False, 'message': 'Error al cambiar la contraseña'}), 500
-
-@residentes_bp.route('/api/cerrar_otras_sesiones', methods=['POST'])
-@login_required
-def api_cerrar_otras_sesiones():
-    """API para cerrar otras sesiones activas"""
-    try:
-        user_id = get_user_id()
-        
-        # Aquí implementarías la lógica para cerrar otras sesiones
-        # Por ejemplo, invalidar tokens JWT excepto el actual
-        # Por ahora es una implementación simulada
-        
-        print(f"🔍 Cerrando otras sesiones para usuario {user_id}")
-        
-        # Simular éxito
-        return jsonify({
-            'success': True, 
-            'message': 'Otras sesiones cerradas correctamente'
-        })
-        
-    except Exception as e:
-        logger.error(f"Error cerrando otras sesiones: {e}")
-        return jsonify({'success': False, 'message': 'Error al cerrar otras sesiones'}), 500
