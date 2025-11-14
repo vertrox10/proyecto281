@@ -14,39 +14,39 @@
     {% if mantenimientos %}
     <div class="mantenimientos-list">
         {% for mantenimiento in mantenimientos %}
-        <div class="mantenimiento-card" data-id="{{ mantenimiento[0] }}">
+        <div class="mantenimiento-card" data-id="{{ mantenimiento.id }}">
             <div class="mantenimiento-header">
-                <h3>Mantenimiento #{{ mantenimiento[0] }}</h3>
-                <span class="status-badge status-{{ mantenimiento[3] }}">{{ mantenimiento[3]|title }}</span>
+                <h3>Mantenimiento #{{ mantenimiento.id }}</h3>
+                <span class="status-badge status-{{ mantenimiento.estado|lower }}">{{ mantenimiento.estado }}</span>
             </div>
 
             <div class="mantenimiento-content">
-                <p class="mantenimiento-desc">{{ mantenimiento[1] }}</p>
+                <p class="mantenimiento-desc">{{ mantenimiento.descripcion }}</p>
 
                 <div class="mantenimiento-info">
                     <div class="info-item">
                         <i class="fas fa-calendar"></i>
-                        <span>Fecha programada: {{ mantenimiento[2] }}</span>
+                        <span>Fecha: {{ mantenimiento.fecha_programada }}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Ubicación: {{ mantenimiento.ubicacion }}</span>
                     </div>
                     <div class="info-item">
                         <i class="fas fa-building"></i>
-                        <span>Ubicación: Piso {{ mantenimiento[4] }} - Depto {{ mantenimiento[5] }}</span>
+                        <span>Área: {{ mantenimiento.area }}</span>
                     </div>
                 </div>
             </div>
 
             <div class="mantenimiento-footer">
                 <div class="mantenimiento-actions">
-                    {% if mantenimiento[3] == 'programado' %}
-                    <button class="btn btn-primary btn-small iniciar-mantenimiento" data-id="{{ mantenimiento[0] }}">
+                    {% if mantenimiento.estado == 'Pendiente' %}
+                    <button class="btn btn-primary btn-small iniciar-mantenimiento" data-id="{{ mantenimiento.id }}">
                         <i class="fas fa-play"></i> Iniciar
                     </button>
-                    {% elif mantenimiento[3] == 'en_proceso' %}
-                    <button class="btn btn-success btn-small completar-mantenimiento" data-id="{{ mantenimiento[0] }}">
-                        <i class="fas fa-check"></i> Completar
-                    </button>
                     {% endif %}
-                    <button class="btn btn-secondary btn-small detalles-mantenimiento" data-id="{{ mantenimiento[0] }}">
+                    <button class="btn btn-secondary btn-small detalles-mantenimiento" data-id="{{ mantenimiento.id }}">
                         <i class="fas fa-eye"></i> Detalles
                     </button>
                 </div>
@@ -66,21 +66,12 @@
 
 {% block scripts %}
 <script>
-    // Event listeners para los botones
     document.addEventListener('DOMContentLoaded', function () {
         // Botones de iniciar mantenimiento
         document.querySelectorAll('.iniciar-mantenimiento').forEach(function (button) {
             button.addEventListener('click', function () {
                 const id = this.getAttribute('data-id');
                 iniciarMantenimiento(id);
-            });
-        });
-
-        // Botones de completar mantenimiento
-        document.querySelectorAll('.completar-mantenimiento').forEach(function (button) {
-            button.addEventListener('click', function () {
-                const id = this.getAttribute('data-id');
-                completarMantenimiento(id);
             });
         });
 
@@ -95,24 +86,39 @@
 
     function iniciarMantenimiento(id) {
         if (confirm('¿Iniciar este mantenimiento?')) {
-            alert('Iniciando mantenimiento ' + id);
-            setTimeout(function () {
-                location.reload();
-            }, 1000);
-        }
-    }
-
-    function completarMantenimiento(id) {
-        if (confirm('¿Marcar este mantenimiento como completado?')) {
-            alert('Completando mantenimiento ' + id);
-            setTimeout(function () {
-                location.reload();
-            }, 1000);
+            fetch(`/empleado/mantenimiento/${id}/iniciar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Mantenimiento iniciado correctamente');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al iniciar el mantenimiento');
+                });
         }
     }
 
     function verDetalles(id) {
+        // Aquí puedes implementar un modal o redirección para ver detalles
         alert('Mostrando detalles del mantenimiento ' + id);
+
+        // Ejemplo con modal (necesitarías implementar el modal en tu HTML)
+        // fetch(`/empleado/mantenimiento/${id}/detalles`)
+        // .then(response => response.json())
+        // .then(data => {
+        //     // Mostrar datos en modal
+        //     mostrarModalDetalles(data);
+        // });
     }
 </script>
 {% endblock %}

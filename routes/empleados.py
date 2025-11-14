@@ -36,11 +36,23 @@ def get_id_empleado():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # CORREGIDO: usar current_user.id en lugar de current_user.id_usuario
+        print(f"🔍 Buscando empleado para usuario ID: {current_user.id}")
+        
         cursor.execute("SELECT id_empleado FROM empleado WHERE id_usuario = %s", (current_user.id,))
         result = cursor.fetchone()
+        
+        if result:
+            print(f"✅ Empleado encontrado: ID {result[0]}")
+        else:
+            print(f"❌ No se encontró empleado para usuario {current_user.id}")
+            # Verificar si el usuario existe en la tabla empleado
+            cursor.execute("SELECT * FROM empleado LIMIT 5")
+            empleados = cursor.fetchall()
+            print(f"🔍 Primeros 5 empleados en BD: {empleados}")
+        
         cursor.close()
         conn.close()
+        
         return result[0] if result else None
     except Exception as e:
         print(f"❌ Error obteniendo id_empleado: {e}")
@@ -461,6 +473,7 @@ def api_dashboard_data():
     except Exception as e:
         print(f"❌ Error en API dashboard: {e}")
         return jsonify({'success': False, 'error': str(e)})
+
 # ================================
 # MANTENIMIENTOS ASIGNADOS - CORREGIDO
 # ================================
@@ -473,50 +486,79 @@ def mantenimientos_asignados():
         return redirect(url_for("auth.login"))
     
     try:
+        print(f"🔍 Diagnóstico - Usuario actual:")
+        print(f"   • ID Usuario: {current_user.id}")
+        print(f"   • Nombre: {current_user.nombre}")
+        print(f"   • Rol: {current_user.id_rol}")
+        
+        # Obtener el id_empleado
+        id_empleado = get_id_empleado()
+        print(f"   • ID Empleado: {id_empleado}")
+
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Obtener mantenimientos asignados - CONSULTA CORREGIDA
+        # Verificar si existen mantenimientos en la base de datos
+        cursor.execute("SELECT COUNT(*) FROM mantenimiento")
+        total_mantenimientos = cursor.fetchone()[0]
+        print(f"🔍 Total de mantenimientos en BD: {total_mantenimientos}")
+
+        # VERIFICACIÓN: Ver todos los mantenimientos para ver a quién están asignados
+        cursor.execute("""
+            SELECT id_mantenimiento, descripcion, id_empleado, activo 
+            FROM mantenimiento 
+            LIMIT 5
+        """)
+        todos_mantenimientos = cursor.fetchall()
+        print(f"🔍 Primeros 5 mantenimientos en BD:")
+        for mnt in todos_mantenimientos:
+            print(f"   • ID: {mnt[0]}, Empleado: {mnt[2]}, Activo: {mnt[3]}, Desc: {mnt[1]}")
+
+        # CONSULTA CORREGIDA: Buscar por id_empleado (no id_usuario)
         cursor.execute("""
             SELECT 
-                m.id_mantenimiento, 
-                m.descripcion,
-                'N/A' as fecha_programada,  -- No hay fecha en la tabla, usar valor por defecto
-                CASE 
-                    WHEN m.activo = true THEN 'programado'
-                    ELSE 'completado'
-                END as estado,
-                'Edificio Principal' as ubicacion,  -- Valor por defecto
-                'Área Común' as area  -- Valor por defecto
-            FROM mantenimiento m
-            WHERE m.id_empleado = %s
-            ORDER BY 
-                CASE 
-                    WHEN m.activo = true THEN 1
-                    ELSE 2
-                END,
-                m.id_mantenimiento DESC
-        """, (current_user.id,))
+                id_mantenimiento, 
+                descripcion,
+                activo,
+                id_empleado
+            FROM mantenimiento 
+            WHERE id_empleado = %s
+            ORDER BY id_mantenimiento DESC
+        """, (id_empleado,))  # ¡Usar id_empleado aquí!
         mantenimientos = cursor.fetchall()
 
         cursor.close()
         conn.close()
 
-        print(f"✅ Mantenimientos encontrados: {len(mantenimientos)}")
-        return render_template("empleado/mantenimientos.html", mantenimientos=mantenimientos)
+        print(f"✅ Mantenimientos encontrados para empleado {id_empleado}: {len(mantenimientos)}")
+        for mnt in mantenimientos:
+            print(f"   • ID: {mnt[0]}, Desc: {mnt[1]}, Activo: {mnt[2]}, Empleado: {mnt[3]}")
+        
+        # Convertir a formato para template
+        mantenimientos_data = []
+        for mnt in mantenimientos:
+            mantenimientos_data.append({
+                'id': mnt[0],
+                'descripcion': mnt[1],
+                'estado': 'Pendiente' if mnt[2] else 'Completado',
+                'fecha_programada': 'Por programar',
+                'area': 'Área Común',
+                'ubicacion': 'Edificio Principal'
+            })
+
+        return render_template("empleado/mantenimientos.html", mantenimientos=mantenimientos_data)
 
     except Exception as e:
         print(f"❌ Error obteniendo mantenimientos: {e}")
         flash("Error al cargar los mantenimientos.", "danger")
         return render_template("empleado/mantenimientos.html", mantenimientos=[])
-
 # ================================
-# HISTORIAL DE PAGOS - CORREGIDO CON TABLAS REALES
+# HISTORIAL DE PAGOS - CORREGIDO
 # ================================
 @empleados_bp.route("/historial-pagos")
 @login_required
 def historial_pagos():
-    """Página de historial de pagos para el empleado - CORREGIDA"""
+    """Página de historial de pagos para el empleado"""
     if current_user.id_rol != 2:
         flash("Acceso no autorizado.", "danger")
         return redirect(url_for("auth.login"))
@@ -535,13 +577,13 @@ def historial_pagos():
         salario_actual_result = cursor.fetchone()
         salario_actual = salario_actual_result[0] if salario_actual_result else 0
 
-        # Obtener historial de pagos de nómina (TABLA REAL: nomina)
+        # Obtener historial de pagos de nómina
         cursor.execute("""
             SELECT 
                 n.id_nomina,
-                n.periodo_inicio,
-                n.periodo_fin,
-                n.fecha_pago,
+                TO_CHAR(n.periodo_inicio, 'DD/MM/YYYY') as periodo_inicio,
+                TO_CHAR(n.periodo_fin, 'DD/MM/YYYY') as periodo_fin,
+                TO_CHAR(n.fecha_pago, 'DD/MM/YYYY') as fecha_pago,
                 n.monto,
                 n.estado,
                 p.metodo,
@@ -554,12 +596,12 @@ def historial_pagos():
         """, (id_empleado,))
         pagos = cursor.fetchall()
 
-        # Obtener historial de cambios de salario (TABLA REAL: historial_salario)
+        # Obtener historial de cambios de salario
         cursor.execute("""
             SELECT 
-                hs.fecha_creacion,
+                TO_CHAR(hs.fecha_creacion, 'DD/MM/YYYY') as fecha,
                 hs.salario,
-                a.cargo as modificado_por
+                COALESCE(a.cargo, 'Sistema') as modificado_por
             FROM historial_salario hs
             LEFT JOIN administrador a ON hs.id_administrador = a.id_administrador
             WHERE hs.id_empleado = %s
@@ -576,11 +618,11 @@ def historial_pagos():
         for pago in pagos:
             pagos_data.append({
                 'id': pago[0],
-                'periodo_inicio': pago[1].strftime('%d/%m/%Y') if pago[1] else '',
-                'periodo_fin': pago[2].strftime('%d/%m/%Y') if pago[2] else '',
-                'fecha_pago': pago[3].strftime('%d/%m/%Y') if pago[3] else '',
+                'periodo_inicio': pago[1],
+                'periodo_fin': pago[2],
+                'fecha_pago': pago[3],
                 'monto': float(pago[4]) if pago[4] else 0,
-                'estado': pago[5],
+                'estado': pago[5] or 'pendiente',
                 'metodo': pago[6],
                 'nro_transaccion': pago[7]
             })
@@ -588,10 +630,13 @@ def historial_pagos():
         historial_salarios_data = []
         for salario in historial_salarios:
             historial_salarios_data.append({
-                'fecha': salario[0].strftime('%d/%m/%Y') if salario[0] else '',
+                'fecha': salario[0],
                 'salario': float(salario[1]) if salario[1] else 0,
-                'modificado_por': salario[2] or 'Sistema'
+                'modificado_por': salario[2]
             })
+
+        print(f"✅ Pagos encontrados: {len(pagos_data)}")
+        print(f"✅ Historial salarial: {len(historial_salarios_data)}")
 
         return render_template(
             "empleado/historial_pagos.html",
@@ -609,7 +654,6 @@ def historial_pagos():
             historial_salarios=[],
             salario_actual=0
         )
-
 # ================================
 # TICKETS - CORREGIDO
 # ================================
