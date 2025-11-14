@@ -5,12 +5,596 @@ from db import get_db_connection
 from models import Usuario
 from utils import generar_captcha, es_correo_valido, es_contrasena_valida, es_telefono_valido
 from invitaciones import crear_invitacion, validar_codigo, marcar_codigo_como_usado
+import jwt
+import datetime
+import os
+import secrets
 
 auth_bp = Blueprint("auth", __name__)
+
+# =============================================================================
+# CONFIGURACIÓN Y UTILIDADES
+# =============================================================================
+
+# Clave secreta para JWT
+JWT_SECRET_KEY = 'tu-clave-secreta-muy-segura-para-movil-2024'
+
+# Diccionario temporal para almacenar CAPTCHAs (en producción usa Redis)
+captcha_storage = {}
+
+def generar_token(usuario):
+    """Genera un token JWT para el usuario"""
+    try:
+        print(f"🔍 Generando token para usuario ID: {usuario.id}")
+        payload = {
+            'user_id': usuario.id,
+            'correo': usuario.correo,
+            'id_rol': usuario.id_rol,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+        }
+        token = jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
+        print(f"✅ Token generado exitosamente")
+        return token
+    except Exception as e:
+        print(f"❌ Error generando token: {str(e)}")
+        raise e
+
+def limpiar_captchas_expirados():
+    """Limpia CAPTCHAs antiguos del almacenamiento temporal"""
+    current_time = datetime.datetime.now()
+    expired_keys = [
+        key for key, value in captcha_storage.items()
+        if (current_time - value['timestamp']).total_seconds() > 600  # 10 minutos
+    ]
+    for key in expired_keys:
+        captcha_storage.pop(key, None)
+
+# =============================================================================
+# ENDPOINTS PARA API MÓVIL
+# =============================================================================
+
+@auth_bp.route("/api/auth/login", methods=["POST"])
+def api_login():
+    """Login para aplicación móvil"""
+    try:
+        print("🔍 INICIANDO API LOGIN...")
+        data = request.get_json()
+        
+        print(f"🔍 Datos recibidos: {data}")
+        
+        if not data:
+            print("❌ No se recibieron datos JSON")
+            return jsonify({
+                'success': False,
+                'message': 'No se recibieron datos JSON'
+            }), 400
+        
+        correo = data.get("correo")
+        password = data.get("password")
+        captcha_usuario = data.get("captcha", "")
+        captcha_id = data.get("captcha_id", "")
+
+        print(f"🔍 DEBUG API Login - Correo: {correo}")
+
+        # Validar CAPTCHA para móvil
+        if captcha_id and captcha_id != 'local':
+            print(f"🔍 Validando CAPTCHA: {captcha_id}")
+            captcha_data = captcha_storage.get(captcha_id)
+            if not captcha_data:
+                print("❌ CAPTCHA expirado")
+                return jsonify({
+                    'success': False,
+                    'message': 'CAPTCHA expirado o no encontrado'
+                }), 401
+            
+            captcha_text = captcha_data['text']
+            if captcha_usuario.strip().upper() != captcha_text.strip().upper():
+                print("❌ CAPTCHA incorrecto")
+                return jsonify({
+                    'success': False,
+                    'message': 'CAPTCHA incorrecto'
+                }), 401
+            
+            # Eliminar CAPTCHA después de usar
+            captcha_storage.pop(captcha_id, None)
+
+        print("🔍 Conectando a la base de datos...")
+        # Buscar usuario en la base de datos
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM usuario WHERE correo=%s", (correo,))
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not row:
+            print("❌ Usuario no encontrado")
+            return jsonify({
+                'success': False,
+                'message': 'Usuario no encontrado'
+            }), 404
+
+        print(f"🔍 Usuario encontrado: {row}")
+        
+        # Crear objeto Usuario
+        usuario = Usuario(row)
+        
+        print(f"🔍 Verificando contraseña para: {usuario.correo}")
+        # Verificar contraseña
+        if not check_password_hash(usuario.contrasena, password):
+            print("❌ Contraseña incorrecta")
+            return jsonify({
+                'success': False,
+                'message': 'Contraseña incorrecta'
+            }), 401
+
+        print("🔍 Generando token...")
+        # Generar token
+        token = generar_token(usuario)
+        
+        # Datos del usuario para la respuesta
+        user_data = {
+            'id_usuario': usuario.id,
+            'nombre': usuario.nombre,
+            'ap_paterno': usuario.ap_paterno,
+            'ap_materno': usuario.ap_materno,
+            'correo': usuario.correo,
+            'telefono': getattr(usuario, 'telefono', 'No disponible'),
+            'id_rol': usuario.id_rol
+        }
+
+        print(f"✅ Login exitoso - Usuario: {usuario.correo}, Rol: {usuario.id_rol}")
+
+        response_data = {
+            'success': True,
+            'message': 'Login exitoso',
+            'token': token,
+            'user': user_data
+        }
+        
+        print(f"✅ Enviando respuesta: {response_data}")
+        return jsonify(response_data), 200
+
+    except Exception as e:
+        print(f"❌ ERROR CRÍTICO en api_login: {str(e)}")
+        import traceback
+        print(f"📋 Traceback completo: {traceback.format_exc()}")
+        
+        # Asegurar que siempre devuelva JSON incluso en errores
+        return jsonify({
+            'success': False,
+            'message': f'Error del servidor: {str(e)}'
+        }), 500
+    
+@auth_bp.route("/api/auth/captcha", methods=["GET"])
+def api_captcha():
+    """Generar CAPTCHA para aplicación móvil"""
+    try:
+        captcha_text = generar_captcha()
+        captcha_id = secrets.token_hex(8)
+        
+        # Guardar en almacenamiento temporal
+        captcha_storage[captcha_id] = {
+            'text': captcha_text,
+            'timestamp': datetime.datetime.now()
+        }
+        
+        # Limpiar CAPTCHAs antiguos
+        limpiar_captchas_expirados()
+        
+        return jsonify({
+            'success': True,
+            'captcha': captcha_text,
+            'captcha_id': captcha_id
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error al generar CAPTCHA: {str(e)}'
+        }), 500
+
+@auth_bp.route("/api/auth/validate_captcha", methods=["POST"])
+def api_validate_captcha():
+    """Validar CAPTCHA independientemente para móvil"""
+    try:
+        data = request.get_json()
+        user_input = data.get('user_input', '')
+        captcha_id = data.get('captcha_id', '')
+        
+        if not captcha_id:
+            return jsonify({
+                'success': False,
+                'valid': False,
+                'message': 'ID de CAPTCHA requerido'
+            }), 400
+        
+        # Buscar el CAPTCHA en el almacenamiento
+        captcha_data = captcha_storage.get(captcha_id)
+        
+        if not captcha_data:
+            return jsonify({
+                'success': False,
+                'valid': False,
+                'message': 'CAPTCHA expirado o no encontrado'
+            }), 404
+        
+        captcha_text = captcha_data['text']
+        is_valid = user_input.strip().upper() == captcha_text.strip().upper()
+        
+        # Eliminar el CAPTCHA después de validar (usar una sola vez)
+        if captcha_id in captcha_storage:
+            captcha_storage.pop(captcha_id)
+        
+        return jsonify({
+            'success': True,
+            'valid': is_valid,
+            'message': 'CAPTCHA válido' if is_valid else 'CAPTCHA inválido'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error al validar CAPTCHA: {str(e)}'
+        }), 500
+
+@auth_bp.route("/api/auth/register/residente", methods=["POST"])
+def api_register_residente():
+    """Registro de residente para aplicación móvil"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No se recibieron datos JSON'
+            }), 400
+        
+        # Obtener datos del JSON
+        nombre = data.get("nombre")
+        ap_paterno = data.get("ap_paterno")
+        ap_materno = data.get("ap_materno")
+        correo = data.get("correo")
+        telefono = data.get("telefono")
+        piso = data.get("piso")
+        nro_departamento = data.get("nro_departamento")
+        password = data.get("password")
+        
+        print(f"🔍 DEBUG API Register - Datos recibidos:")
+        print(f"Nombre: {nombre}, Correo: {correo}, Departamento: {nro_departamento}-{piso}")
+        
+        # Validaciones básicas
+        if not all([nombre, ap_paterno, correo, telefono, piso, nro_departamento, password]):
+            missing = [field for field in ['nombre', 'ap_paterno', 'correo', 'telefono', 'piso', 'nro_departamento', 'password'] if not data.get(field)]
+            return jsonify({
+                'success': False,
+                'message': f'Campos obligatorios faltantes: {", ".join(missing)}'
+            }), 400
+        
+        # Validar contraseña
+        if not es_contrasena_valida(password):
+            return jsonify({
+                'success': False,
+                'message': 'La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.'
+            }), 400
+        
+        # Validar correo
+        if not es_correo_valido(correo):
+            return jsonify({
+                'success': False,
+                'message': 'El correo electrónico no es válido.'
+            }), 400
+        
+        # Validar teléfono
+        if not es_telefono_valido(telefono):
+            return jsonify({
+                'success': False,
+                'message': 'El número de teléfono no es válido.'
+            }), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar si el correo ya existe
+        cursor.execute("SELECT id_usuario FROM usuario WHERE correo = %s", (correo,))
+        if cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'message': 'El correo electrónico ya está registrado.'
+            }), 400
+        
+        # Verificar si el departamento ya está ocupado
+        cursor.execute("""
+            SELECT id_usuario FROM residente 
+            WHERE piso = %s AND nro_departamento = %s
+        """, (piso, nro_departamento))
+        if cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({
+                'success': False,
+                'message': 'Este departamento ya tiene un residente registrado.'
+            }), 400
+        
+        # Hash de la contraseña
+        hashed_password = generate_password_hash(password)
+        
+        # Insertar nuevo usuario
+        cursor.execute("""
+            INSERT INTO usuario 
+            (nombre, ap_paterno, ap_materno, correo, telefono, contrasena, id_rol)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id_usuario
+        """, (nombre, ap_paterno, ap_materno, correo, telefono, hashed_password, 3))
+        
+        id_usuario = cursor.fetchone()[0]
+        
+        # Insertar en tabla RESIDENTE
+        cursor.execute("""
+            INSERT INTO residente (id_usuario, nro_departamento, piso, fecha_ingreso)
+            VALUES (%s, %s, %s, CURRENT_DATE)
+        """, (id_usuario, nro_departamento, piso))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Registro exitoso. Ahora puedes iniciar sesión.'
+        }), 201
+        
+    except Exception as e:
+        print(f"❌ ERROR en api_register_residente: {str(e)}")
+        if 'conn' in locals():
+            conn.rollback()
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+        return jsonify({
+            'success': False,
+            'message': f'Error al registrar: {str(e)}'
+        }), 500
+
+@auth_bp.route("/api/auth/solicitar_codigo", methods=["POST"])
+def api_solicitar_codigo():
+    """Solicitar código de invitación para móvil"""
+    try:
+        data = request.get_json()
+        correo = data.get("correo")
+        rol = data.get("rol")
+        
+        if not correo or not rol:
+            return jsonify({
+                'success': False,
+                'message': 'Correo y rol son obligatorios'
+            }), 400
+        
+        # Usar tu función existente de invitaciones
+        codigo_generado = crear_invitacion(correo)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Código de invitación enviado a {correo}',
+            'codigo': codigo_generado  # Solo para testing, en producción no enviar
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error al enviar código: {str(e)}'
+        }), 500
+
+@auth_bp.route("/api/auth/validar_codigo", methods=["POST"])
+def api_validar_codigo():
+    """Validar código de invitación para móvil"""
+    try:
+        data = request.get_json()
+        codigo = data.get("codigo")
+        rol = data.get("rol")
+        
+        if not codigo:
+            return jsonify({
+                'success': False,
+                'message': 'Código es obligatorio'
+            }), 400
+        
+        resultado = validar_codigo(codigo)
+        
+        if resultado and resultado["estado"] == True:
+            return jsonify({
+                'success': True,
+                'valido': True,
+                'message': 'Código válido. Puedes continuar con el registro.'
+            }), 200
+        else:
+            return jsonify({
+                'success': True,  # La petición fue exitosa pero el código es inválido
+                'valido': False,
+                'message': 'Código inválido o expirado.'
+            }), 200
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error al validar código: {str(e)}'
+        }), 500
+
+@auth_bp.route("/api/residentes/dashboard", methods=["GET"])
+def api_dashboard():
+    """Dashboard para residentes en aplicación móvil"""
+    try:
+        # Obtener token del header Authorization
+        auth_header = request.headers.get('Authorization')
+        
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({
+                'success': False,
+                'message': 'Token de autorización requerido'
+            }), 401
+        
+        token = auth_header.split(' ')[1]
+        
+        # Verificar token
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
+            user_id = payload['user_id']
+            user_rol = payload['id_rol']
+            user_correo = payload['correo']
+            
+            print(f"🔍 DEBUG Dashboard - User ID: {user_id}, Rol: {user_rol}")
+            
+        except jwt.ExpiredSignatureError:
+            return jsonify({
+                'success': False,
+                'message': 'Token expirado'
+            }), 401
+        except jwt.InvalidTokenError:
+            return jsonify({
+                'success': False,
+                'message': 'Token inválido'
+            }), 401
+
+        # Verificar que el usuario sea residente (rol 3)
+        if user_rol != 3:
+            return jsonify({
+                'success': False,
+                'message': 'Acceso no autorizado para este rol'
+            }), 403
+
+        # Obtener datos del dashboard para el residente
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Obtener información del residente - CORREGIDO
+            # En lugar de la consulta actual, prueba esta:
+            cursor.execute("""
+                SELECT r.nro_departamento, r.piso, r.fecha_ingreso,
+                    u.nombre, u.ap_paterno, u.ap_materno, u.telefono
+                FROM residente r
+                JOIN usuario u ON r.id_usuario = u.id_usuario
+                WHERE r.id_usuario = %s  -- Si la anterior no funciona, prueba esta
+            """, (user_id,))
+            residente_data = cursor.fetchone()
+            
+            print(f"🔍 DEBUG - Datos del residente: {residente_data}")
+            
+            if not residente_data:
+                return jsonify({
+                    'success': False,
+                    'message': 'Datos de residente no encontrados'
+                }), 404
+
+            # Contar notificaciones pendientes
+            cursor.execute("""
+                SELECT COUNT(*) FROM notificacion 
+                WHERE id_usuario = %s AND leida = FALSE
+            """, (user_id,))
+            notificacion_result = cursor.fetchone()
+            notificacion_count = notificacion_result[0] if notificacion_result else 0
+            
+            # Obtener últimas notificaciones
+            cursor.execute("""
+                SELECT titulo, mensaje, fecha_creacion 
+                FROM notificacion 
+                WHERE id_usuario = %s 
+                ORDER BY fecha_creacion DESC 
+                LIMIT 5
+            """, (user_id,))
+            notificacion_recientes = cursor.fetchall()
+            
+            # Contar tickets activos del residente - CORREGIDO
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM ticket t
+                JOIN departamento d ON t.id_departamento = d.id_departamento
+                JOIN residente r ON (
+                    (d.piso = 'Piso ' || r.piso::varchar AND d.nro = r.nro_departamento) OR
+                    (d.piso = r.piso::varchar AND d.nro = r.nro_departamento)
+                )
+                WHERE r.id_usuario = %s  -- ← CORREGIDO: usar r.id_usuario
+                AND t.estado IN ('abierto', 'en_progreso', 'pendiente')
+            """, (user_id,))
+            tickets_result = cursor.fetchone()
+            tickets_count = tickets_result[0] if tickets_result else 0
+            
+            # Contar facturas pendientes
+            cursor.execute("""
+                SELECT COUNT(*), COALESCE(SUM(monto_total), 0)
+                FROM factura 
+                WHERE id_usuario = %s 
+                AND estado_factura = 'pendiente'
+            """, (user_id,))
+            facturas_result = cursor.fetchone()
+            facturas_count = facturas_result[0] if facturas_result else 0
+            monto_pendiente = float(facturas_result[1]) if facturas_result and facturas_result[1] else 0.0
+
+            # Procesar notificaciones recientes
+            notificacion_list = []
+            for notif in notificacion_recientes:
+                notificacion_list.append({
+                    'titulo': notif[0],
+                    'mensaje': notif[1],
+                    'fecha': notif[2].strftime('%Y-%m-%d %H:%M') if notif[2] else None
+                })
+            
+            # Construir datos del dashboard
+            dashboard_data = {
+                'residente': {
+                    'nombre_completo': f"{residente_data[3]} {residente_data[4]} {residente_data[5]}",
+                    'nro_departamento': residente_data[0],
+                    'piso': residente_data[1],
+                    'fecha_ingreso': residente_data[2].strftime('%Y-%m-%d') if residente_data[2] else None,
+                    'telefono': residente_data[6]
+                },
+                'estadisticas': {
+                    'notificaciones_pendientes': notificacion_count,
+                    'tickets_activos': tickets_count,
+                    'facturas_pendientes': facturas_count,
+                    'monto_pendiente': monto_pendiente
+                },
+                'notificaciones_recientes': notificacion_list,
+                'mensaje_bienvenida': f"Bienvenido, {residente_data[3]}",
+                'fecha_actual': datetime.datetime.now().strftime('%Y-%m-%d')
+            }
+
+            print(f"✅ Dashboard generado para residente {residente_data[3]}")
+            print(f"📊 Estadísticas: {dashboard_data['estadisticas']}")
+
+            return jsonify({
+                'success': True,
+                'data': dashboard_data
+            }), 200
+
+        except Exception as e:
+            print(f"❌ ERROR en consultas del dashboard: {str(e)}")
+            return jsonify({
+                'success': False,
+                'message': f'Error al obtener datos del dashboard: {str(e)}'
+            }), 500
+
+        finally:
+            cursor.close()
+            conn.close()
+
+    except Exception as e:
+        print(f"❌ ERROR en api_dashboard: {str(e)}")
+        import traceback
+        print(f"📋 Traceback completo: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'message': f'Error del servidor: {str(e)}'
+        }), 500
+# =============================================================================
+# ENDPOINTS ORIGINALES PARA SISTEMA WEB
+# =============================================================================
 
 @auth_bp.route("/", methods=["GET", "POST"])
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
+    """Login para sistema web"""
     if request.method == "POST":
         correo = request.form.get("correo")
         password = request.form.get("password")
@@ -55,14 +639,17 @@ def login():
 
     session["captcha"] = generar_captcha()
     return render_template("login.html", captcha_text=session["captcha"])
+
 @auth_bp.route("/logout")
 def logout():
+    """Cerrar sesión"""
     logout_user()
     flash("Sesión cerrada correctamente.", "info")
     return redirect(url_for("auth.login"))
 
 @auth_bp.route("/register/residente", methods=["GET", "POST"])
 def register_residente():
+    """Registro de residente para sistema web"""
     if request.method == "POST":
         # Obtener datos del formulario
         nombre = request.form.get("nombre")
@@ -201,10 +788,12 @@ def register_residente():
 
 @auth_bp.route("/seleccionar_registro")
 def seleccionar_registro():
+    """Seleccionar tipo de registro"""
     return render_template("seleccionar_registro.html")
 
 @auth_bp.route("/verificar_codigo/<rol>", methods=["GET", "POST"])
 def verificar_codigo(rol):
+    """Verificar código de invitación"""
     if request.method == "POST":
         accion = request.form.get("accion")
         correo = request.form.get("correo")
@@ -242,6 +831,7 @@ def verificar_codigo(rol):
 
 @auth_bp.route("/verificar_captcha", methods=["POST"])
 def verificar_captcha():
+    """Verificar CAPTCHA para sistema web"""
     data = request.get_json()
     captcha_usuario = data.get("captcha", "")
     captcha_sesion = session.get("captcha", "")
@@ -251,6 +841,7 @@ def verificar_captcha():
 @auth_bp.route("/residente/ingresar_base")
 @login_required
 def ingresar_base():
+    """Ingresar base para residentes"""
     if current_user.id_rol != 3:
         flash("Acceso solo para residentes.", "danger")
         return redirect(url_for("auth.login"))
@@ -259,6 +850,7 @@ def ingresar_base():
 @auth_bp.route("/residente/guardar_base", methods=["POST"])
 @login_required
 def residente_guardar_base():
+    """Guardar base para residentes"""
     if current_user.id_rol != 3:
         flash("Acceso solo para residentes.", "danger")
         return redirect(url_for("auth.login"))
@@ -272,6 +864,7 @@ def residente_guardar_base():
 
 @auth_bp.route("/register/empleado", methods=["GET", "POST"])
 def register_empleado():
+    """Registro de empleado para sistema web"""
     if request.method == "POST":
         # Obtener datos del formulario
         nombre = request.form.get("nombre")
@@ -293,30 +886,30 @@ def register_empleado():
             missing = [field for field in ['nombre', 'ap_paterno', 'correo', 'telefono', 'puesto', 'salario', 'fecha_contratacion', 'password'] if not request.form.get(field)]
             print(f"❌ Campos faltantes: {missing}")
             flash("Todos los campos son obligatorios.", "danger")
-            return render_template("empleado/register_empleado.html", user_data=request.form)  # <- CORREGIDO
+            return render_template("empleado/register_empleado.html", user_data=request.form)
         
         if password != confirm_password:
             print("❌ Contraseñas no coinciden")
             flash("Las contraseñas no coinciden.", "danger")
-            return render_template("empleado/register_empleado.html", user_data=request.form)  # <- CORREGIDO
+            return render_template("empleado/register_empleado.html", user_data=request.form)
         
         # Validar contraseña
         if not es_contrasena_valida(password):
             print("❌ Contraseña no válida")
             flash("La contraseña debe tener al menos 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial.", "danger")
-            return render_template("empleado/register_empleado.html", user_data=request.form)  # <- CORREGIDO
+            return render_template("empleado/register_empleado.html", user_data=request.form)
         
         # Validar correo
         if not es_correo_valido(correo):
             print("❌ Correo no válido")
             flash("El correo electrónico no es válido.", "danger")
-            return render_template("empleado/register_empleado.html", user_data=request.form)  # <- CORREGIDO
+            return render_template("empleado/register_empleado.html", user_data=request.form)
         
         # Validar teléfono
         if not es_telefono_valido(telefono):
             print("❌ Teléfono no válido")
             flash("El número de teléfono no es válido.", "danger")
-            return render_template("empleado/register_empleado.html", user_data=request.form)  # <- CORREGIDO
+            return render_template("empleado/register_empleado.html", user_data=request.form)
         
         try:
             conn = get_db_connection()
@@ -329,7 +922,7 @@ def register_empleado():
             if cursor.fetchone():
                 print("❌ Correo ya existe")
                 flash("El correo electrónico ya está registrado.", "danger")
-                return render_template("empleado/register_empleado.html", user_data=request.form)  # <- CORREGIDO
+                return render_template("empleado/register_empleado.html", user_data=request.form)
             
             print("✅ Correo no existe en BD")
             
@@ -371,7 +964,7 @@ def register_empleado():
             if 'conn' in locals():
                 conn.rollback()
             flash(f"Error al registrar empleado: {str(e)}", "danger")
-            return render_template("empleado/register_empleado.html", user_data=request.form)  # <- CORREGIDO
+            return render_template("empleado/register_empleado.html", user_data=request.form)
         finally:
             if 'cursor' in locals():
                 cursor.close()
@@ -380,10 +973,11 @@ def register_empleado():
             print("🔚 Conexión cerrada")
     
     # GET request - mostrar formulario vacío
-    return render_template("empleado/register_empleado.html")  # <- CORREGIDO
+    return render_template("empleado/register_empleado.html")
 
 @auth_bp.route("/register/admin", methods=["GET", "POST"])
 def register_admin():
+    """Registro de administrador para sistema web"""
     if request.method == "POST":
         # Obtener datos del formulario
         nombre = request.form.get("nombre")
@@ -493,3 +1087,28 @@ def register_admin():
     # GET request - mostrar formulario vacío
     return render_template("administrador/register_admin.html")
 
+
+
+
+
+
+
+
+
+
+
+
+@auth_bp.route("/api/auth/test", methods=["POST"])
+def api_test_auth():
+    """Endpoint simple de prueba"""
+    try:
+        return jsonify({
+            'success': True,
+            'message': 'API de auth funcionando correctamente',
+            'timestamp': datetime.datetime.now().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }), 500

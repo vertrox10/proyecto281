@@ -7,21 +7,22 @@
 
 {% block content %}
 <div class="dashboard-header">
-    <h1><i class="fas fa-tachometer-alt"></i> Panel Principal 2024</h1>
-    <p>Bienvenido de vuelta, {{ empleado.nombre }}. Consumos del año 2024.</p>
+    <h1><i class="fas fa-tachometer-alt"></i> Panel Principal - Empleado</h1>
+    <p>Bienvenido de vuelta, {{ empleado.nombre }} {{ empleado.ap_paterno }}. Estado actual del edificio.</p>
 </div>
 
 <!-- Métricas Principales -->
 <div class="metrics-grid">
+    <!-- Consumos -->
     <div class="metric-card">
         <div class="metric-icon agua">
             <i class="fas fa-tint"></i>
         </div>
         <div class="metric-info">
             <h3>Consumo de Agua</h3>
-            <span class="metric-value" id="consumo-agua">0 m³</span>
-            <div class="consumo-trend">
-                <span>2024</span>
+            <span class="metric-value" id="consumo-agua">{{ "%.1f"|format(consumo_agua) }} m³</span>
+            <div class="metric-trend">
+                <span>Este mes</span>
             </div>
         </div>
     </div>
@@ -32,9 +33,9 @@
         </div>
         <div class="metric-info">
             <h3>Consumo de Luz</h3>
-            <span class="metric-value" id="consumo-luz">0 kWh</span>
-            <div class="consumo-trend">
-                <span>2024</span>
+            <span class="metric-value" id="consumo-luz">{{ "%.0f"|format(consumo_luz) }} kWh</span>
+            <div class="metric-trend">
+                <span>Este mes</span>
             </div>
         </div>
     </div>
@@ -45,9 +46,49 @@
         </div>
         <div class="metric-info">
             <h3>Consumo de Gas</h3>
-            <span class="metric-value" id="consumo-gas">0 m³</span>
-            <div class="consumo-trend">
-                <span>2024</span>
+            <span class="metric-value" id="consumo-gas">{{ "%.1f"|format(consumo_gas) }} m³</span>
+            <div class="metric-trend">
+                <span>Este mes</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actividades del Empleado -->
+    <div class="metric-card">
+        <div class="metric-icon mantenimientos">
+            <i class="fas fa-tools"></i>
+        </div>
+        <div class="metric-info">
+            <h3>Mantenimientos Activos</h3>
+            <span class="metric-value" id="mantenimientos-activos">{{ mantenimientos_activos }}</span>
+            <div class="metric-trend">
+                <span>Asignados a mí</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon tickets">
+            <i class="fas fa-ticket-alt"></i>
+        </div>
+        <div class="metric-info">
+            <h3>Tickets Asignados</h3>
+            <span class="metric-value" id="tickets-asignados">{{ tickets_asignados }}</span>
+            <div class="metric-trend">
+                <span>Por atender</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon asistencia">
+            <i class="fas fa-user-clock"></i>
+        </div>
+        <div class="metric-info">
+            <h3>Asistencia</h3>
+            <span class="metric-value" id="dias-trabajados">{{ dias_trabajados }}/22</span>
+            <div class="metric-trend">
+                <span>Este mes</span>
             </div>
         </div>
     </div>
@@ -58,11 +99,11 @@
     <div class="chart-row">
         <div class="chart-container large">
             <div class="chart-header">
-                <h3><i class="fas fa-chart-line"></i> Consumos Mensuales 2024</h3>
+                <h3><i class="fas fa-chart-line"></i> Consumos Mensuales del Edificio</h3>
                 <div class="chart-controls">
                     <select id="chart-period">
                         <option value="6">Últimos 6 meses</option>
-                        <option value="12">Todo 2024</option>
+                        <option value="12">Último año</option>
                     </select>
                     <button class="btn-refresh" id="btn-refresh">
                         <i class="fas fa-sync-alt"></i> Actualizar
@@ -70,47 +111,32 @@
                 </div>
             </div>
             <canvas id="consumosChart" height="300"></canvas>
-            <!-- DESCRIPCIÓN DEL GRÁFICO -->
-            <div class="chart-description">
-                <p><strong>📈 Evolución temporal:</strong> Muestra la tendencia de consumo mes a mes.
-                    Permite identificar patrones estacionales y comparar el desempeño entre diferentes períodos.</p>
-            </div>
         </div>
     </div>
 
     <div class="chart-row">
         <div class="chart-container">
             <div class="chart-header">
-                <h3><i class="fas fa-chart-pie"></i> Distribución 2024</h3>
+                <h3><i class="fas fa-chart-pie"></i> Distribución de Consumos</h3>
             </div>
             <canvas id="distribucionChart" height="250"></canvas>
-            <!-- DESCRIPCIÓN DEL GRÁFICO -->
-            <div class="chart-description">
-                <p><strong>🥧 Proporciones:</strong> Representa el porcentaje que cada tipo de consumo
-                    representa del total. Ayuda a visualizar qué recursos tienen mayor impacto.</p>
-            </div>
         </div>
 
         <div class="chart-container">
             <div class="chart-header">
-                <h3><i class="fas fa-balance-scale"></i> Comparación 2024</h3>
+                <h3><i class="fas fa-tools"></i> Mis Mantenimientos por Mes</h3>
             </div>
-            <canvas id="comparacionChart" height="250"></canvas>
-            <!-- DESCRIPCIÓN DEL GRÁFICO -->
-            <div class="chart-description">
-                <p><strong>⚖️ Análisis comparativo:</strong> Permite comparar directamente los valores
-                    de cada tipo de consumo. Ideal para identificar cuáles requieren mayor atención.</p>
-            </div>
+            <canvas id="mantenimientosChart" height="250"></canvas>
         </div>
     </div>
 </div>
 
 <!-- Elemento oculto para pasar datos iniciales -->
 <div id="initial-data" data-agua="{{ consumo_agua }}" data-luz="{{ consumo_luz }}" data-gas="{{ consumo_gas }}"
-    style="display: none;">
+    data-mantenimientos="{{ mantenimientos_activos }}" data-tickets="{{ tickets_asignados }}" style="display: none;">
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='empleado/empleado.js') }}"></script>
+<script src="{{ url_for('static', filename='empleado/dashboard.js') }}"></script>
 {% endblock %}

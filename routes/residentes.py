@@ -352,6 +352,7 @@ def _formatear_tickets(tickets):
         })
     return tickets_list
 
+
 # ===== RUTAS PRINCIPALES =====
 @residentes_bp.route('/dashboard')
 @login_required
