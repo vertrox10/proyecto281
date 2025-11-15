@@ -126,6 +126,9 @@ from routes.residentes import residentes_bp
 from routes.residentemovil import residentemovil_bp
 from routes.residenteticketmovil import residente_ticket_movil
 from routes.residenteperfilmovil import residente_perfil_movil_bp
+# Agrega esta línea con las otras importaciones de blueprints
+from routes.empleadomovil import empleado_movil_bp
+
 
 # Registrar blueprints
 app.register_blueprint(auth_bp)
@@ -136,6 +139,9 @@ app.register_blueprint(residentes_bp, url_prefix="/residentes")
 app.register_blueprint(residentemovil_bp)
 app.register_blueprint(residente_ticket_movil, url_prefix='/api/movil')
 app.register_blueprint(residente_perfil_movil_bp, url_prefix='/api/movil')
+# Con las otras registraciones de blueprints, agrega:
+app.register_blueprint(empleado_movil_bp, url_prefix='/api/movil')
+
 
 # Flask-Login con manejo de errores
 @login_manager.user_loader
