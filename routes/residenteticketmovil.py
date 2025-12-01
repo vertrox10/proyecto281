@@ -13,7 +13,7 @@ residente_ticket_movil = Blueprint('residente_ticket_movil', __name__, url_prefi
 CORS(residente_ticket_movil, supports_credentials=True)
 
 def get_user_id_from_jwt():
-    """Obtiene el user_id desde el token JWT - MISMA IMPLEMENTACIÓN QUE residentemovil.py"""
+    """Obtiene el user_id desde el token JWT - CORREGIDO"""
     try:
         # Obtener el token del header
         auth_header = request.headers.get('Authorization', '')
@@ -26,8 +26,8 @@ def get_user_id_from_jwt():
         token = auth_header[7:]  # Remover 'Bearer '
         print(f"🔐 [TICKETS MOVIL] Token limpio: {token[:50]}...")
         
-        # ✅ USAR LA MISMA CLAVE
-        SECRET_KEY = 'tu-clave-secreta-muy-segura-para-movil-2024'
+        # ✅ USAR LA MISMA CLAVE QUE EL SISTEMA PRINCIPAL
+        SECRET_KEY = 'tu-clave-super-segura-inf281-2025-movil-app-12345' 
         print(f"🔐 [TICKETS MOVIL] Secret Key usada: {SECRET_KEY[:10]}...")
         
         # Decodificar el token con PyJWT
@@ -35,15 +35,15 @@ def get_user_id_from_jwt():
             decoded = pyjwt.decode(token, SECRET_KEY, algorithms=['HS256'])
             print(f"✅ [TICKETS MOVIL] Token decodificado COMPLETO: {decoded}")
             
-            # 🔥 BUSCAR EL USER_ID EN EL FORMATO CORRECTO
-            user_id = decoded.get('user_id')  # ← MISMO CAMPO QUE residentemovil.py
+            # 🔥 CORREGIDO: Buscar en 'sub' (como hace el sistema principal)
+            user_id = decoded.get('sub')  # ← CAMBIO IMPORTANTE
             
-            print(f"✅ [TICKETS MOVIL] User ID encontrado: {user_id}")
+            print(f"✅ [TICKETS MOVIL] User ID encontrado en 'sub': {user_id}")
             
             if user_id:
                 return int(user_id)
             else:
-                print("❌ [TICKETS MOVIL] ERROR: No se encontró 'user_id' en el token")
+                print("❌ [TICKETS MOVIL] ERROR: No se encontró 'sub' en el token")
                 print(f"🔍 [TICKETS MOVIL] Todos los campos disponibles: {decoded}")
                 return None
                 
@@ -59,7 +59,7 @@ def get_user_id_from_jwt():
         return None
 
 def validate_jwt_token():
-    """Valida el token JWT y retorna user_id o error - MISMA IMPLEMENTACIÓN"""
+    """Valida el token JWT y retorna user_id o error"""
     user_id = get_user_id_from_jwt()
     if not user_id:
         return None, jsonify({
@@ -69,7 +69,7 @@ def validate_jwt_token():
     return user_id, None, None
 
 def get_residente_from_user_id(user_id):
-    """Obtiene datos del residente desde user_id - MISMA IMPLEMENTACIÓN"""
+    """Obtiene datos del residente desde user_id"""
     try:
         conn = get_db_connection()
         if conn is None:
@@ -856,7 +856,7 @@ def debug_tickets():
             'areas': '/api/movil/areas (GET)',
             'estadisticas': '/api/movil/estadisticas (GET)'
         },
-        'version': '1.0.0-jwt-manual'
+        'version': '1.0.0-jwt-manual-corregido'
     })
 
 @residente_ticket_movil.route('/test_conexion', methods=['GET'])

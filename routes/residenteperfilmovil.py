@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 # ✅ SIN url_prefix aquí - se define en app.py
 residente_perfil_movil_bp = Blueprint('residente_perfil_movil', __name__)
 
-# Clave secreta JWT (debe coincidir con auth.py)
-JWT_SECRET_KEY = 'tu-clave-secreta-muy-segura-para-movil-2024'
+# ✅ CLAVE SECRETA CORREGIDA - USA LA MISMA QUE TU SISTEMA PRINCIPAL
+JWT_SECRET_KEY = 'tu-clave-super-segura-inf281-2025-movil-app-12345'
 
 def get_user_id_from_token():
     """Obtener user_id desde el token JWT (como lo haces en auth.py)"""
@@ -19,25 +19,35 @@ def get_user_id_from_token():
         auth_header = request.headers.get('Authorization')
         
         if not auth_header or not auth_header.startswith('Bearer '):
+            print("❌ [PERFIL-MÓVIL] No se encontró Bearer token")
             return None
         
         token = auth_header.split(' ')[1]
+        print(f"🔐 [PERFIL-MÓVIL] Token recibido: {token[:50]}...")
         
         # Decodificar token JWT
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
-        user_id = payload['user_id']
+        print(f"✅ [PERFIL-MÓVIL] Token decodificado: {payload}")
         
-        print(f"🔐 [JWT AUTH] User ID obtenido: {user_id}")
-        return user_id
+        # ✅ BUSCAR EN 'sub' (como hace tu sistema principal)
+        user_id = payload.get('sub')
+        
+        if user_id:
+            print(f"🔐 [PERFIL-MÓVIL] User ID obtenido desde 'sub': {user_id}")
+            return int(user_id)
+        else:
+            print("❌ [PERFIL-MÓVIL] No se encontró 'sub' en el token")
+            print(f"🔍 [PERFIL-MÓVIL] Campos disponibles: {payload}")
+            return None
         
     except jwt.ExpiredSignatureError:
-        print("❌ [JWT AUTH] Token expirado")
+        print("❌ [PERFIL-MÓVIL] Token expirado")
         return None
     except jwt.InvalidTokenError as e:
-        print(f"❌ [JWT AUTH] Token inválido: {e}")
+        print(f"❌ [PERFIL-MÓVIL] Token inválido: {e}")
         return None
     except Exception as e:
-        print(f"❌ [JWT AUTH] Error general: {e}")
+        print(f"❌ [PERFIL-MÓVIL] Error general: {e}")
         return None
 
 def jwt_required(f):
@@ -172,6 +182,7 @@ def actualizar_perfil_movil(user_id):
             }), 400
         
         print(f"📱 [PERFIL-MÓVIL] Actualizando perfil para usuario: {user_id}")
+        print(f"📝 [PERFIL-MÓVIL] Datos recibidos: {data}")
         
         # Validaciones básicas
         if not data.get('nombre'):
@@ -242,6 +253,8 @@ def actualizar_perfil_movil(user_id):
 def obtener_resumen_dashboard_movil(user_id):
     """Obtener resumen para el dashboard móvil"""
     try:
+        print(f"📱 [PERFIL-MÓVIL] Obteniendo resumen dashboard para usuario: {user_id}")
+        
         conn = get_db_connection()
         if conn is None:
             return jsonify({
@@ -272,6 +285,8 @@ def obtener_resumen_dashboard_movil(user_id):
         piso = residente_data[1]
         nro_departamento = residente_data[2]
         
+        print(f"🔍 [PERFIL-MÓVIL] Residente: ID={id_residente}, Piso={piso}, Depto={nro_departamento}")
+        
         # Buscar departamento para obtener id_departamento
         cursor.execute("""
             SELECT id_departamento 
@@ -281,6 +296,8 @@ def obtener_resumen_dashboard_movil(user_id):
         
         depto_result = cursor.fetchone()
         id_departamento = depto_result[0] if depto_result else None
+        
+        print(f"🔍 [PERFIL-MÓVIL] ID Departamento: {id_departamento}")
         
         # Tickets abiertos
         tickets_abiertos = 0
@@ -312,6 +329,8 @@ def obtener_resumen_dashboard_movil(user_id):
             tickets_abiertos = tickets_result[0] or 0
             tickets_urgentes = tickets_result[1] or 0
         
+        print(f"🔍 [PERFIL-MÓVIL] Tickets: {tickets_abiertos} abiertos, {tickets_urgentes} urgentes")
+        
         # Pagos pendientes
         cursor.execute("""
             SELECT 
@@ -326,6 +345,8 @@ def obtener_resumen_dashboard_movil(user_id):
         pagos_pendientes = pagos_result[0] or 0 if pagos_result else 0
         monto_pendiente = float(pagos_result[1] or 0) if pagos_result else 0.0
         
+        print(f"🔍 [PERFIL-MÓVIL] Pagos: {pagos_pendientes} pendientes, ${monto_pendiente}")
+        
         # Reservas activas (hoy o futuras)
         cursor.execute("""
             SELECT COUNT(*) as activas
@@ -337,6 +358,8 @@ def obtener_resumen_dashboard_movil(user_id):
         
         reservas_result = cursor.fetchone()
         reservas_activas = reservas_result[0] or 0 if reservas_result else 0
+        
+        print(f"🔍 [PERFIL-MÓVIL] Reservas activas: {reservas_activas}")
         
         cursor.close()
         conn.close()
@@ -358,6 +381,8 @@ def obtener_resumen_dashboard_movil(user_id):
                 'numero': nro_departamento
             }
         }
+        
+        print(f"✅ [PERFIL-MÓVIL] Resumen obtenido exitosamente")
         
         return jsonify({
             'success': True,

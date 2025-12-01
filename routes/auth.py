@@ -1,14 +1,17 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_login import login_user, logout_user, current_user, login_required
+from jwt_decorators import jwt_required
 from werkzeug.security import check_password_hash, generate_password_hash
 from db import get_db_connection
 from models import Usuario
 from utils import generar_captcha, es_correo_valido, es_contrasena_valida, es_telefono_valido
 from invitaciones import crear_invitacion, validar_codigo, marcar_codigo_como_usado
-import jwt
 import datetime
 import os
 import secrets
+import random
+import uuid
+from jwt_utils import create_jwt_token
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -16,28 +19,8 @@ auth_bp = Blueprint("auth", __name__)
 # CONFIGURACIÓN Y UTILIDADES
 # =============================================================================
 
-# Clave secreta para JWT
-JWT_SECRET_KEY = 'tu-clave-secreta-muy-segura-para-movil-2024'
-
 # Diccionario temporal para almacenar CAPTCHAs (en producción usa Redis)
 captcha_storage = {}
-
-def generar_token(usuario):
-    """Genera un token JWT para el usuario"""
-    try:
-        print(f"🔍 Generando token para usuario ID: {usuario.id}")
-        payload = {
-            'user_id': usuario.id,
-            'correo': usuario.correo,
-            'id_rol': usuario.id_rol,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
-        }
-        token = jwt.encode(payload, JWT_SECRET_KEY, algorithm='HS256')
-        print(f"✅ Token generado exitosamente")
-        return token
-    except Exception as e:
-        print(f"❌ Error generando token: {str(e)}")
-        raise e
 
 def limpiar_captchas_expirados():
     """Limpia CAPTCHAs antiguos del almacenamiento temporal"""
@@ -75,19 +58,24 @@ def api_login():
         captcha_id = data.get("captcha_id", "")
 
         print(f"🔍 DEBUG API Login - Correo: {correo}")
+        print(f"🔍 DEBUG CAPTCHA - ID: {captcha_id}, Usuario: {captcha_usuario}")
 
         # Validar CAPTCHA para móvil
         if captcha_id and captcha_id != 'local':
             print(f"🔍 Validando CAPTCHA: {captcha_id}")
+            print(f"📊 CAPTCHAs en almacenamiento: {list(captcha_storage.keys())}")
+            
             captcha_data = captcha_storage.get(captcha_id)
             if not captcha_data:
-                print("❌ CAPTCHA expirado")
+                print("❌ CAPTCHA expirado o no encontrado")
                 return jsonify({
                     'success': False,
                     'message': 'CAPTCHA expirado o no encontrado'
                 }), 401
             
             captcha_text = captcha_data['text']
+            print(f"🔍 CAPTCHA esperado: {captcha_text}, Usuario: {captcha_usuario}")
+            
             if captcha_usuario.strip().upper() != captcha_text.strip().upper():
                 print("❌ CAPTCHA incorrecto")
                 return jsonify({
@@ -97,6 +85,7 @@ def api_login():
             
             # Eliminar CAPTCHA después de usar
             captcha_storage.pop(captcha_id, None)
+            print("✅ CAPTCHA validado y eliminado")
 
         print("🔍 Conectando a la base de datos...")
         # Buscar usuario en la base de datos
@@ -129,8 +118,23 @@ def api_login():
             }), 401
 
         print("🔍 Generando token...")
-        # Generar token
-        token = generar_token(usuario)
+        
+        # ✅ CORREGIDO: Generar token con la estructura correcta
+        identity_data = {
+            'user_id': usuario.id,
+            'correo': usuario.correo,
+            'id_rol': usuario.id_rol,
+            'nombre': usuario.nombre
+        }
+        
+        print("🔍 Generando token MANUAL...")
+        token = create_jwt_token(
+            user_id=usuario.id,
+            correo=usuario.correo, 
+            id_rol=usuario.id_rol,
+            nombre=usuario.nombre
+        )
+        print(f"✅ Token generado: {token[:50]}...")
         
         # Datos del usuario para la respuesta
         user_data = {
@@ -160,37 +164,38 @@ def api_login():
         import traceback
         print(f"📋 Traceback completo: {traceback.format_exc()}")
         
-        # Asegurar que siempre devuelva JSON incluso en errores
         return jsonify({
             'success': False,
             'message': f'Error del servidor: {str(e)}'
         }), 500
-    
-@auth_bp.route("/api/auth/captcha", methods=["GET"])
+
+@auth_bp.route("/captcha", methods=["GET"])
 def api_captcha():
-    """Generar CAPTCHA para aplicación móvil"""
+    """API para generar CAPTCHA"""
     try:
-        captcha_text = generar_captcha()
-        captcha_id = secrets.token_hex(8)
+        captcha = ''.join(random.choices('ABCDEFGHJKLMNPQRSTUVWXYZ23456789', k=6))
+        captcha_id = str(uuid.uuid4())[:8]
         
-        # Guardar en almacenamiento temporal
+        # ✅ CORREGIDO: GUARDAR EL CAPTCHA EN EL ALMACENAMIENTO
         captcha_storage[captcha_id] = {
-            'text': captcha_text,
+            'text': captcha,
             'timestamp': datetime.datetime.now()
         }
         
-        # Limpiar CAPTCHAs antiguos
-        limpiar_captchas_expirados()
+        print(f"✅ CAPTCHA generado: {captcha}, ID: {captcha_id}")
+        print(f"📊 CAPTCHAs almacenados: {len(captcha_storage)}")
         
         return jsonify({
             'success': True,
-            'captcha': captcha_text,
+            'captcha': captcha,
             'captcha_id': captcha_id
-        }), 200
+        })
+        
     except Exception as e:
+        print(f"❌ Error generando CAPTCHA: {e}")
         return jsonify({
             'success': False,
-            'message': f'Error al generar CAPTCHA: {str(e)}'
+            'error': str(e)
         }), 500
 
 @auth_bp.route("/api/auth/validate_captcha", methods=["POST"])
@@ -421,172 +426,21 @@ def api_validar_codigo():
             'message': f'Error al validar código: {str(e)}'
         }), 500
 
-@auth_bp.route("/api/residentes/dashboard", methods=["GET"])
-def api_dashboard():
-    """Dashboard para residentes en aplicación móvil"""
+@auth_bp.route("/api/auth/test", methods=["POST"])
+def api_test_auth():
+    """Endpoint simple de prueba"""
     try:
-        # Obtener token del header Authorization
-        auth_header = request.headers.get('Authorization')
-        
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({
-                'success': False,
-                'message': 'Token de autorización requerido'
-            }), 401
-        
-        token = auth_header.split(' ')[1]
-        
-        # Verificar token
-        try:
-            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
-            user_id = payload['user_id']
-            user_rol = payload['id_rol']
-            user_correo = payload['correo']
-            
-            print(f"🔍 DEBUG Dashboard - User ID: {user_id}, Rol: {user_rol}")
-            
-        except jwt.ExpiredSignatureError:
-            return jsonify({
-                'success': False,
-                'message': 'Token expirado'
-            }), 401
-        except jwt.InvalidTokenError:
-            return jsonify({
-                'success': False,
-                'message': 'Token inválido'
-            }), 401
-
-        # Verificar que el usuario sea residente (rol 3)
-        if user_rol != 3:
-            return jsonify({
-                'success': False,
-                'message': 'Acceso no autorizado para este rol'
-            }), 403
-
-        # Obtener datos del dashboard para el residente
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        try:
-            # Obtener información del residente - CORREGIDO
-            # En lugar de la consulta actual, prueba esta:
-            cursor.execute("""
-                SELECT r.nro_departamento, r.piso, r.fecha_ingreso,
-                    u.nombre, u.ap_paterno, u.ap_materno, u.telefono
-                FROM residente r
-                JOIN usuario u ON r.id_usuario = u.id_usuario
-                WHERE r.id_usuario = %s  -- Si la anterior no funciona, prueba esta
-            """, (user_id,))
-            residente_data = cursor.fetchone()
-            
-            print(f"🔍 DEBUG - Datos del residente: {residente_data}")
-            
-            if not residente_data:
-                return jsonify({
-                    'success': False,
-                    'message': 'Datos de residente no encontrados'
-                }), 404
-
-            # Contar notificaciones pendientes
-            cursor.execute("""
-                SELECT COUNT(*) FROM notificacion 
-                WHERE id_usuario = %s AND leida = FALSE
-            """, (user_id,))
-            notificacion_result = cursor.fetchone()
-            notificacion_count = notificacion_result[0] if notificacion_result else 0
-            
-            # Obtener últimas notificaciones
-            cursor.execute("""
-                SELECT titulo, mensaje, fecha_creacion 
-                FROM notificacion 
-                WHERE id_usuario = %s 
-                ORDER BY fecha_creacion DESC 
-                LIMIT 5
-            """, (user_id,))
-            notificacion_recientes = cursor.fetchall()
-            
-            # Contar tickets activos del residente - CORREGIDO
-            cursor.execute("""
-                SELECT COUNT(*) 
-                FROM ticket t
-                JOIN departamento d ON t.id_departamento = d.id_departamento
-                JOIN residente r ON (
-                    (d.piso = 'Piso ' || r.piso::varchar AND d.nro = r.nro_departamento) OR
-                    (d.piso = r.piso::varchar AND d.nro = r.nro_departamento)
-                )
-                WHERE r.id_usuario = %s  -- ← CORREGIDO: usar r.id_usuario
-                AND t.estado IN ('abierto', 'en_progreso', 'pendiente')
-            """, (user_id,))
-            tickets_result = cursor.fetchone()
-            tickets_count = tickets_result[0] if tickets_result else 0
-            
-            # Contar facturas pendientes
-            cursor.execute("""
-                SELECT COUNT(*), COALESCE(SUM(monto_total), 0)
-                FROM factura 
-                WHERE id_usuario = %s 
-                AND estado_factura = 'pendiente'
-            """, (user_id,))
-            facturas_result = cursor.fetchone()
-            facturas_count = facturas_result[0] if facturas_result else 0
-            monto_pendiente = float(facturas_result[1]) if facturas_result and facturas_result[1] else 0.0
-
-            # Procesar notificaciones recientes
-            notificacion_list = []
-            for notif in notificacion_recientes:
-                notificacion_list.append({
-                    'titulo': notif[0],
-                    'mensaje': notif[1],
-                    'fecha': notif[2].strftime('%Y-%m-%d %H:%M') if notif[2] else None
-                })
-            
-            # Construir datos del dashboard
-            dashboard_data = {
-                'residente': {
-                    'nombre_completo': f"{residente_data[3]} {residente_data[4]} {residente_data[5]}",
-                    'nro_departamento': residente_data[0],
-                    'piso': residente_data[1],
-                    'fecha_ingreso': residente_data[2].strftime('%Y-%m-%d') if residente_data[2] else None,
-                    'telefono': residente_data[6]
-                },
-                'estadisticas': {
-                    'notificaciones_pendientes': notificacion_count,
-                    'tickets_activos': tickets_count,
-                    'facturas_pendientes': facturas_count,
-                    'monto_pendiente': monto_pendiente
-                },
-                'notificaciones_recientes': notificacion_list,
-                'mensaje_bienvenida': f"Bienvenido, {residente_data[3]}",
-                'fecha_actual': datetime.datetime.now().strftime('%Y-%m-%d')
-            }
-
-            print(f"✅ Dashboard generado para residente {residente_data[3]}")
-            print(f"📊 Estadísticas: {dashboard_data['estadisticas']}")
-
-            return jsonify({
-                'success': True,
-                'data': dashboard_data
-            }), 200
-
-        except Exception as e:
-            print(f"❌ ERROR en consultas del dashboard: {str(e)}")
-            return jsonify({
-                'success': False,
-                'message': f'Error al obtener datos del dashboard: {str(e)}'
-            }), 500
-
-        finally:
-            cursor.close()
-            conn.close()
-
+        return jsonify({
+            'success': True,
+            'message': 'API de auth funcionando correctamente',
+            'timestamp': datetime.datetime.now().isoformat()
+        }), 200
     except Exception as e:
-        print(f"❌ ERROR en api_dashboard: {str(e)}")
-        import traceback
-        print(f"📋 Traceback completo: {traceback.format_exc()}")
         return jsonify({
             'success': False,
-            'message': f'Error del servidor: {str(e)}'
+            'message': f'Error: {str(e)}'
         }), 500
+
 # =============================================================================
 # ENDPOINTS ORIGINALES PARA SISTEMA WEB
 # =============================================================================
@@ -1086,30 +940,3 @@ def register_admin():
     
     # GET request - mostrar formulario vacío
     return render_template("administrador/register_admin.html")
-
-
-
-
-
-
-
-
-
-
-
-
-@auth_bp.route("/api/auth/test", methods=["POST"])
-def api_test_auth():
-    """Endpoint simple de prueba"""
-    try:
-        return jsonify({
-            'success': True,
-            'message': 'API de auth funcionando correctamente',
-            'timestamp': datetime.datetime.now().isoformat()
-        }), 200
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }), 500
-

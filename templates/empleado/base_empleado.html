@@ -30,6 +30,11 @@
                     class="{% if request.endpoint == 'empleados.historial_pagos' %}active{% endif %}">
                     <i class="fas fa-money-bill-wave"></i> Mis Pagos
                 </a></li>
+            <!-- NUEVA PESTAÑA IA -->
+            <li><a href="{{ url_for('ia_empleado.dashboard') }}"
+                    class="{% if request.endpoint == 'ia_empleado.dashboard' %}active{% endif %}">
+                    <i class="fas fa-robot"></i> Asistente IA
+                </a></li>
             <li><a href="{{ url_for('empleados.perfil') }}"
                     class="{% if request.endpoint == 'empleados.perfil' %}active{% endif %}">
                     <i class="fas fa-user"></i> Mi Perfil

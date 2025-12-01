@@ -1,57 +1,41 @@
-# routes/empleadomovil.py
+# routes/empleadomovil.py - VERSIÓN CORREGIDA
 from flask import Blueprint, jsonify, request
-import jwt  # ✅ Usar JWT normal como en auth.py
+from jwt_decorators import jwt_required  # ← CAMBIAR AQUÍ
 from db import get_db_connection
 
 empleado_movil_bp = Blueprint('empleado_movil', __name__)
-
-# ✅ MISMA CLAVE SECRETA QUE EN auth.py
-JWT_SECRET_KEY = 'tu-clave-secreta-muy-segura-para-movil-2024'
-
-def verificar_token_movil(token):
-    """Verificar token JWT (igual que en auth.py)"""
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
-        return payload
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.InvalidTokenError:
-        return None
 
 # ================================
 # DASHBOARD EMPLEADO MÓVIL - CORREGIDO
 # ================================
 @empleado_movil_bp.route("/empleado/dashboard-data", methods=["GET"])
+@jwt_required  # ← SIN PARÉNTESIS
 def api_dashboard_data_movil():
-    """API para obtener datos del dashboard del empleado para móvil"""
+    """API para obtener datos del dashboard del empleado para móvil - VERSIÓN CORREGIDA"""
     try:
-        # Obtener token del header Authorization
-        auth_header = request.headers.get('Authorization')
+        # 🔥 CAMBIO: Usar request.current_user_id en lugar de get_jwt_identity()
+        current_user_id = request.current_user_id
         
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({
-                'success': False, 
-                'message': 'Token de autorización requerido'
-            }), 401
-        
-        token = auth_header.split(' ')[1]
-        
-        # Verificar token usando JWT normal (como en auth.py)
-        payload = verificar_token_movil(token)
-        if not payload:
-            return jsonify({
-                'success': False, 
-                'message': 'Token inválido o expirado'
-            }), 401
+        print(f"🔐 [EMPLEADO MOVIL] Usuario autenticado: {current_user_id}")
 
-        user_id = payload['user_id']
-        print(f"📱 [EMPLEADO MOVIL] Dashboard solicitado por usuario: {user_id}")
-        
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Obtener el id_empleado
-        cursor.execute("SELECT id_empleado FROM empleado WHERE id_usuario = %s", (user_id,))
+        # Métricas principales del empleado - CORREGIDAS
+        cursor.execute("""
+            SELECT COUNT(*) FROM mantenimiento 
+            WHERE id_empleado = %s AND activo = true
+        """, (current_user_id,))
+        mantenimientos_activos = cursor.fetchone()[0]
+
+        cursor.execute("""
+            SELECT COUNT(*) FROM ticket 
+            WHERE id_empleado = %s AND estado IN ('abierto', 'en_progreso')
+        """, (current_user_id,))
+        tickets_asignados = cursor.fetchone()[0]
+
+        # Para datos de nómina, necesitamos el id_empleado
+        cursor.execute("SELECT id_empleado FROM empleado WHERE id_usuario = %s", (current_user_id,))
         empleado_result = cursor.fetchone()
         
         if not empleado_result:
@@ -61,19 +45,11 @@ def api_dashboard_data_movil():
             }), 404
         
         id_empleado = empleado_result[0]
-
-        # Métricas principales del empleado
         cursor.execute("""
             SELECT COUNT(*) FROM mantenimiento 
             WHERE id_empleado = %s AND activo = true
-        """, (id_empleado,))
+        """, (id_empleado,))  # ← USAR id_empleado
         mantenimientos_activos = cursor.fetchone()[0]
-
-        cursor.execute("""
-            SELECT COUNT(*) FROM ticket 
-            WHERE id_empleado = %s AND estado IN ('abierto', 'en_progreso')
-        """, (user_id,))
-        tickets_asignados = cursor.fetchone()[0]
 
         cursor.execute("""
             SELECT n.monto 
@@ -118,7 +94,7 @@ def api_dashboard_data_movil():
         """)
         consumo_gas = float(cursor.fetchone()[0] or 0)
 
-        # Estado de tickets
+        # Estado de tickets - CORREGIDO
         cursor.execute("""
             SELECT 
                 COUNT(CASE WHEN estado = 'abierto' THEN 1 END) as pendientes,
@@ -126,7 +102,7 @@ def api_dashboard_data_movil():
                 COUNT(CASE WHEN estado = 'cerrado' THEN 1 END) as completados
             FROM ticket 
             WHERE id_empleado = %s
-        """, (user_id,))
+        """, (current_user_id,))
         estado_tickets = cursor.fetchone()
 
         cursor.close()
@@ -170,47 +146,36 @@ def api_dashboard_data_movil():
             'error': str(e)
         }), 500
 
+# ================================
+# MANTENIMIENTOS ASIGNADOS - CORREGIDO
+# ================================
 @empleado_movil_bp.route("/empleado/mantenimientos", methods=["GET"])
+@jwt_required
 def api_mantenimientos_movil():
-    """API para obtener mantenimientos asignados al empleado - CORREGIDO"""
+    """API para obtener mantenimientos asignados al empleado - VERSIÓN CORREGIDA"""
     try:
-        # Obtener token del header Authorization
-        auth_header = request.headers.get('Authorization')
+        current_user_id = request.current_user_id
         
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({
-                'success': False, 
-                'message': 'Token de autorización requerido'
-            }), 401
-        
-        token = auth_header.split(' ')[1]
-        
-        # Verificar token
-        payload = verificar_token_movil(token)
-        if not payload:
-            return jsonify({
-                'success': False, 
-                'message': 'Token inválido o expirado'
-            }), 401
+        print(f"🔐 [EMPLEADO MOVIL] Mantenimientos solicitados por usuario: {current_user_id}")
 
-        user_id = payload['user_id']
-        
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Obtener el id_empleado
-        cursor.execute("SELECT id_empleado FROM empleado WHERE id_usuario = %s", (user_id,))
+        # ✅ PRIMERO: Obtener el id_empleado del usuario
+        cursor.execute("SELECT id_empleado FROM empleado WHERE id_usuario = %s", (current_user_id,))
         empleado_result = cursor.fetchone()
         
         if not empleado_result:
+            print(f"❌ No se encontró empleado para usuario {current_user_id}")
             return jsonify({
                 'success': False, 
                 'error': 'Empleado no encontrado'
             }), 404
         
         id_empleado = empleado_result[0]
+        print(f"✅ ID Empleado encontrado: {id_empleado}")
 
-        # CONSULTA CORREGIDA - usando las columnas reales
+        # ✅ SEGUNDO: Buscar mantenimientos por id_empleado
         cursor.execute("""
             SELECT 
                 id_mantenimiento, 
@@ -220,16 +185,19 @@ def api_mantenimientos_movil():
             FROM mantenimiento 
             WHERE id_empleado = %s
             ORDER BY id_mantenimiento DESC
-        """, (id_empleado,))
+        """, (id_empleado,))  # ← USAR id_empleado aquí
         mantenimientos = cursor.fetchall()
 
         cursor.close()
         conn.close()
 
+        print(f"✅ Mantenimientos encontrados: {len(mantenimientos)}")
+        for mnt in mantenimientos:
+            print(f"   • ID: {mnt[0]}, Desc: {mnt[1]}, Activo: {mnt[2]}, Empleado: {mnt[3]}")
+
         # Convertir a formato JSON usando la estructura real
         mantenimientos_data = []
         for mnt in mantenimientos:
-            # Determinar estado basado en la columna 'activo'
             estado = 'Pendiente' if mnt[2] else 'Completado'
             
             mantenimientos_data.append({
@@ -238,9 +206,9 @@ def api_mantenimientos_movil():
                 'estado': estado,
                 'activo': mnt[2],
                 'id_empleado': mnt[3],
-                'fecha_programada': 'Por programar',  # Valor por defecto ya que no existe la columna
-                'area': 'Área Común',  # Valor por defecto
-                'ubicacion': 'Edificio Principal'  # Valor por defecto
+                'fecha_programada': 'Por programar',
+                'area': 'Área Común',
+                'ubicacion': 'Edificio Principal'
             })
 
         return jsonify({
@@ -256,38 +224,79 @@ def api_mantenimientos_movil():
         }), 500
 
 # ================================
-# HISTORIAL DE PAGOS - CORREGIDO
+# DIAGNÓSTICO DE ESTRUCTURA - NUEVO
 # ================================
-@empleado_movil_bp.route("/empleado/pagos", methods=["GET"])
-def api_pagos_movil():
-    """API para obtener historial de pagos del empleado"""
+@empleado_movil_bp.route("/empleado/diagnostico-estructura", methods=["GET"])
+@jwt_required  # ← SIN PARÉNTESIS
+def diagnostico_estructura():
+    """Diagnóstico de la estructura de datos del empleado"""
     try:
-        # Obtener token del header Authorization
-        auth_header = request.headers.get('Authorization')
+        current_user_id = request.current_user_id  # ← CAMBIO AQUÍ
         
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({
-                'success': False, 
-                'message': 'Token de autorización requerido'
-            }), 401
-        
-        token = auth_header.split(' ')[1]
-        
-        # Verificar token
-        payload = verificar_token_movil(token)
-        if not payload:
-            return jsonify({
-                'success': False, 
-                'message': 'Token inválido o expirado'
-            }), 401
-
-        user_id = payload['user_id']
+        print(f"🔍 [DIAGNÓSTICO] Usuario ID: {current_user_id}")
         
         conn = get_db_connection()
         cursor = conn.cursor()
 
+        # 1. Verificar usuario
+        cursor.execute("SELECT id_usuario, nombre, correo, id_rol FROM usuario WHERE id_usuario = %s", (current_user_id,))
+        usuario = cursor.fetchone()
+        print(f"🔍 [DIAGNÓSTICO] Usuario: {usuario}")
+
+        # 2. Verificar empleado
+        cursor.execute("SELECT id_empleado, id_usuario, puesto FROM empleado WHERE id_usuario = %s", (current_user_id,))
+        empleado = cursor.fetchone()
+        print(f"🔍 [DIAGNÓSTICO] Empleado: {empleado}")
+
+        # 3. Verificar mantenimientos asignados
+        cursor.execute("SELECT COUNT(*) FROM mantenimiento WHERE id_empleado = %s", (current_user_id,))
+        mantenimientos_count = cursor.fetchone()[0]
+        print(f"🔍 [DIAGNÓSTICO] Mantenimientos asignados: {mantenimientos_count}")
+
+        # 4. Verificar tickets asignados
+        cursor.execute("SELECT COUNT(*) FROM ticket WHERE id_empleado = %s", (current_user_id,))
+        tickets_count = cursor.fetchone()[0]
+        print(f"🔍 [DIAGNÓSTICO] Tickets asignados: {tickets_count}")
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'diagnostico': {
+                'usuario_id': current_user_id,
+                'usuario_encontrado': bool(usuario),
+                'empleado_encontrado': bool(empleado),
+                'mantenimientos_asignados': mantenimientos_count,
+                'tickets_asignados': tickets_count,
+                'estructura_correcta': bool(empleado)
+            }
+        })
+
+    except Exception as e:
+        print(f"❌ Error en diagnóstico: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ================================
+# HISTORIAL DE PAGOS
+# ================================
+@empleado_movil_bp.route("/empleado/pagos", methods=["GET"])
+@jwt_required  # ← SIN PARÉNTESIS
+def api_pagos_movil():
+    """API para obtener historial de pagos del empleado"""
+    try:
+        current_user_id = request.current_user_id  # ← CAMBIO AQUÍ
+        
+        print(f"🔐 [EMPLEADO MOVIL] Pagos solicitados por: {current_user_id}")
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
         # Obtener el id_empleado
-        cursor.execute("SELECT id_empleado FROM empleado WHERE id_usuario = %s", (user_id,))
+        cursor.execute("SELECT id_empleado FROM empleado WHERE id_usuario = %s", (current_user_id,))
         empleado_result = cursor.fetchone()
         
         if not empleado_result:
@@ -355,38 +364,22 @@ def api_pagos_movil():
         }), 500
 
 # ================================
-# PERFIL DEL EMPLEADO - CORREGIDO
+# PERFIL DEL EMPLEADO
 # ================================
 @empleado_movil_bp.route("/empleado/perfil", methods=["GET"])
+@jwt_required  # ← SIN PARÉNTESIS
 def api_perfil_movil():
     """API para obtener perfil del empleado"""
     try:
-        # Obtener token del header Authorization
-        auth_header = request.headers.get('Authorization')
+        current_user_id = request.current_user_id  # ← CAMBIO AQUÍ
         
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({
-                'success': False, 
-                'message': 'Token de autorización requerido'
-            }), 401
-        
-        token = auth_header.split(' ')[1]
-        
-        # Verificar token
-        payload = verificar_token_movil(token)
-        if not payload:
-            return jsonify({
-                'success': False, 
-                'message': 'Token inválido o expirado'
-            }), 401
+        print(f"🔐 [EMPLEADO MOVIL] Perfil solicitado por: {current_user_id}")
 
-        user_id = payload['user_id']
-        
         conn = get_db_connection()
         cursor = conn.cursor()
 
         # Obtener el id_empleado
-        cursor.execute("SELECT id_empleado FROM empleado WHERE id_usuario = %s", (user_id,))
+        cursor.execute("SELECT id_empleado FROM empleado WHERE id_usuario = %s", (current_user_id,))
         empleado_result = cursor.fetchone()
         
         if not empleado_result:
@@ -412,7 +405,7 @@ def api_perfil_movil():
         cursor.execute("""
             SELECT COUNT(*) FROM ticket 
             WHERE id_empleado = %s AND estado = 'cerrado'
-        """, (user_id,))
+        """, (current_user_id,))
         tickets_completados = cursor.fetchone()[0]
         
         cursor.execute("""
@@ -424,7 +417,7 @@ def api_perfil_movil():
         cursor.execute("""
             SELECT COUNT(*) FROM ticket 
             WHERE id_empleado = %s AND estado IN ('abierto', 'en_progreso')
-        """, (user_id,))
+        """, (current_user_id,))
         tickets_pendientes = cursor.fetchone()[0]
         
         cursor.close()
@@ -464,5 +457,28 @@ def api_perfil_movil():
         print(f"❌ Error cargando perfil móvil: {e}")
         return jsonify({
             'success': False, 
+            'error': str(e)
+        }), 500
+
+# ================================
+# ENDPOINT DE PRUEBA JWT
+# ================================
+@empleado_movil_bp.route("/empleado/test-jwt", methods=["GET"])
+@jwt_required  # ← SIN PARÉNTESIS
+def test_jwt_movil():
+    """Endpoint de prueba para verificar que JWT funciona"""
+    try:
+        current_user_id = request.current_user_id  # ← CAMBIO AQUÍ
+        
+        return jsonify({
+            'success': True,
+            'message': '✅ JWT funcionando correctamente en empleado móvil',
+            'user_id': current_user_id,
+            'auth_header': request.headers.get('Authorization', 'No header')
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
             'error': str(e)
         }), 500

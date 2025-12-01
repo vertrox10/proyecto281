@@ -116,7 +116,9 @@
         color: var(--dark);
     }
 
-    .text-success { color: var(--secondary); }
+    .text-success {
+        color: var(--secondary);
+    }
 
     /* Costos de Servicios */
     .consumo-mensual-section {
@@ -154,9 +156,17 @@
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
     }
 
-    .consumo-card.verde { border-left-color: var(--secondary); }
-    .consumo-card.amarillo { border-left-color: var(--warning); }
-    .consumo-card.rojo { border-left-color: var(--danger); }
+    .consumo-card.verde {
+        border-left-color: var(--secondary);
+    }
+
+    .consumo-card.amarillo {
+        border-left-color: var(--warning);
+    }
+
+    .consumo-card.rojo {
+        border-left-color: var(--danger);
+    }
 
     .consumo-header {
         display: flex;
@@ -182,9 +192,20 @@
         font-weight: 600;
     }
 
-    .bg-primary { background: var(--primary); color: white; }
-    .bg-warning { background: var(--warning); color: black; }
-    .bg-info { background: var(--info); color: white; }
+    .bg-primary {
+        background: var(--primary);
+        color: white;
+    }
+
+    .bg-warning {
+        background: var(--warning);
+        color: black;
+    }
+
+    .bg-info {
+        background: var(--info);
+        color: white;
+    }
 
     .costo {
         font-size: 2rem;
@@ -205,11 +226,17 @@
         margin: 0;
     }
 
-    .variacion.up { color: var(--secondary); }
-    .variacion.down { color: var(--danger); }
+    .variacion.up {
+        color: var(--secondary);
+    }
+
+    .variacion.down {
+        color: var(--danger);
+    }
 
     /* Secciones Generales */
-    .sensores-section, .consumos-section {
+    .sensores-section,
+    .consumos-section {
         background: white;
         border-radius: 16px;
         padding: 1.5rem;
@@ -250,9 +277,20 @@
         font-weight: 600;
     }
 
-    .bg-success { background: var(--secondary); color: white; }
-    .bg-danger { background: var(--danger); color: white; }
-    .bg-secondary { background: var(--gray); color: white; }
+    .bg-success {
+        background: var(--secondary);
+        color: white;
+    }
+
+    .bg-danger {
+        background: var(--danger);
+        color: white;
+    }
+
+    .bg-secondary {
+        background: var(--gray);
+        color: white;
+    }
 
     /* Tablas */
     .table-responsive {
@@ -414,7 +452,8 @@
     <!-- RESUMEN EJECUTIVO -->
     <div class="resumen-ejecutivo">
         <div class="resumen-card">
-            <h4><i class="fas fa-chart-line"></i> Resumen General del Sistema - {{ current_month|default('Actual') }}</h4>
+            <h4><i class="fas fa-chart-line"></i> Resumen General del Sistema - {{ current_month|default('Actual') }}
+            </h4>
             <div class="resumen-grid">
                 <div class="resumen-item">
                     <span class="resumen-label">Total Sensores:</span>
@@ -441,48 +480,54 @@
         <h4><i class="fas fa-dollar-sign"></i> COSTOS DE SERVICIOS MENSUALES</h4>
         <div class="consumo-grid">
             <!-- Agua -->
-            <div class="consumo-card {% if (agua.variacion|default(0)) <= 5 %}verde{% elif (agua.variacion|default(0)) <= 15 %}amarillo{% else %}rojo{% endif %}">
+            <div
+                class="consumo-card {% if (agua.variacion|default(0)) <= 5 %}verde{% elif (agua.variacion|default(0)) <= 15 %}amarillo{% else %}rojo{% endif %}">
                 <div class="consumo-header">
                     <h5><i class="fas fa-tint"></i> Agua</h5>
                     <span class="consumo-badge bg-primary">{{ agua.registros|default(0) }} reg.</span>
                 </div>
                 <p class="costo">${{ agua.costo|default(0)|round(2) }}/mes</p>
                 <p class="consumo-detalle">Consumo: {{ "%.2f"|format(agua.consumo_total|default(0)) }} m³</p>
-                {% if (agua.variacion|default(0)) < 0 %}
-                    <p class="variacion down"><i class="fas fa-arrow-down"></i> {{ (agua.variacion|default(0))|abs }}% vs anterior</p>
-                {% else %}
-                    <p class="variacion up"><i class="fas fa-arrow-up"></i> {{ agua.variacion|default(0) }}% vs anterior</p>
-                {% endif %}
+                {% if (agua.variacion|default(0)) < 0 %} <p class="variacion down"><i class="fas fa-arrow-down"></i> {{
+                    (agua.variacion|default(0))|abs }}% vs anterior</p>
+                    {% else %}
+                    <p class="variacion up"><i class="fas fa-arrow-up"></i> {{ agua.variacion|default(0) }}% vs anterior
+                    </p>
+                    {% endif %}
             </div>
 
             <!-- Gas -->
-            <div class="consumo-card {% if (gas.variacion|default(0)) <= 5 %}verde{% elif (gas.variacion|default(0)) <= 15 %}amarillo{% else %}rojo{% endif %}">
+            <div
+                class="consumo-card {% if (gas.variacion|default(0)) <= 5 %}verde{% elif (gas.variacion|default(0)) <= 15 %}amarillo{% else %}rojo{% endif %}">
                 <div class="consumo-header">
                     <h5><i class="fas fa-fire"></i> Gas</h5>
                     <span class="consumo-badge bg-warning">{{ gas.registros|default(0) }} reg.</span>
                 </div>
                 <p class="costo">${{ gas.costo|default(0)|round(2) }}/mes</p>
                 <p class="consumo-detalle">Consumo: {{ "%.2f"|format(gas.consumo_total|default(0)) }} m³</p>
-                {% if (gas.variacion|default(0)) < 0 %}
-                    <p class="variacion down"><i class="fas fa-arrow-down"></i> {{ (gas.variacion|default(0))|abs }}% vs anterior</p>
-                {% else %}
-                    <p class="variacion up"><i class="fas fa-arrow-up"></i> {{ gas.variacion|default(0) }}% vs anterior</p>
-                {% endif %}
+                {% if (gas.variacion|default(0)) < 0 %} <p class="variacion down"><i class="fas fa-arrow-down"></i> {{
+                    (gas.variacion|default(0))|abs }}% vs anterior</p>
+                    {% else %}
+                    <p class="variacion up"><i class="fas fa-arrow-up"></i> {{ gas.variacion|default(0) }}% vs anterior
+                    </p>
+                    {% endif %}
             </div>
 
             <!-- Luz -->
-            <div class="consumo-card {% if (luz.variacion|default(0)) <= 5 %}verde{% elif (luz.variacion|default(0)) <= 15 %}amarillo{% else %}rojo{% endif %}">
+            <div
+                class="consumo-card {% if (luz.variacion|default(0)) <= 5 %}verde{% elif (luz.variacion|default(0)) <= 15 %}amarillo{% else %}rojo{% endif %}">
                 <div class="consumo-header">
                     <h5><i class="fas fa-bolt"></i> Luz</h5>
                     <span class="consumo-badge bg-info">{{ luz.registros|default(0) }} reg.</span>
                 </div>
                 <p class="costo">${{ luz.costo|default(0)|round(2) }}/mes</p>
                 <p class="consumo-detalle">Consumo: {{ "%.2f"|format(luz.consumo_total|default(0)) }} kWh</p>
-                {% if (luz.variacion|default(0)) < 0 %}
-                    <p class="variacion down"><i class="fas fa-arrow-down"></i> {{ (luz.variacion|default(0))|abs }}% vs anterior</p>
-                {% else %}
-                    <p class="variacion up"><i class="fas fa-arrow-up"></i> {{ luz.variacion|default(0) }}% vs anterior</p>
-                {% endif %}
+                {% if (luz.variacion|default(0)) < 0 %} <p class="variacion down"><i class="fas fa-arrow-down"></i> {{
+                    (luz.variacion|default(0))|abs }}% vs anterior</p>
+                    {% else %}
+                    <p class="variacion up"><i class="fas fa-arrow-up"></i> {{ luz.variacion|default(0) }}% vs anterior
+                    </p>
+                    {% endif %}
             </div>
         </div>
     </div>
@@ -496,7 +541,7 @@
                 <span class="badge bg-success">Activos: {{ metricas_sensores.sensores_activos|default(0) }}</span>
             </div>
         </div>
-        
+
         <div class="table-responsive">
             <table class="tabla-sensores">
                 <thead>
@@ -510,36 +555,36 @@
                 </thead>
                 <tbody>
                     {% if sensores %}
-                        {% for sensor in sensores %}
-                        <tr>
-                            <td><strong>#{{ sensor.id_sensor }}</strong></td>
-                            <td>
-                                {% if sensor.id_departamento %}
-                                    <span class="badge bg-info">Depto {{ sensor.id_departamento }}</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">Sin asignar</span>
-                                {% endif %}
-                            </td>
-                            <td><code>{{ sensor.num_serie|default('N/A') }}</code></td>
-                            <td>
-                                {% if sensor.disponibilidad %}
-                                    <span class="badge bg-success"><i class="fas fa-check"></i> Activo</span>
-                                {% else %}
-                                    <span class="badge bg-danger"><i class="fas fa-times"></i> Inactivo</span>
-                                {% endif %}
-                            </td>
-                            <td><small>{{ sensor.descripcion|default('Sin descripción') }}</small></td>
-                        </tr>
-                        {% endfor %}
+                    {% for sensor in sensores %}
+                    <tr>
+                        <td><strong>#{{ sensor.id_sensor }}</strong></td>
+                        <td>
+                            {% if sensor.id_departamento %}
+                            <span class="badge bg-info">Depto {{ sensor.id_departamento }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Sin asignar</span>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ sensor.num_serie|default('N/A') }}</code></td>
+                        <td>
+                            {% if sensor.disponibilidad %}
+                            <span class="badge bg-success"><i class="fas fa-check"></i> Activo</span>
+                            {% else %}
+                            <span class="badge bg-danger"><i class="fas fa-times"></i> Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ sensor.descripcion|default('Sin descripción') }}</small></td>
+                    </tr>
+                    {% endfor %}
                     {% else %}
-                        <tr>
-                            <td colspan="5">
-                                <div class="empty-state">
-                                    <h5><i class="fas fa-satellite-dish"></i> No hay sensores registrados</h5>
-                                    <p>No se encontraron sensores en la base de datos.</p>
-                                </div>
-                            </td>
-                        </tr>
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <h5><i class="fas fa-satellite-dish"></i> No hay sensores registrados</h5>
+                                <p>No se encontraron sensores en la base de datos.</p>
+                            </div>
+                        </td>
+                    </tr>
                     {% endif %}
                 </tbody>
             </table>
@@ -584,47 +629,47 @@
                 </thead>
                 <tbody>
                     {% if consumos %}
-                        {% for registro in consumos %}
-                        <tr class="fila-consumo" data-servicio="{{ registro.tipo|lower|default('luz') }}">
-                            <td>
-                                {% if registro.tipo == 'agua' %}
-                                    <span class="badge bg-primary"><i class="fas fa-tint"></i> AGUA</span>
-                                {% elif registro.tipo == 'gas' %}
-                                    <span class="badge bg-warning"><i class="fas fa-fire"></i> GAS</span>
-                                {% else %}
-                                    <span class="badge bg-info"><i class="fas fa-bolt"></i> LUZ</span>
-                                {% endif %}
-                            </td>
-                            <td><small>#{{ registro.id_sensor|default('N/A') }}</small></td>
-                            <td>
-                                {% if registro.id_departamento %}
-                                    <span class="badge bg-secondary">Depto {{ registro.id_departamento }}</span>
-                                {% else %}
-                                    <span class="badge bg-light text-dark">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td><strong>{{ "%.2f"|format(registro.cantidad_registrada|default(0)) }}</strong></td>
-                            <td>
-                                {% if registro.fecha_registro %}
-                                    {{ registro.fecha_registro.strftime('%d/%m/%Y %H:%M') }}
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge bg-success"><i class="fas fa-check"></i> OK</span>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                    {% for registro in consumos %}
+                    <tr class="fila-consumo" data-servicio="{{ registro.tipo|lower|default('luz') }}">
+                        <td>
+                            {% if registro.tipo == 'agua' %}
+                            <span class="badge bg-primary"><i class="fas fa-tint"></i> AGUA</span>
+                            {% elif registro.tipo == 'gas' %}
+                            <span class="badge bg-warning"><i class="fas fa-fire"></i> GAS</span>
+                            {% else %}
+                            <span class="badge bg-info"><i class="fas fa-bolt"></i> LUZ</span>
+                            {% endif %}
+                        </td>
+                        <td><small>#{{ registro.id_sensor|default('N/A') }}</small></td>
+                        <td>
+                            {% if registro.id_departamento %}
+                            <span class="badge bg-secondary">Depto {{ registro.id_departamento }}</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ "%.2f"|format(registro.cantidad_registrada|default(0)) }}</strong></td>
+                        <td>
+                            {% if registro.fecha_registro %}
+                            {{ registro.fecha_registro.strftime('%d/%m/%Y %H:%M') }}
+                            {% else %}
+                            N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-success"><i class="fas fa-check"></i> OK</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
                     {% else %}
-                        <tr>
-                            <td colspan="6">
-                                <div class="empty-state">
-                                    <h5><i class="fas fa-clipboard-list"></i> No hay registros de consumo</h5>
-                                    <p>No se encontraron registros en las tablas de consumo.</p>
-                                </div>
-                            </td>
-                        </tr>
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h5><i class="fas fa-clipboard-list"></i> No hay registros de consumo</h5>
+                                <p>No se encontraron registros en las tablas de consumo.</p>
+                            </div>
+                        </td>
+                    </tr>
                     {% endif %}
                 </tbody>
             </table>
@@ -635,43 +680,43 @@
 <!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-function filtrarConsumos() {
-    const filtro = document.getElementById("filtro-select").value;
-    const filas = document.querySelectorAll(".fila-consumo");
+    function filtrarConsumos() {
+        const filtro = document.getElementById("filtro-select").value;
+        const filas = document.querySelectorAll(".fila-consumo");
 
-    filas.forEach(fila => {
-        const servicio = fila.getAttribute("data-servicio");
-        if (filtro === "todos" || servicio === filtro) {
-            fila.style.display = "";
-        } else {
-            fila.style.display = "none";
-        }
+        filas.forEach(fila => {
+            const servicio = fila.getAttribute("data-servicio");
+            if (filtro === "todos" || servicio === filtro) {
+                fila.style.display = "";
+            } else {
+                fila.style.display = "none";
+            }
+        });
+    }
+
+    function exportarExcel() {
+        const tabla = document.getElementById('tabla-consumos');
+        const wb = XLSX.utils.table_to_book(tabla, { sheet: "Consumos" });
+        const fecha = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `consumos_${fecha}.xlsx`);
+    }
+
+    // Inicializar filtro al cargar
+    document.addEventListener('DOMContentLoaded', function () {
+        filtrarConsumos();
+
+        // Agregar animaciones a las tarjetas
+        const cards = document.querySelectorAll('.consumo-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+
+            setTimeout(() => {
+                card.style.transition = 'all 0.5s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
     });
-}
-
-function exportarExcel() {
-    const tabla = document.getElementById('tabla-consumos');
-    const wb = XLSX.utils.table_to_book(tabla, { sheet: "Consumos" });
-    const fecha = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb, `consumos_${fecha}.xlsx`);
-}
-
-// Inicializar filtro al cargar
-document.addEventListener('DOMContentLoaded', function() {
-    filtrarConsumos();
-    
-    // Agregar animaciones a las tarjetas
-    const cards = document.querySelectorAll('.consumo-card');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        
-        setTimeout(() => {
-            card.style.transition = 'all 0.5s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
-});
 </script>
 {% endblock %}

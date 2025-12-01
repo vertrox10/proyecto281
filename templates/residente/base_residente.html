@@ -44,6 +44,10 @@
                     class="{% if request.endpoint == 'residentes.perfil' %}active{% endif %}">
                     <i class="fas fa-user-circle"></i> Mi Perfil
                 </a></li>
+            <li><a href="{{ url_for('ia_residente.dashboard') }}"
+                    class="{% if request.endpoint == 'ia_residente.dashboard' %}active{% endif %}">
+                    <i class="fas fa-robot"></i> Asistente IA
+                </a></li>
         </ul>
         <div class="user-section">
             <a href="{{ url_for('auth.logout') }}" class="logout">

@@ -7,11 +7,12 @@ import logging
 import os
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
-import jwt as pyjwt
+from jwt_decorators import jwt_required  # ✅ DECORADOR CORRECTO
 
 logger = logging.getLogger(__name__)
 
-residentemovil_bp = Blueprint('residentemovil', __name__, url_prefix='/residentemovil')
+# ✅ CORRECTO: Crear el blueprint aquí
+residentemovil_bp = Blueprint('residentemovil', __name__)
 CORS(residentemovil_bp, supports_credentials=True)
 
 # Configuración para subida de archivos
@@ -21,101 +22,6 @@ UPLOAD_FOLDER = 'static/uploads/bouchers_movil'
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def get_user_id_from_jwt():
-    """Obtiene el user_id desde el token JWT - VERSIÓN CORREGIDA PARA TU TOKEN"""
-    try:
-        # Obtener el token del header
-        auth_header = request.headers.get('Authorization', '')
-        print(f"🔐 [RESIDENTEMOVIL] Auth Header recibido: {auth_header[:50]}...")
-        
-        if not auth_header.startswith('Bearer '):
-            print("❌ [RESIDENTEMOVIL] ERROR: No se encontró Bearer token")
-            return None
-            
-        token = auth_header[7:]  # Remover 'Bearer '
-        print(f"🔐 [RESIDENTEMOVIL] Token limpio: {token[:50]}...")
-        
-        # ✅ USAR LA CLAVE CORRECTA
-        SECRET_KEY = 'tu-clave-secreta-muy-segura-para-movil-2024'
-        print(f"🔐 [RESIDENTEMOVIL] Secret Key usada: {SECRET_KEY[:10]}...")
-        
-        # Decodificar el token con PyJWT
-        try:
-            decoded = pyjwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-            print(f"✅ [RESIDENTEMOVIL] Token decodificado COMPLETO: {decoded}")
-            
-            # 🔥 BUSCAR EL USER_ID EN EL FORMATO CORRECTO DE TU TOKEN
-            user_id = decoded.get('user_id')  # ← ESTE ES EL CAMPO CORRECTO
-            
-            print(f"✅ [RESIDENTEMOVIL] User ID encontrado: {user_id}")
-            
-            if user_id:
-                return int(user_id)
-            else:
-                print("❌ [RESIDENTEMOVIL] ERROR: No se encontró 'user_id' en el token")
-                print(f"🔍 [RESIDENTEMOVIL] Todos los campos disponibles: {decoded}")
-                return None
-                
-        except pyjwt.ExpiredSignatureError:
-            print("❌ [RESIDENTEMOVIL] ERROR: Token expirado")
-            return None
-        except pyjwt.InvalidTokenError as e:
-            print(f"❌ [RESIDENTEMOVIL] ERROR: Token inválido - {e}")
-            return None
-            
-    except Exception as e:
-        print(f"💥 [RESIDENTEMOVIL] ERROR general: {e}")
-        return None
-@residentemovil_bp.route('/api/debug_token_formato')
-def debug_token_formato():
-    """Debug específico para el formato de token personalizado"""
-    try:
-        auth_header = request.headers.get('Authorization', '')
-        
-        if not auth_header.startswith('Bearer '):
-            return jsonify({
-                'success': False,
-                'message': 'No Bearer token'
-            }), 401
-            
-        token = auth_header[7:]
-        SECRET_KEY = 'tu-clave-secreta-muy-segura-para-movil-2024'
-        
-        try:
-            decoded = pyjwt.decode(token, SECRET_KEY, algorithms=['HS256'])
-            
-            return jsonify({
-                'success': True,
-                'message': '✅ Token decodificado exitosamente',
-                'token_format': 'PERSONALIZADO',
-                'payload': decoded,
-                'user_id_location': decoded.get('user_id'),
-                'all_fields': list(decoded.keys()),
-                'secret_key_match': True
-            })
-            
-        except Exception as e:
-            return jsonify({
-                'success': False,
-                'message': f'❌ Error decodificando: {str(e)}',
-                'secret_key_used': SECRET_KEY[:10] + '...'
-            }), 422
-            
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Error en debug: {str(e)}'
-        }), 500
-def validate_jwt_token():
-    """Valida el token JWT y retorna user_id o error"""
-    user_id = get_user_id_from_jwt()
-    if not user_id:
-        return None, jsonify({
-            'success': False,
-            'message': 'Token inválido o faltante'
-        }), 422
-    return user_id, None, None
 
 def get_residente_from_user_id(user_id):
     """Obtiene datos del residente desde user_id"""
@@ -137,41 +43,230 @@ def get_residente_from_user_id(user_id):
         
         if residente:
             print(f"✅ [RESIDENTEMOVIL] Residente encontrado: ID={residente[0]}, Piso={residente[1]}, Depto={residente[2]}")
+            return {
+                'id_residente': residente[0],
+                'piso': residente[1],
+                'nro_departamento': residente[2]
+            }
         else:
             print("❌ [RESIDENTEMOVIL] No se encontró residente")
-            
-        return residente
+            return None
     except Exception as e:
         logger.error(f"Error obteniendo residente: {e}")
         return None
 
-# ===== MIDDLEWARE DE DEBUG =====
+# ===== ENDPOINTS CON DECORADOR JWT =====
 
-@residentemovil_bp.before_request
-def debug_before_request():
-    """Middleware para debuggear requests"""
-    if request.endpoint and 'residentemovil' in request.endpoint:
-        auth_header = request.headers.get('Authorization', '')
-        print(f"\n🔐 [RESIDENTEMOVIL] === NUEVO REQUEST ===")
-        print(f"🔐 [RESIDENTEMOVIL] Endpoint: {request.endpoint}")
-        print(f"🔐 [RESIDENTEMOVIL] Method: {request.method}")
-        print(f"🔐 [RESIDENTEMOVIL] Auth Header: {auth_header[:80]}...")
-        print(f"🔐 [RESIDENTEMOVIL] JWT Secret: {current_app.config.get('JWT_SECRET_KEY', 'NO_CONFIG')[:10]}...")
-
-# ===== ENDPOINTS CON VALIDACIÓN MANUAL =====
-
-@residentemovil_bp.route('/api/areas_disponibles')
-def areas_disponibles_movil():
-    """Obtener áreas disponibles - VERSIÓN CON VALIDACIÓN MANUAL"""
+@residentemovil_bp.route('/residente/dashboard-data')
+@jwt_required  # ✅ USAR EL DECORADOR CORRECTO
+def dashboard_data_movil():
+    """Endpoint de dashboard para residentes móviles - VERSIÓN CORREGIDA"""
     try:
-        print("🎯 [RESIDENTEMOVIL] Entrando a áreas_disponibles_movil")
+        current_user_id = request.current_user_id  # ✅ AHORA FUNCIONARÁ
         
-        # Validación manual del token
-        user_id, error_response, status_code = validate_jwt_token()
-        if error_response:
-            return error_response, status_code
+        print(f"📱 [RESIDENTEMOVIL] Obteniendo dashboard para usuario: {current_user_id}")
         
-        print(f"📱 [RESIDENTEMOVIL] Obteniendo áreas para usuario: {user_id}")
+        # Obtener datos del residente
+        residente = get_residente_from_user_id(current_user_id)
+        if not residente:
+            return jsonify({
+                'success': False,
+                'message': 'No se encontraron datos del residente'
+            }), 404
+        
+        id_residente = residente['id_residente']
+        piso = residente['piso']
+        nro_departamento = residente['nro_departamento']
+        
+        # CONEXIÓN A BD PARA DATOS REALES
+        conn = get_db_connection()
+        if conn is None:
+            # Datos de ejemplo si no hay conexión
+            return jsonify({
+                'success': True,
+                'dashboard': {
+                    'residente': {
+                        'id': id_residente,
+                        'nombre': 'Ana Rojas',
+                        'piso': piso,
+                        'departamento': nro_departamento,
+                        'correo': 'grr012096@gmail.com'
+                    },
+                    'estadisticas': {
+                        'reservas_activas': 2,
+                        'reservas_totales': 15,
+                        'pagos_pendientes': 0,
+                        'monto_gastado': 1250.00
+                    },
+                    'reservas_recientes': [
+                        {
+                            'id': 1,
+                            'area': 'Salón de Eventos',
+                            'fecha': '15/01/2024',
+                            'estado': 'confirmado',
+                            'monto': 350.00
+                        },
+                        {
+                            'id': 2, 
+                            'area': 'Gimnasio',
+                            'fecha': '16/01/2024',
+                            'estado': 'pendiente',
+                            'monto': 50.00
+                        }
+                    ],
+                    'alertas': [
+                        {
+                            'tipo': 'info',
+                            'mensaje': 'Bienvenido al sistema móvil',
+                            'fecha': datetime.now().strftime('%d/%m/%Y')
+                        }
+                    ]
+                },
+                'modo': 'simulacion_sin_bd'
+            })
+        
+        cursor = conn.cursor()
+        
+        # Obtener datos reales del residente
+        cursor.execute("""
+            SELECT u.nombre, u.ap_paterno, u.ap_materno, u.correo, u.telefono
+            FROM usuario u
+            WHERE u.id_usuario = %s
+        """, (current_user_id,))
+        
+        usuario_data = cursor.fetchone()
+        
+        # Contar reservas activas
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM pagos_qr 
+            WHERE id_residente = %s AND estado IN ('confirmado', 'pendiente')
+        """, (id_residente,))
+        reservas_activas = cursor.fetchone()[0]
+        
+        # Contar reservas totales
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM pagos_qr 
+            WHERE id_residente = %s
+        """, (id_residente,))
+        reservas_totales = cursor.fetchone()[0]
+        
+        # Sumar montos pagados
+        cursor.execute("""
+            SELECT COALESCE(SUM(monto), 0) 
+            FROM pagos_qr 
+            WHERE id_residente = %s AND estado = 'confirmado'
+        """, (id_residente,))
+        monto_gastado = float(cursor.fetchone()[0])
+        
+        # Reservas recientes
+        cursor.execute("""
+            SELECT 
+                pq.id_pago,
+                c.nombre as area,
+                pq.fecha_reserva,
+                pq.estado,
+                pq.monto
+            FROM pagos_qr pq
+            LEFT JOIN conceptos_pago c ON pq.id_concepto = c.id_concepto
+            WHERE pq.id_residente = %s
+            ORDER BY pq.fecha_generacion DESC
+            LIMIT 5
+        """, (id_residente,))
+        
+        reservas_recientes = []
+        for reserva in cursor.fetchall():
+            reservas_recientes.append({
+                'id': reserva[0],
+                'area': reserva[1] or 'Área común',
+                'fecha': reserva[2].strftime('%d/%m/%Y') if reserva[2] else 'Pendiente',
+                'estado': reserva[3],
+                'monto': float(reserva[4])
+            })
+        
+        cursor.close()
+        conn.close()
+        
+        # Construir respuesta
+        nombre_completo = f"{usuario_data[0]} {usuario_data[1] or ''}".strip() if usuario_data else "Residente"
+        
+        dashboard_data = {
+            'residente': {
+                'id': id_residente,
+                'nombre': nombre_completo,
+                'piso': piso,
+                'departamento': nro_departamento,
+                'correo': usuario_data[3] if usuario_data else 'No disponible',
+                'telefono': usuario_data[4] if usuario_data else 'No disponible'
+            },
+            'estadisticas': {
+                'reservas_activas': reservas_activas,
+                'reservas_totales': reservas_totales,
+                'pagos_pendientes': 0,
+                'monto_gastado': monto_gastado
+            },
+            'reservas_recientes': reservas_recientes,
+            'alertas': [
+                {
+                    'tipo': 'success',
+                    'mensaje': f'Bienvenido/a {nombre_completo}',
+                    'fecha': datetime.now().strftime('%d/%m/%Y')
+                }
+            ]
+        }
+        
+        print(f"✅ [RESIDENTEMOVIL] Dashboard enviado para usuario {current_user_id}")
+        
+        return jsonify({
+            'success': True,
+            'dashboard': dashboard_data,
+            'user_id': current_user_id,
+            'modo': 'bd_real'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo dashboard: {e}")
+        import traceback
+        print(f"📋 Traceback: {traceback.format_exc()}")
+        
+        # Respuesta de emergencia
+        return jsonify({
+            'success': True,
+            'dashboard': {
+                'residente': {
+                    'id': 0,
+                    'nombre': 'Ana Rojas',
+                    'piso': 'X',
+                    'departamento': 'Y',
+                    'correo': 'grr012096@gmail.com'
+                },
+                'estadisticas': {
+                    'reservas_activas': 0,
+                    'reservas_totales': 0,
+                    'pagos_pendientes': 0,
+                    'monto_gastado': 0
+                },
+                'reservas_recientes': [],
+                'alertas': [
+                    {
+                        'tipo': 'warning',
+                        'mensaje': 'Datos en modo simulación',
+                        'fecha': datetime.now().strftime('%d/%m/%Y')
+                    }
+                ]
+            },
+            'modo': 'simulacion_error'
+        })
+
+@residentemovil_bp.route('/residente/areas_disponibles')
+@jwt_required  # ✅ AGREGAR DECORADOR
+def areas_disponibles_movil():
+    """Obtener áreas disponibles"""
+    try:
+        current_user_id = request.current_user_id
+        
+        print(f"📱 [RESIDENTEMOVIL] Obteniendo áreas para usuario: {current_user_id}")
         
         # Datos estáticos para el móvil
         areas = [
@@ -221,13 +316,13 @@ def areas_disponibles_movil():
             }
         ]
         
-        print(f"✅ [RESIDENTEMOVIL] Enviando {len(areas)} áreas al usuario {user_id}")
+        print(f"✅ [RESIDENTEMOVIL] Enviando {len(areas)} áreas al usuario {current_user_id}")
         
         return jsonify({
             'success': True,
             'areas': areas,
             'total': len(areas),
-            'user_id': user_id,
+            'user_id': current_user_id,
             'message': 'Áreas obtenidas exitosamente'
         })
         
@@ -238,31 +333,37 @@ def areas_disponibles_movil():
             'message': 'Error obteniendo áreas disponibles'
         }), 500
 
-@residentemovil_bp.route('/api/mis_reservas')
+@residentemovil_bp.route('/residente/mis_reservas')
+@jwt_required  # ✅ AGREGAR DECORADOR
 def mis_reservas_movil():
-    """Obtener reservas del residente - VERSIÓN CON VALIDACIÓN MANUAL"""
+    """Obtener reservas del residente"""
     try:
-        print("🎯 [RESIDENTEMOVIL] Entrando a mis_reservas_movil")
+        current_user_id = request.current_user_id
         
-        # Validación manual del token
-        user_id, error_response, status_code = validate_jwt_token()
-        if error_response:
-            return error_response, status_code
+        print(f"📱 [RESIDENTEMOVIL] Obteniendo reservas para usuario: {current_user_id}")
         
-        print(f"📱 [RESIDENTEMOVIL] Obteniendo reservas para usuario: {user_id}")
+        # Obtener el id_residente
+        residente = get_residente_from_user_id(current_user_id)
+        if not residente:
+            return jsonify({
+                'success': False,
+                'message': 'No se encontraron datos del residente'
+            }), 404
         
+        id_residente = residente['id_residente']
+        print(f"✅ ID Residente encontrado: {id_residente}")
+
         conn = get_db_connection()
         if conn is None:
             return jsonify({
                 'success': True,
                 'reservas': _get_reservas_ejemplo(),
                 'modo': 'simulacion_sin_bd',
-                'user_id': user_id
+                'user_id': current_user_id
             })
             
         cursor = conn.cursor()
         
-        # Consulta optimizada para móvil
         cursor.execute("""
             SELECT 
                 pq.id_pago,
@@ -276,12 +377,11 @@ def mis_reservas_movil():
                 pq.fecha_reserva,
                 c.nombre as concepto_nombre
             FROM pagos_qr pq
-            JOIN residente r ON pq.id_residente = r.id_residente
             LEFT JOIN conceptos_pago c ON pq.id_concepto = c.id_concepto
-            WHERE r.id_usuario = %s
+            WHERE pq.id_residente = %s
             ORDER BY pq.fecha_generacion DESC
             LIMIT 20
-        """, (user_id,))
+        """, (id_residente,))
         
         reservas = cursor.fetchall()
         cursor.close()
@@ -302,13 +402,14 @@ def mis_reservas_movil():
                 'concepto': reserva[9] or 'Área común'
             })
         
-        print(f"✅ [RESIDENTEMOVIL] Enviando {len(reservas_list)} reservas al usuario {user_id}")
+        print(f"✅ [RESIDENTEMOVIL] Enviando {len(reservas_list)} reservas al usuario {current_user_id}")
         
         return jsonify({
             'success': True,
             'reservas': reservas_list,
             'total': len(reservas_list),
-            'user_id': user_id
+            'user_id': current_user_id,
+            'id_residente': id_residente
         })
         
     except Exception as e:
@@ -317,415 +418,28 @@ def mis_reservas_movil():
             'success': True,
             'reservas': _get_reservas_ejemplo(),
             'modo': 'simulacion_error',
-            'user_id': user_id if 'user_id' in locals() else None
+            'user_id': current_user_id
         })
 
-@residentemovil_bp.route('/api/test_conexion')
-def test_conexion():
-    """Endpoint para probar conexión con el móvil - VERSIÓN CON VALIDACIÓN MANUAL"""
+@residentemovil_bp.route('/residente/test-jwt')
+@jwt_required  # ✅ AGREGAR DECORADOR
+def test_jwt_residente():
+    """Endpoint de prueba para verificar que JWT funciona en residente"""
     try:
-        print("🎯 [RESIDENTEMOVIL] Entrando a test_conexion")
-        
-        # Validación manual del token
-        user_id, error_response, status_code = validate_jwt_token()
-        if error_response:
-            return error_response, status_code
-        
-        print(f"🔐 [RESIDENTEMOVIL] Test conexión para usuario: {user_id}")
-        
-        conn = get_db_connection()
-        if conn is None:
-            return jsonify({
-                'success': False,
-                'message': 'Error de conexión a la base de datos'
-            }), 500
-            
-        cursor = conn.cursor()
-        cursor.execute("SELECT nombre, correo FROM usuario WHERE id_usuario = %s", (user_id,))
-        usuario = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        
-        if usuario:
-            return jsonify({
-                'success': True,
-                'message': '✅ Conexión exitosa con Flask + JWT',
-                'usuario': usuario[0],
-                'correo': usuario[1],
-                'user_id': user_id,
-                'timestamp': datetime.now().isoformat()
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Usuario no encontrado'
-            }), 404
-            
-    except Exception as e:
-        logger.error(f"Error en test_conexion: {e}")
-        return jsonify({
-            'success': False,
-            'message': f'Error en el servidor: {str(e)}'
-        }), 500
-
-@residentemovil_bp.route('/api/procesar_reserva', methods=['POST'])
-def procesar_reserva_movil():
-    """Procesar reserva - VERSIÓN CON VALIDACIÓN MANUAL"""
-    try:
-        print("🎯 [RESIDENTEMOVIL] Entrando a procesar_reserva_movil")
-        
-        # Validación manual del token
-        user_id, error_response, status_code = validate_jwt_token()
-        if error_response:
-            return error_response, status_code
-        
-        print(f"📱 [RESIDENTEMOVIL] Procesando reserva para usuario: {user_id}")
-        
-        # Obtener datos del residente
-        residente = get_residente_from_user_id(user_id)
-        if not residente:
-            return jsonify({
-                'success': False, 
-                'message': 'No se encontraron datos del residente'
-            }), 400
-        
-        id_residente, piso, nro_departamento = residente
-        print(f"📱 [RESIDENTEMOVIL] Residente: ID={id_residente}, Piso={piso}, Depto={nro_departamento}")
-        
-        # Manejar tanto JSON como FormData
-        if request.content_type and request.content_type.startswith('application/json'):
-            data = request.get_json()
-            boucher_filename = None
-            print("📱 [RESIDENTEMOVIL] Datos recibidos como JSON")
-        else:
-            data = request.form.to_dict()
-            boucher_file = request.files.get('boucher')
-            boucher_filename = None
-            
-            if boucher_file and allowed_file(boucher_file.filename):
-                filename = secure_filename(boucher_file.filename)
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                timestamp = int(datetime.now().timestamp())
-                boucher_filename = f"movil_boucher_{user_id}_{timestamp}_{filename}"
-                boucher_path = os.path.join(UPLOAD_FOLDER, boucher_filename)
-                boucher_file.save(boucher_path)
-                print(f"📱 [RESIDENTEMOVIL] Boucher guardado: {boucher_filename}")
-
-            print("📱 [RESIDENTEMOVIL] Datos recibidos como FormData")
-
-        # Debug
-        print(f"📱 [RESIDENTEMOVIL] Datos recibidos: {list(data.keys())}")
-        for key, value in data.items():
-            print(f"   {key}: {value}")
-        
-        # Validaciones básicas
-        required_fields = ['area', 'nombre_area', 'fecha', 'monto']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({
-                    'success': False, 
-                    'message': f'Campo requerido faltante: {field}'
-                }), 400
-        
-        # CONEXIÓN REAL A LA BASE DE DATOS
-        try:
-            conn = get_db_connection()
-            if conn is None:
-                raise Exception("No se pudo conectar a la base de datos")
-                
-            cursor = conn.cursor()
-            
-            # Determinar concepto_id basado en el área
-            conceptos = {
-                'salon': 1,
-                'piscina': 2, 
-                'gimnasio': 3,
-                'parqueo': 4
-            }
-            concepto_id = conceptos.get(data['area'])
-            print(f"🔍 [RESIDENTEMOVIL] Concepto ID: {concepto_id} para área: {data['area']}")
-            
-            # Si no existe concepto, usar uno por defecto
-            if not concepto_id:
-                cursor.execute("SELECT id_concepto FROM conceptos_pago WHERE activo = true LIMIT 1")
-                concepto_default = cursor.fetchone()
-                concepto_id = concepto_default[0] if concepto_default else 1
-                print(f"⚠️ [RESIDENTEMOVIL] Usando concepto por defecto: {concepto_id}")
-            
-            # Calcular horas y monto
-            horas = int(data.get('horas', 1))
-            monto = float(data['monto'])
-            
-            # Generar código único
-            codigo_qr = f"RESERVA_{user_id}_{int(datetime.now().timestamp())}"
-            
-            # Procesar fecha
-            fecha_reserva_obj = None
-            fecha_reserva_str = data.get('fecha', '')
-            
-            if fecha_reserva_str:
-                try:
-                    fecha_reserva_obj = datetime.strptime(fecha_reserva_str, '%Y-%m-%d').date()
-                except ValueError:
-                    try:
-                        fecha_reserva_obj = datetime.strptime(fecha_reserva_str, '%d/%m/%Y').date()
-                    except ValueError:
-                        fecha_reserva_obj = datetime.now().date()
-            else:
-                fecha_reserva_obj = datetime.now().date()
-            
-            # Método de pago
-            metodo_pago = data.get('metodo_pago', 'qr')
-            
-            # Insertar en pagos_qr
-            query = """
-                INSERT INTO pagos_qr (
-                    id_residente, id_concepto, monto, descripcion, codigo_qr,
-                    fecha_generacion, fecha_expiracion, metodo_pago, comprobante,
-                    img_boucher, horas, fecha_reserva, observaciones
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id_pago
-            """
-            
-            valores = (
-                id_residente,
-                concepto_id,
-                monto,
-                f"Reserva de {data['nombre_area']} para {data['fecha']} - {horas} hora(s)",
-                codigo_qr,
-                datetime.now(),
-                datetime.now() + timedelta(hours=24),
-                metodo_pago,
-                data.get('comprobante', f"{metodo_pago.upper()}_{int(datetime.now().timestamp())}"),
-                boucher_filename,
-                horas,
-                fecha_reserva_obj,
-                f"Reserva móvil - {datetime.now().strftime('%d/%m/%Y %H:%M')}"
-            )
-            
-            print(f"🚀 [RESIDENTEMOVIL] Ejecutando inserción...")
-            cursor.execute(query, valores)
-            pago_id = cursor.fetchone()[0]
-            
-            conn.commit()
-            cursor.close()
-            conn.close()
-            
-            print(f"✅ [RESIDENTEMOVIL] Reserva REAL insertada en BD. ID: {pago_id}")
-            
-            return jsonify({
-                'success': True, 
-                'pago_id': pago_id,
-                'message': 'Reserva procesada exitosamente',
-                'residente': {
-                    'id': id_residente,
-                    'piso': piso,
-                    'departamento': nro_departamento
-                },
-                'user_id': user_id,
-                'modo': 'bd_real'
-            })
-            
-        except Exception as db_error:
-            print(f"❌ [RESIDENTEMOVIL] Error en BD: {db_error}")
-            # Si hay error en BD, retornar simulación
-            pago_id = int(datetime.now().timestamp())
-            
-            return jsonify({
-                'success': True, 
-                'pago_id': pago_id,
-                'message': 'Reserva procesada en modo simulación (error BD)',
-                'user_id': user_id,
-                'modo': 'simulacion_error_bd'
-            })
-        
-    except Exception as e:
-        logger.error(f"Error procesando reserva móvil: {e}")
-        import traceback
-        print(f"📋 Traceback: {traceback.format_exc()}")
-        return jsonify({
-            'success': False, 
-            'message': f'Error al procesar reserva: {str(e)}'
-        }), 500
-
-@residentemovil_bp.route('/api/generar_factura/<int:pago_id>')
-def generar_factura_movil(pago_id):
-    """Generar factura - VERSIÓN CON VALIDACIÓN MANUAL"""
-    try:
-        # Validación manual del token
-        user_id, error_response, status_code = validate_jwt_token()
-        if error_response:
-            return error_response, status_code
-        
-        print(f"🧾 [RESIDENTEMOVIL] Generando factura para pago {pago_id}, usuario {user_id}")
-        
-        # Obtener datos del usuario para la factura
-        conn = get_db_connection()
-        if conn is None:
-            return jsonify({
-                'success': False,
-                'message': 'Error de conexión a la base de datos'
-            }), 500
-            
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT u.nombre, u.ap_paterno, u.ap_materno, u.ci, r.piso, r.nro_departamento
-            FROM usuario u
-            JOIN residente r ON u.id_usuario = r.id_usuario
-            WHERE u.id_usuario = %s
-        """, (user_id,))
-        
-        usuario_data = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        
-        if usuario_data:
-            nombre, ap_paterno, ap_materno, ci, piso, depto = usuario_data
-            nombre_completo = f"{nombre} {ap_paterno or ''} {ap_materno or ''}".strip()
-            departamento = f"Piso {piso} - Dpto {depto}"
-        else:
-            nombre_completo = "Residente Móvil"
-            ci = "1234567"
-            departamento = "Piso X - Dpto Y"
-
-        # Factura de ejemplo
-        factura_data = {
-            'numero_factura': f"FAC-MOVIL-{pago_id:06d}",
-            'fecha_emision': datetime.now().strftime('%d/%m/%Y %H:%M'),
-            'cliente': {
-                'nombre': nombre_completo,
-                'ci': ci,
-                'departamento': departamento
-            },
-            'concepto': 'Reserva de Área Común',
-            'monto': 350.00,
-            'metodo_pago': 'qr',
-            'estado': 'CONFIRMADO',
-            'qr_data': f'RESERVA_{pago_id}',
-            'user_id': user_id
-        }
+        current_user_id = request.current_user_id
         
         return jsonify({
             'success': True,
-            'factura': factura_data
+            'message': '✅ JWT funcionando correctamente en residente móvil',
+            'user_id': current_user_id,
+            'auth_header': request.headers.get('Authorization', 'No header')
         })
         
     except Exception as e:
-        logger.error(f"Error generando factura móvil: {e}")
         return jsonify({
             'success': False,
-            'message': 'Error generando factura'
+            'error': str(e)
         }), 500
-
-@residentemovil_bp.route('/api/horarios_areas')
-def horarios_areas_movil():
-    """Obtener horarios de áreas - VERSIÓN CON VALIDACIÓN MANUAL"""
-    try:
-        # Validación manual del token
-        user_id, error_response, status_code = validate_jwt_token()
-        if error_response:
-            return error_response, status_code
-        
-        print(f"📱 [RESIDENTEMOVIL] Obteniendo horarios para usuario: {user_id}")
-        
-        horarios = {
-            'salon': 'Lunes a Domingo: 8:00 - 22:00',
-            'piscina': 'Martes a Domingo: 9:00 - 19:00', 
-            'gimnasio': 'Lunes a Sábado: 6:00 - 22:00',
-            'parqueo': 'Todos los días: 24 horas'
-        }
-        
-        return jsonify({
-            'success': True,
-            'horarios': horarios,
-            'user_id': user_id
-        })
-        
-    except Exception as e:
-        logger.error(f"Error obteniendo horarios: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'Error obteniendo horarios'
-        }), 500
-
-# ===== ENDPOINT DE DEBUG JWT =====
-
-@residentemovil_bp.route('/api/debug_jwt')
-def debug_jwt():
-    """Endpoint para debuggear JWT"""
-    try:
-        auth_header = request.headers.get('Authorization', '')
-        print(f"🔐 [DEBUG JWT] Auth Header: {auth_header}")
-        
-        if not auth_header.startswith('Bearer '):
-            return jsonify({
-                'success': False,
-                'message': 'No Bearer token found',
-                'auth_header': auth_header
-            }), 401
-            
-        token = auth_header[7:]
-        
-        # Probar con PyJWT
-        try:
-            secret_key = current_app.config.get('JWT_SECRET_KEY', 'NO_CONFIGURADO')
-            decoded = pyjwt.decode(token, secret_key, algorithms=['HS256'])
-            
-            return jsonify({
-                'success': True,
-                'message': '✅ JWT válido en residentemovil',
-                'decoded': decoded,
-                'secret_key_used': secret_key[:10] + '...',
-                'user_id': decoded.get('sub'),
-                'token_length': len(token)
-            })
-            
-        except Exception as e:
-            return jsonify({
-                'success': False,
-                'message': f'❌ JWT inválido: {str(e)}',
-                'secret_key_used': secret_key[:10] + '...' if secret_key != 'NO_CONFIGURADO' else 'NO_CONFIGURADO',
-                'token_length': len(token)
-            }), 422
-            
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Error en debug: {str(e)}'
-        }), 500
-
-# ===== ENDPOINTS PÚBLICOS (sin autenticación) =====
-
-@residentemovil_bp.route('/api/public/test')
-def test_publico():
-    """Endpoint público para pruebas de conexión"""
-    return jsonify({
-        'success': True,
-        'message': '✅ Endpoint móvil funcionando',
-        'timestamp': datetime.now().isoformat(),
-        'version': '2.0.0-jwt-manual'
-    })
-
-@residentemovil_bp.route('/api/public/areas')
-def areas_publicas():
-    """Áreas disponibles sin autenticación (para desarrollo)"""
-    return jsonify({
-        'success': True,
-        'areas': [
-            {
-                'id': 'salon',
-                'nombre': 'Salón de Eventos',
-                'precio': 350.00,
-                'disponible': True
-            },
-            {
-                'id': 'piscina',
-                'nombre': 'Piscina', 
-                'precio': 200.00,
-                'disponible': True
-            }
-        ]
-    })
 
 # ===== FUNCIONES AUXILIARES =====
 
@@ -757,35 +471,3 @@ def _get_reservas_ejemplo():
             'concepto': 'Gimnasio'
         }
     ]
-
-# ===== ENDPOINT PARA RENOVAR TOKEN =====
-
-@residentemovil_bp.route('/api/renovar_token', methods=['POST'])
-def renovar_token():
-    """Renovar token JWT"""
-    try:
-        # Validación manual del token actual
-        user_id, error_response, status_code = validate_jwt_token()
-        if error_response:
-            return error_response, status_code
-        
-        # Crear nuevo token
-        from flask_jwt_extended import create_access_token
-        nuevo_token = create_access_token(
-            identity=user_id,
-            expires_delta=timedelta(days=7)
-        )
-        
-        return jsonify({
-            'success': True,
-            'token': nuevo_token,
-            'message': 'Token renovado exitosamente',
-            'user_id': user_id
-        })
-        
-    except Exception as e:
-        logger.error(f"Error renovando token: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'Error renovando token'
-        }), 500

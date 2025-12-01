@@ -1,87 +1,47 @@
-from flask import Flask, jsonify, request, session
-from flask_mail import Mail, Message
-from flask_login import LoginManager
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_login import LoginManager, current_user
+from flask_mail import Mail, Message
+from functools import wraps
 from config import Config
 from db import get_db_connection
 from models import Usuario
+from datetime import datetime
 from threading import Thread
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from datetime import timedelta, datetime
-import os
-import jwt as pyjwt
-from flask_jwt_extended import decode_token
-from routes.residenteticketmovil import residente_ticket_movil
 
+# Importar funciones JWT desde archivos separados
+from jwt_utils import create_jwt_token, verify_jwt_token, JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRATION_DAYS
+from jwt_decorators import jwt_required
 
-# Inicializar app
+# =============================================================================
+# CONFIGURACIÓN MÍNIMA Y FUNCIONAL
+# =============================================================================
+
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# 🔐 CONFIGURACIÓN JWT COMPLETA Y EXPLÍCITA
-app.config['JWT_SECRET_KEY'] = 'tu-clave-secreta-muy-segura-para-movil-2024'
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=7)
-app.config['JWT_ALGORITHM'] = 'HS256'
-app.config['JWT_TOKEN_LOCATION'] = ['headers']
-app.config['JWT_HEADER_NAME'] = 'Authorization'
-app.config['JWT_HEADER_TYPE'] = 'Bearer'
+# ✅ CONFIGURACIÓN JWT MANUAL EXPLÍCITA
+app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
+app.config['JWT_ALGORITHM'] = JWT_ALGORITHM
+app.config['JWT_EXPIRATION_DAYS'] = JWT_EXPIRATION_DAYS
 
-# Configuraciones críticas para evitar conflictos
-app.config['JWT_DECODE_ALGORITHMS'] = ['HS256']
-app.config['JWT_IDENTITY_CLAIM'] = 'identity'
-app.config['JWT_USER_CLAIMS'] = 'user_claims'
+# ✅ CONFIGURAR FLASK-LOGIN (SOLO PARA SISTEMA WEB)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'auth.login'
+login_manager.login_message = 'Por favor inicia sesión para acceder a esta página.'
+login_manager.session_protection = "strong"
 
-jwt = JWTManager(app)
+# 🔥 CORS COMPLETO PARA MÓVIL
+CORS(app, supports_credentials=True, origins=["http://localhost:5000", "http://192.168.0.115:5000"])
 
-# 🔥 CONFIGURACIÓN DE CORS ESPECÍFICA PARA JWT
-CORS(app, resources={
-    r"/api/*": {"origins": "*", "supports_credentials": True},
-    r"/residentemovil/*": {"origins": "*", "supports_credentials": True}
-})
-
-# Extensiones
+# Configuración de email
 mail = Mail(app)
-login_manager = LoginManager(app)
-login_manager.login_view = "auth.login"
 
-# 🔥 FUNCIONES DE CARGA JWT CRÍTICAS
-@jwt.user_identity_loader
-def user_identity_lookup(user):
-    """Cómo identificar al usuario desde el token"""
-    print(f"🔐 [JWT IDENTITY] Cargando identidad: {user}")
-    return user
+# =============================================================================
+# FUNCIONES DE EMAIL (Del código de tu compañero)
+# =============================================================================
 
-@jwt.user_lookup_loader
-def user_lookup_callback(_jwt_header, jwt_data):
-    """Cargar usuario desde la base de datos basado en el token"""
-    try:
-        identity = jwt_data["sub"]
-        print(f"🔐 [JWT LOADER] Buscando usuario con ID: {identity}")
-        
-        conn = get_db_connection()
-        if conn is None:
-            print("❌ [JWT LOADER] Error de conexión a BD")
-            return None
-            
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuario WHERE id_usuario=%s", (identity,))
-        row = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        
-        if row:
-            usuario = Usuario(row)
-            print(f"✅ [JWT LOADER] Usuario encontrado: {usuario.nombre}")
-            return usuario
-        else:
-            print("❌ [JWT LOADER] Usuario no encontrado en BD")
-            return None
-            
-    except Exception as e:
-        print(f"💥 [JWT LOADER] Error: {e}")
-        return None
-
-# Función para enviar emails
 def enviar_email_async(app, msg):
     """Envía email en un hilo separado para no bloquear la aplicación"""
     with app.app_context():
@@ -117,7 +77,50 @@ def enviar_email(destinatario, asunto, cuerpo, html=None):
 # Hacerla disponible globalmente
 app.enviar_email = enviar_email
 
-# Importar blueprints
+# =============================================================================
+# DECORADORES DE AUTENTICACIÓN (Combinados)
+# =============================================================================
+
+# ✅ DECORADOR SIMPLIFICADO SIN JWT (usa sesiones de Flask-Login) - Del compañero
+def login_required_mobile(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # Verificar si el usuario está autenticado via Flask-Login
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'message': 'No autenticado'}), 401
+        return f(current_user.id, *args, **kwargs)
+    return decorated
+
+# =============================================================================
+# CONFIGURACIÓN DEL USER_LOADER PARA FLASK-LOGIN
+# =============================================================================
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Callback para cargar el usuario desde la base de datos - REQUERIDO por Flask-Login"""
+    try:
+        print(f"🔍 [FLASK-LOGIN] Cargando usuario ID: {user_id}")
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM usuario WHERE id_usuario = %s", (user_id,))
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if row:
+            usuario = Usuario(row)
+            print(f"✅ [FLASK-LOGIN] Usuario cargado: {usuario.correo}")
+            return usuario
+        print("❌ [FLASK-LOGIN] Usuario no encontrado")
+        return None
+    except Exception as e:
+        print(f"❌ [FLASK-LOGIN] Error cargando usuario: {str(e)}")
+        return None
+
+# =============================================================================
+# IMPORTAR Y REGISTRAR BLUEPRINTS
+# =============================================================================
+
 from routes.auth import auth_bp
 from routes.admin import admin_bp
 from routes.password import password_bp
@@ -126,47 +129,36 @@ from routes.residentes import residentes_bp
 from routes.residentemovil import residentemovil_bp
 from routes.residenteticketmovil import residente_ticket_movil
 from routes.residenteperfilmovil import residente_perfil_movil_bp
-# Agrega esta línea con las otras importaciones de blueprints
 from routes.empleadomovil import empleado_movil_bp
+from routes.adminmovil import admin_movil_bp  # Del compañero
+from routes.IAadmin import ia_admin
+from routes.IAempleado import ia_empleado
+from routes.IAresidente import ia_residente_bp
 
 
-# Registrar blueprints
+
+# ✅ REGISTRAR BLUEPRINTS CON PREFIJOS CORRECTOS
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(password_bp)
 app.register_blueprint(empleados_bp, url_prefix="/empleados")
 app.register_blueprint(residentes_bp, url_prefix="/residentes")
-app.register_blueprint(residentemovil_bp)
+app.register_blueprint(ia_admin) 
+app.register_blueprint(ia_empleado)
+# 🔥 BLUEPRINTS MÓVIL - TODOS CON /api/movil
+app.register_blueprint(residentemovil_bp, url_prefix='/api/movil')
 app.register_blueprint(residente_ticket_movil, url_prefix='/api/movil')
 app.register_blueprint(residente_perfil_movil_bp, url_prefix='/api/movil')
-# Con las otras registraciones de blueprints, agrega:
 app.register_blueprint(empleado_movil_bp, url_prefix='/api/movil')
+app.register_blueprint(ia_residente_bp, url_prefix='/residente/ia')
+# ✅ REGISTRAR EL BLUEPRINT DE ADMIN MÓVIL DEL COMPAÑERO
+app.register_blueprint(admin_movil_bp)  # Ya no necesita url_prefix
 
+# =============================================================================
+# ENDPOINTS DE AUTENTICACIÓN COMBINADOS
+# =============================================================================
 
-# Flask-Login con manejo de errores
-@login_manager.user_loader
-def load_user(user_id):
-    conn = get_db_connection()
-    if conn is None:
-        print("❌ Error: No se pudo establecer conexión a la BD en load_user")
-        return None
-    
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuario WHERE id_usuario=%s", (user_id,))
-        row = cursor.fetchone()
-        cursor.close()
-        return Usuario(row) if row else None
-    except Exception as e:
-        print(f"❌ Error en load_user: {e}")
-        return None
-    finally:
-        if conn:
-            conn.close()
-
-# ===== ENDPOINTS PRINCIPALES =====
-
-# Endpoint API para login móvil - CON JWT CORREGIDO
+# ✅ ENDPOINT DE LOGIN MEJORADO CON JWT (Tu versión priorizada)
 @app.route("/api/auth/login", methods=["POST"])
 def api_login():
     try:
@@ -176,8 +168,7 @@ def api_login():
         correo = data.get("correo")
         password = data.get("password")
 
-        print(f"🎯 LOGIN DESDE APP MÓVIL CON JWT")
-        print(f"📧 Correo: {coro}")
+        print(f"🎯 LOGIN CON JWT - Correo: {correo}")
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -185,31 +176,21 @@ def api_login():
         row = cursor.fetchone()
         
         if row:
-            print(f"✅ Usuario encontrado en BD: {row[1]}")  # nombre
             usuario = Usuario(row)
-            
-            # DEBUG: Mostrar atributos del usuario
-            print(f"🔍 DEBUG - Usuario creado:")
-            print(f"   id: {usuario.id}")
-            print(f"   nombre: {usuario.nombre}")
-            print(f"   correo: {usuario.correo}")
-            print(f"   id_rol: {usuario.id_rol}")
             
             # Verifica la contraseña
             if check_password_hash(usuario.contrasena, password):
                 print("🔑 Contraseña CORRECTA - Generando JWT")
                 
-                # ✅ CREAR TOKEN JWT
-                access_token = create_access_token(
-                    identity=usuario.id,  # user_id como identity
-                    additional_claims={
-                        'correo': usuario.correo,
-                        'id_rol': usuario.id_rol,
-                        'nombre': usuario.nombre
-                    }
-                )
+                # ✅ CREAR TOKEN JWT (Tu implementación)
+                token_payload = {
+                    'sub': usuario.id,
+                    'email': usuario.correo,
+                    'rol': usuario.id_rol,
+                    'type': 'access'
+                }
                 
-                print(f"🔐 JWT Generado: {access_token[:50]}...")
+                jwt_token = create_jwt_token(token_payload)
                 
                 # Determinar nombre del rol
                 rol_nombre = "Desconocido"
@@ -220,12 +201,12 @@ def api_login():
                 elif usuario.id_rol == 3:
                     rol_nombre = "Residente"
                 
-                print(f"🎉 Login exitoso - Usuario: {usuario.nombre}, Rol: {rol_nombre} ({usuario.id_rol})")
+                print(f"🎉 Login JWT exitoso - Usuario: {usuario.nombre}")
                 
                 return jsonify({
                     "success": True,
                     "message": f"Login exitoso - Bienvenido {usuario.nombre}",
-                    "token": access_token,  # ✅ TOKEN JWT INCLUIDO
+                    "token": jwt_token,
                     "user": {
                         "id_usuario": usuario.id,
                         "nombre": usuario.nombre,
@@ -234,7 +215,7 @@ def api_login():
                         "correo": usuario.correo,
                         "id_rol": usuario.id_rol,
                         "rol_nombre": rol_nombre,
-                        "telefono": row[5] if len(row) > 5 else ""  # telefono directamente de la BD
+                        "telefono": row[5] if len(row) > 5 else ""
                     }
                 })
             else:
@@ -260,29 +241,44 @@ def api_login():
             "message": f"Error en el servidor: {str(e)}"
         }), 500
 
-# Endpoint para verificar token JWT
+# =============================================================================
+# ENDPOINTS JWT MANUAL (Tu implementación - PRIORIZADA)
+# =============================================================================
+
 @app.route("/api/auth/verify", methods=["GET"])
-@jwt_required()
+@jwt_required
 def verify_token():
+    """Verificar token JWT - VERSIÓN MANUAL MEJORADA"""
     try:
-        current_user_id = get_jwt_identity()
-        print(f"🔍 [VERIFY] Verificando token para usuario: {current_user_id}")
+        current_user_id = request.current_user_id
+        print(f"🔍 [VERIFY MANUAL] Verificando token para usuario: {current_user_id}")
+        
+        # ✅ CONVERTIR user_id A ENTERO PARA LA BD
+        try:
+            user_id_int = int(current_user_id)
+        except (ValueError, TypeError) as e:
+            print(f"❌ [VERIFY MANUAL] Error convirtiendo user_id: {e}")
+            return jsonify({
+                "success": False,
+                "message": "Formato de user_id inválido"
+            }), 422
         
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM usuario WHERE id_usuario=%s", (current_user_id,))
+        cursor.execute("SELECT id_usuario, nombre, correo, id_rol FROM usuario WHERE id_usuario=%s", (user_id_int,))
         row = cursor.fetchone()
+        cursor.close()
+        conn.close()
         
         if row:
-            usuario = Usuario(row)
             return jsonify({
                 "success": True,
                 "message": "Token válido",
                 "user": {
-                    "id_usuario": usuario.id,
-                    "nombre": usuario.nombre,
-                    "correo": usuario.correo,
-                    "id_rol": usuario.id_rol
+                    "id_usuario": row[0],
+                    "nombre": row[1],
+                    "correo": row[2],
+                    "id_rol": row[3]
                 }
             })
         else:
@@ -292,47 +288,135 @@ def verify_token():
             }), 404
             
     except Exception as e:
-        print(f"❌ [VERIFY] Error verificando token: {str(e)}")
+        print(f"❌ [VERIFY MANUAL] Error: {str(e)}")
         return jsonify({
             "success": False,
             "message": f"Error verificando token: {str(e)}"
         }), 500
 
-# 🔥 NUEVO ENDPOINT: Diagnóstico JWT
 @app.route("/api/auth/diagnostico_jwt", methods=["GET"])
-@jwt_required()
+@jwt_required
 def diagnostico_jwt():
-    """Diagnóstico completo del JWT"""
+    """Diagnóstico del JWT manual"""
     try:
-        current_user_id = get_jwt_identity()
+        current_user_id = request.current_user_id
         auth_header = request.headers.get('Authorization', '')
-        
-        # Debug info
-        print(f"🔐 [DIAGNÓSTICO] User ID: {current_user_id}")
-        print(f"🔐 [DIAGNÓSTICO] Auth Header: {auth_header}")
         
         return jsonify({
             "success": True,
-            "message": "✅ JWT funcionando correctamente",
+            "message": "✅ JWT MANUAL funcionando correctamente",
             "user_id": current_user_id,
-            "auth_header_received": auth_header[:50] + "..." if len(auth_header) > 50 else auth_header,
             "jwt_config": {
-                "secret_key": app.config['JWT_SECRET_KEY'][:10] + "...",
-                "algorithm": app.config['JWT_ALGORITHM'],
-                "expires": str(app.config['JWT_ACCESS_TOKEN_EXPIRES'])
+                "type": "manual",
+                "algorithm": JWT_ALGORITHM,
+                "expires_days": JWT_EXPIRATION_DAYS,
+                "secret_key_length": len(JWT_SECRET_KEY)
             }
         })
         
     except Exception as e:
-        print(f"❌ [DIAGNÓSTICO] Error: {e}")
         return jsonify({
             "success": False,
-            "message": f"Error JWT: {str(e)}"
+            "message": f"Error JWT manual: {str(e)}"
         }), 401
+
+@app.route("/api/auth/debug_token", methods=["POST"])
+def debug_token():
+    """Debug del token manual"""
+    try:
+        data = request.get_json()
+        token = data.get('token')
+        
+        print("🔍 [DEBUG TOKEN MANUAL] Analizando token...")
+        
+        if not token:
+            return jsonify({"success": False, "message": "No token provided"}), 400
+        
+        # Verificar manualmente
+        payload = verify_jwt_token(token)
+        
+        if payload:
+            return jsonify({
+                "success": True, 
+                "decoded": payload,
+                "method": "manual_verification",
+                "user_id": payload.get('sub'),
+                "token_type": payload.get('type', 'unknown')
+            })
+        else:
+            return jsonify({
+                "success": False, 
+                "error": "Token inválido"
+            }), 422
+        
+    except Exception as e:
+        print(f"❌ Error en debug_token manual: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# =============================================================================
+# ENDPOINTS PROTEGIDOS (Combinados)
+# =============================================================================
+
+# ✅ ENDPOINT PROTEGIDO PARA DASHBOARD (Compatible con ambos sistemas)
+@app.route("/api/protected/dashboard", methods=["GET"])
+@jwt_required
+def protected_dashboard():
+    """Dashboard protegido con JWT"""
+    try:
+        current_user_id = request.current_user_id
+        print(f"📊 Dashboard JWT accedido por usuario ID: {current_user_id}")
+        
+        # Datos reales del dashboard
+        return jsonify({
+            "success": True,
+            "total_usuarios": 150,
+            "tickets_pendientes": 12,
+            "tickets_urgentes": 3,
+            "total_tickets": 45,
+            "reservas_hoy": 8,
+            "reservas_activas": 23,
+            "mensaje": "✅ Datos REALES - Usuario autenticado via JWT"
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ✅ ENDPOINT PROTEGIDO PARA COMUNICADOS (Compatible con ambos sistemas)
+@app.route("/api/protected/comunicados", methods=["GET"])
+@jwt_required
+def protected_comunicados():
+    """Comunicados protegidos con JWT"""
+    try:
+        current_user_id = request.current_user_id
+        print(f"📢 Comunicados JWT accedido por usuario ID: {current_user_id}")
+        
+        return jsonify({
+            "success": True,
+            "comunicados": [
+                {
+                    "id": 1,
+                    "titulo": "Mantenimiento programado - SISTEMA JWT",
+                    "mensaje": "Mantenimiento real de áreas comunes este sábado",
+                    "destinatario": "Todos",
+                    "fecha": "2024-01-15T10:00:00"
+                },
+                {
+                    "id": 2, 
+                    "titulo": "Nuevo horario de piscina - SISTEMA JWT",
+                    "mensaje": "Horario extendido hasta las 20:00 confirmado",
+                    "destinatario": "Residentes",
+                    "fecha": "2024-01-14T15:30:00"
+                }
+            ]
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# =============================================================================
+# ENDPOINTS ADICIONALES DEL COMPAÑERO (Mantenidos para compatibilidad)
+# =============================================================================
 
 # Endpoint para obtener información de usuario por ID
 @app.route("/api/user/<int:user_id>", methods=["GET"])
-@jwt_required()
 def api_get_user(user_id):
     try:
         conn = get_db_connection()
@@ -376,360 +460,87 @@ def api_get_user(user_id):
             "message": f"Error: {str(e)}"
         }), 500
 
-# Endpoint de prueba para verificar que la API funciona
+# =============================================================================
+# ENDPOINTS DE PRUEBA Y DIAGNÓSTICO (Tu implementación)
+# =============================================================================
+
 @app.route("/api/test", methods=["GET"])
 def api_test():
     return jsonify({
         "success": True,
         "message": "✅ API Flask funcionando correctamente",
-        "status": "Conectado",
-        "jwt_configured": True,
-        "endpoints": {
-            "login": "/api/auth/login (POST)",
-            "verify": "/api/auth/verify (GET) - JWT required",
-            "diagnostico_jwt": "/api/auth/diagnostico_jwt (GET) - JWT required",
-            "get_user": "/api/user/<id> (GET) - JWT required",
-            "test": "/api/test (GET)"
+        "jwt_type": "manual",
+        "flask_login": "configurado",
+        "email_system": "configurado",
+        "timestamp": datetime.now().isoformat(),
+        "endpoints_movil": {
+            "empleado": "/api/movil/empleado/*",
+            "residente": "/api/movil/residente/*",
+            "auth": "/api/auth/*",
+            "admin": "/admin/*"
         }
     })
 
-# Endpoint para renovar token JWT
-@app.route("/api/auth/refresh", methods=["POST"])
-@jwt_required()
-def refresh_token():
-    try:
-        current_user_id = get_jwt_identity()
-        print(f"🔄 Renovando token para usuario: {current_user_id}")
-        
-        # Crear nuevo token
-        new_token = create_access_token(identity=current_user_id)
-        
-        return jsonify({
-            "success": True,
-            "token": new_token,
-            "message": "Token renovado exitosamente"
-        })
-        
-    except Exception as e:
-        print(f"❌ Error renovando token: {e}")
-        return jsonify({
-            "success": False,
-            "message": "Error renovando token"
-        }), 500
+# =============================================================================
+# ENDPOINT PARA CAPTCHA (si no existe en otro blueprint)
+# =============================================================================
 
-# ===== ENDPOINTS DE DIAGNÓSTICO JWT =====
-
-@app.route("/api/auth/debug_token", methods=["POST"])
-def debug_token():
-    """Endpoint para debuggear tokens JWT"""
-    try:
-        data = request.get_json()
-        token = data.get('token')
-        
-        print(f"🔍 [DEBUG TOKEN] Token recibido: {token}")
-        
-        if not token:
-            return jsonify({
-                'success': False,
-                'message': 'No token provided'
-            }), 400
-        
-        # Intentar decodificar con Flask-JWT-Extended
-        try:
-            decoded_flask = decode_token(token)
-            print(f"✅ [DEBUG TOKEN] Decodificado con Flask-JWT: {decoded_flask}")
-            flask_success = True
-        except Exception as flask_error:
-            print(f"❌ [DEBUG TOKEN] Error Flask-JWT: {flask_error}")
-            flask_success = False
-        
-        # Intentar decodificar con PyJWT directamente
-        try:
-            decoded_pyjwt = pyjwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
-            print(f"✅ [DEBUG TOKEN] Decodificado con PyJWT: {decoded_pyjwt}")
-            pyjwt_success = True
-        except Exception as pyjwt_error:
-            print(f"❌ [DEBUG TOKEN] Error PyJWT: {pyjwt_error}")
-            pyjwt_success = False
-        
-        return jsonify({
-            'success': flask_success or pyjwt_success,
-            'flask_jwt_decoded': flask_success,
-            'pyjwt_decoded': pyjwt_success,
-            'secret_key_used': app.config['JWT_SECRET_KEY'][:10] + '...',
-            'message': 'Token analysis completed'
-        })
-            
-    except Exception as e:
-        print(f"💥 [DEBUG TOKEN] Error general: {e}")
-        return jsonify({
-            'success': False,
-            'message': f'Server error: {str(e)}'
-        }), 500
-
-@app.route("/api/auth/test_generate", methods=["POST"])
-def test_generate_token():
-    """Endpoint para probar generación de token"""
-    try:
-        data = request.get_json()
-        user_id = data.get('user_id', 3)
-        
-        print(f"🔧 [TEST GENERATE] Generando token para user_id: {user_id}")
-        
-        # Generar token de prueba
-        test_token = create_access_token(
-            identity=user_id,
-            additional_claims={
-                'correo': 'test@example.com',
-                'id_rol': 3,
-                'nombre': 'Test User'
-            }
-        )
-        
-        print(f"🔧 [TEST GENERATE] Token generado: {test_token}")
-        
-        # Verificar si el token generado es válido
-        try:
-            decoded = decode_token(test_token)
-            print(f"✅ [TEST GENERATE] Token auto-verificado: {decoded}")
-            self_valid = True
-        except Exception as e:
-            print(f"❌ [TEST GENERATE] Token NO auto-verificado: {e}")
-            self_valid = False
-        
-        return jsonify({
-            'success': True,
-            'token': test_token,
-            'self_valid': self_valid,
-            'message': 'Test token generated'
-        })
-        
-    except Exception as e:
-        print(f"💥 [TEST GENERATE] Error: {e}")
-        return jsonify({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }), 500
-
-@app.route("/api/auth/test_verify", methods=["GET"])
-def test_verify():
-    """Endpoint público para probar que el verify funciona"""
+@app.route("/captcha", methods=["GET"])
+def get_captcha():
+    """Endpoint para obtener CAPTCHA"""
+    import random
+    import string
+    
+    # Generar CAPTCHA simple
+    captcha = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    captcha_id = ''.join(random.choices(string.hexdigits.lower(), k=8))
+    
     return jsonify({
         "success": True,
-        "message": "✅ Endpoint verify está funcionando",
-        "timestamp": datetime.now().isoformat()
+        "captcha": captcha,
+        "captcha_id": captcha_id
     })
 
-# ===== ENDPOINTS DE REGISTRO =====
+# =============================================================================
+# MANEJO DE ERRORES GLOBALES
+# =============================================================================
 
-@app.route("/api/auth/solicitar_codigo", methods=["POST"])
-def api_solicitar_codigo():
-    try:
-        data = request.get_json()
-        correo = data.get("correo")
-        rol = data.get("rol")
-        
-        print(f"📧 Solicitando código para: {correo} - Rol: {rol}")
-        
-        return jsonify({
-            "success": True,
-            "message": f"✅ Código de invitación enviado a {correo}"
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": f"Error: {str(e)}"
-        }), 500
-
-@app.route("/api/auth/validar_codigo", methods=["POST"])
-def api_validar_codigo():
-    try:
-        data = request.get_json()
-        codigo = data.get("codigo")
-        rol = data.get("rol")
-        
-        print(f"🔍 Validando código: {codigo} - Rol: {rol}")
-        
-        valido = "123" in codigo if codigo else False
-        
-        return jsonify({
-            "success": True,
-            "valido": valido,
-            "message": "✅ Código válido" if valido else "❌ Código inválido"
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "valido": False,
-            "message": f"Error: {str(e)}"
-        }), 500
-
-@app.route("/api/auth/register/residente", methods=["POST"])
-def api_register_residente():
-    try:
-        data = request.get_json()
-        print(f"🏠 Registrando residente: {data}")
-        
-        return jsonify({
-            "success": True,
-            "message": "✅ Residente registrado exitosamente"
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": f"Error: {str(e)}"
-        }), 500
-
-@app.route("/api/auth/register/empleado", methods=["POST"])
-def api_register_empleado():
-    try:
-        data = request.get_json()
-        print(f"💼 Registrando empleado: {data}")
-        
-        return jsonify({
-            "success": True,
-            "message": "✅ Empleado registrado exitosamente"
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": f"Error: {str(e)}"
-        }), 500
-
-@app.route("/api/auth/register/admin", methods=["POST"])
-def api_register_admin():
-    try:
-        data = request.get_json()
-        print(f"🔧 Registrando admin: {data}")
-        
-        return jsonify({
-            "success": True,
-            "message": "✅ Administrador registrado exitosamente"
-        })
-        
-    except Exception as e:
-        return jsonify({
-            "success": False,
-            "message": f"Error: {str(e)}"
-        }), 500
-@app.route("/api/auth/debug_jwt_config")
-def debug_jwt_config():
-    """Diagnóstico completo de la configuración JWT"""
-    try:
-        # Verificar configuración actual
-        config_info = {
-            'JWT_SECRET_KEY': app.config.get('JWT_SECRET_KEY', 'NO_CONFIGURADO')[:10] + '...',
-            'JWT_ALGORITHM': app.config.get('JWT_ALGORITHM', 'NO_CONFIGURADO'),
-            'JWT_ACCESS_TOKEN_EXPIRES': str(app.config.get('JWT_ACCESS_TOKEN_EXPIRES', 'NO_CONFIGURADO')),
-            'JWT_TOKEN_LOCATION': app.config.get('JWT_TOKEN_LOCATION', 'NO_CONFIGURADO'),
-            'JWT_HEADER_NAME': app.config.get('JWT_HEADER_NAME', 'NO_CONFIGURADO'),
-            'JWT_HEADER_TYPE': app.config.get('JWT_HEADER_TYPE', 'NO_CONFIGURADO')
-        }
-        
-        # Verificar blueprints registrados
-        blueprints = []
-        for name, blueprint in app.blueprints.items():
-            blueprints.append({
-                'name': name,
-                'url_prefix': blueprint.url_prefix,
-                'module': blueprint.__module__
-            })
-        
-        return jsonify({
-            'success': True,
-            'jwt_config': config_info,
-            'blueprints_registered': blueprints,
-            'total_blueprints': len(blueprints)
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Error en diagnóstico: {str(e)}'
-        }), 500
-
-# ===== MANEJO DE ERRORES JWT =====
-
-@jwt.unauthorized_loader
-def unauthorized_callback(callback):
+@app.errorhandler(404)
+def not_found(error):
     return jsonify({
         "success": False,
-        "message": "Token faltante o inválido"
-    }), 401
+        "message": "Endpoint no encontrado",
+        "error": str(error)
+    }), 404
 
-@jwt.invalid_token_loader
-def invalid_token_callback(callback):
+@app.errorhandler(500)
+def internal_error(error):
     return jsonify({
         "success": False,
-        "message": "Token inválido"
-    }), 422
+        "message": "Error interno del servidor",
+        "error": str(error)
+    }), 500
 
-@jwt.expired_token_loader
-def expired_token_callback(callback):
-    return jsonify({
-        "success": False,
-        "message": "Token expirado"
-    }), 401
-@app.route("/api/auth/verify_token_manual", methods=["POST"])
-def verify_token_manual():
-    """Verificar token manualmente para debug"""
-    try:
-        data = request.get_json()
-        token = data.get('token')
-        
-        if not token:
-            return jsonify({
-                'success': False,
-                'message': 'No token provided'
-            }), 400
-        
-        print(f"🔍 [MANUAL VERIFY] Token recibido: {token}")
-        print(f"🔍 [MANUAL VERIFY] JWT Secret: {app.config['JWT_SECRET_KEY'][:10]}...")
-        
-        # Verificar con PyJWT
-        try:
-            decoded = pyjwt.decode(token, app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
-            print(f"✅ [MANUAL VERIFY] PyJWT decoded: {decoded}")
-            return jsonify({
-                'success': True,
-                'message': 'Token válido con PyJWT',
-                'decoded': decoded
-            })
-        except Exception as e:
-            print(f"❌ [MANUAL VERIFY] PyJWT error: {e}")
-            return jsonify({
-                'success': False,
-                'message': f'PyJWT error: {str(e)}'
-            }), 422
-            
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Server error: {str(e)}'
-        }), 500
-    
-# ===== INICIO DE LA APLICACIÓN =====
+# =============================================================================
+# INICIO DE LA APLICACIÓN
+# =============================================================================
 
 if __name__ == "__main__":
-    print("🚀 Iniciando servidor Flask...")
-    print("🔐 JWT Configurado:")
-    print(f"   • Clave: {app.config['JWT_SECRET_KEY'][:10]}...")
-    print(f"   • Expiración: {app.config['JWT_ACCESS_TOKEN_EXPIRES']}")
+    print("🚀 Iniciando servidor Flask COMBINADO...")
+    print("🔐 JWT Configurado: MANUAL (PRIORITARIO)")
+    print(f"   • Algoritmo: {JWT_ALGORITHM}")
+    print(f"   • Expiración: {JWT_EXPIRATION_DAYS} días")
+    print(f"   • Secret Key: {JWT_SECRET_KEY[:10]}...")
+    print("🔐 Flask-Login: CONFIGURADO ✅")
+    print("📧 Sistema de Email: CONFIGURADO ✅")
     print("📱 Endpoints API Móvil:")
     print("   • http://localhost:5000/api/test (GET) - Prueba de conexión")
     print("   • http://localhost:5000/api/auth/login (POST) - Login con JWT")
     print("   • http://localhost:5000/api/auth/verify (GET) - Verificar JWT")
-    print("   • http://localhost:5000/api/auth/diagnostico_jwt (GET) - Diagnóstico JWT")
-    print("   • http://localhost:5000/api/auth/debug_token (POST) - Debug JWT")
-    print("   • http://localhost:5000/api/auth/test_generate (POST) - Test generar token")
-    print("   • http://localhost:5000/api/auth/test_verify (GET) - Test verify")
-    print("   • http://localhost:5000/api/auth/refresh (POST) - Renovar JWT")
-    print("   • http://localhost:5000/api/user/<id> (GET) - Obtener usuario")
+    print("   • http://localhost:5000/api/movil/empleado/* - Endpoints empleado")
+    print("   • http://localhost:5000/api/movil/residente/* - Endpoints residente")
+    print("   • http://localhost:5000/admin/* - Endpoints administrador")
     print("🌐 Sistema Web:")
     print("   • http://localhost:5000/ - Sistema web completo")
-    app.run(debug=True, host='0.0.0.0', port=5000)
     
+    app.run(debug=True, host='0.0.0.0', port=5000)

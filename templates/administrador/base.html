@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <title>{% block title %}Panel{% endblock %}</title>
@@ -18,8 +19,10 @@
       </div>
     </div>
     <ul>
-      <li><a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i> <span class="sidebar-text">Dashboard</span></a></li>
-  <li><a href="{{ url_for('admin.finanzas') }}"><i class="fas fa-chart-line"></i> <span class="sidebar-text">Dashboard Finanzas</span></a></li>
+      <li><a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-home"></i> <span
+            class="sidebar-text">Dashboard</span></a></li>
+      <li><a href="{{ url_for('admin.finanzas') }}"><i class="fas fa-chart-line"></i> <span
+            class="sidebar-text">Dashboard Finanzas</span></a></li>
       <li class="nav-item">
         <a href="#" class="nav-link" onclick="toggleSubmenu('finanzas-submenu')">
           <i class="fas fa-money-check-alt"></i> <span class="sidebar-text">Pago</span>
@@ -30,11 +33,19 @@
           <li><a href="{{ url_for('admin.reporte_deudas') }}">Reportes</a></li>
         </ul>
       </li>
-  <li><a href="{{ url_for('admin.panel_admin') }}"><i class="fas fa-bolt"></i> <span class="sidebar-text">Consumos</span></a></li>
-      <li><a href="{{ url_for('admin.reservas') }}"><i class="fas fa-calendar-alt"></i> <span class="sidebar-text">Reservas</span></a></li>
-      <li><a href="{{ url_for('admin.tickets') }}"><i class="fas fa-ticket-alt"></i> <span class="sidebar-text">Tickets</span></a></li>
-      <li><a href="{{ url_for('admin.usuarios') }}"><i class="fas fa-users"></i> <span class="sidebar-text">Usuarios</span></a></li>
-      <li><a href="{{ url_for('admin.comunicado') }}"><i class="fas fa-users"></i> <span class="sidebar-text">Comunicados</span></a></li>
+      <li><a href="{{ url_for('admin.panel_admin') }}"><i class="fas fa-bolt"></i> <span
+            class="sidebar-text">Consumos</span></a></li>
+      <li><a href="{{ url_for('admin.reservas') }}"><i class="fas fa-calendar-alt"></i> <span
+            class="sidebar-text">Reservas</span></a></li>
+      <li><a href="{{ url_for('admin.tickets') }}"><i class="fas fa-ticket-alt"></i> <span
+            class="sidebar-text">Tickets</span></a></li>
+      <li><a href="{{ url_for('admin.usuarios') }}"><i class="fas fa-users"></i> <span
+            class="sidebar-text">Usuarios</span></a></li>
+      <li><a href="{{ url_for('admin.comunicado') }}"><i class="fas fa-bullhorn"></i> <span
+            class="sidebar-text">Comunicados</span></a></li>
+      <!-- NUEVA PESTAÑA ASISTENTE IA -->
+      <li><a href="{{ url_for('ia_admin.dashboard') }}"><i class="fas fa-robot"></i> <span
+            class="sidebar-text">Asistente IA</span></a></li>
     </ul>
   </div>
 
@@ -70,6 +81,17 @@
     .submenu.active {
       display: block;
     }
+
+    /* Estilos para el ícono del Asistente IA */
+    .fa-robot {
+      color: #E3A78C;
+      /* Color durazno suave de tu paleta */
+    }
+
+    .sidebar li a:hover .fa-robot {
+      color: #264653;
+      /* Azul profundo al hacer hover */
+    }
   </style>
 
   <script>
@@ -81,8 +103,21 @@
       const submenu = document.getElementById(id);
       submenu.classList.toggle('active');
     }
+
+    // Detectar la página activa y resaltarla
+    document.addEventListener('DOMContentLoaded', function () {
+      const currentPath = window.location.pathname;
+      const menuItems = document.querySelectorAll('.sidebar li a');
+
+      menuItems.forEach(item => {
+        if (item.getAttribute('href') === currentPath) {
+          item.parentElement.classList.add('active');
+        }
+      });
+    });
   </script>
 
   {% block extra_scripts %}{% endblock %}
 </body>
+
 </html>
